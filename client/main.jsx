@@ -1,92 +1,141 @@
 var React = require('react');
-var Notette = require('./Notette.jsx');
-var EntryModel = require('./EntryModel.js');
-var Utils = require('./Utils.js');
+var Note = require('./Note.jsx');
+var $ = require('jquery');
 
-var Entry = React.createClass({
+var NoteHolder = React.createClass({
 
-	saveText : function(text){
-		var currentNoteRef = this.refs["entry-"+entryModel.currentEditingNote];
-		var currentNoteText = text ? text : currentNoteRef.refs.textArea.value;
-		entryModel.saveEntry(currentNoteText);
+	move : function(dir){
+		if(dir === "forward"){
+			this.setState({currentEditingNote : this.state.currentEditingNote + 1});
+		} else if (dir === "backward"){
+			this.setState({currentEditingNote : this.state.currentEditingNote - 1});
+		}
 	},
 
-	getText : function(){
-		var currentNoteRef = this.refs["entry-"+entryModel.currentEditingNote];
-		return currentNoteRef.refs.textArea.value;
+	deleteCurrentNote : function(){
+		this.setState({
+			notes : this.state.notes.splice(this.state.currentEditingNote, 1),
+			currentEditingNote : this.state.currentEditingNote - 1
+		})
+	},
+
+	focusNote : function(index){
+		var realIndex = (index < this.state.notes.length) ? index : this.state.notes.length-1;
+		this.refs["entry-"+ realIndex].refs.textArea.focus();
+	},
+
+	saveNotes : function(){
+		console.log('saving');
+
+		var that = this;
+		var notes = Object.keys(this.refs).map(function(key){
+			return that.refs[key].refs.textArea.value
+		});
+
+		$.post('/save', {
+			data : notes.join('#$#')
+		}, function(data){
+			console.log(data);
+		})
+	},
+
+	loadNotes : function(){
+		console.log('loading');
+		$.get('/load', function(data){
+			var loadedContent = data.map(function(elem){
+				return elem.content;
+			});
+			loadedContent.reverse();
+			if(loadedContent.length != 0){
+				this.setState({notes : loadedContent});
+			}
+		}.bind(this));
+
+	},
+
+	getNoteContent : function(index){
+		return this.refs["entry-"+ index].refs.textArea.value;
+	},
+
+	getInitialState: function () {
+		console.log('called only once');
+		return {
+			notes : [""],
+			currentEditingNote : 0,
+		};
 	},
 
 	keyDownHandler : function(e){
 		if( e.which == 9 ){
 			e.preventDefault();
 
-			this.saveText();
-
 			if (!e.shiftKey){
-				if (entryModel.isLast())
-					entryModel.addEntry("Any thoughts?");
-				entryModel.moveNext();				
-			}
-			else{
-				entryModel.movePrev();
+
+				if(this.state.currentEditingNote === this.state.notes.length-1){
+					this.setState({notes : this.state.notes.concat("Any thoughts?")});
+				}
+				this.move("forward");
+
+			} else if(this.state.currentEditingNote > 0){
+
+				this.move("backward");
+
 			}
 		}
-
-		if( e.which == 8){
-			if(this.getText() === "" && !entryModel.isFirst()){
+		if(e.which == 8)
+			if (this.state.currentEditingNote > 0 && this.getNoteContent(this.state.currentEditingNote) === ""){
 				e.preventDefault();
-				entryModel.removeEntry();	
+				this.deleteCurrentNote();
 			}
+
+		if(e.which == 76 && e.shiftKey && e.metaKey){
+			e.preventDefault();
+			this.loadNotes();
 		}
 
-		entryModel.notify();
-		React.findDOMNode(this.refs["entry-"+entryModel.currentEditingNote].refs.textArea).focus();
+		if(e.which == 83 && e.shiftKey && e.metaKey){
+			e.preventDefault();
+			this.saveNotes();
+		}
+
 	},
 
 	componentDidMount: function () {
+		this.loadNotes();
+		this.focusNote(this.state.currentEditingNote);
+	},
 
+	componentWillUpdate: function (nextProps, nextState) {
+	    console.log(this.state.notes); 
+	    console.log(nextState.notes);  
+	},
+
+	componentDidUpdate: function (prevProps, prevState) {
+		console.log(prevState.notes);
+		console.log(this.state.notes);
+		this.focusNote(this.state.currentEditingNote);
+		// this.forceUpdate();
 	},
 
 	render : function() {
 		var that = this;
-
-		var renderedEntries = entryModel.notes.map(function(entry, index){
+		var renderedEntries = this.state.notes.map(function(note, index){
 			return (
-				<Notette
-					key={entry.id}
-					description="Note"
+				<Note
+					key={"key-"+index}
 					ref={"entry-"+index}
 					keyDownHandler={that.keyDownHandler}
-					defaultText={entry.content}
+					text={note}
 				/>
 			)	
 		});
 
 		return(
-			<div>
-			<div
-				style={{
-					margin: "-0.1em 0.1em",
-					fontFamily:"Seravek",
-					letterSpacing: "-0.07em",
-					fontSize: "5em",
-					fontWeight:"Bold",
-					clear:"both"
-				}}
-			>
-				StackNEVERflow
-			</div>
-			{renderedEntries}
+			<div className="note-holder">
+				{renderedEntries}
 			</div>
 		)
 	}
 })
 
-var entryModel = new EntryModel('Entry');
-
-function render(){
-	React.render(<Entry/>, document.getElementById('content'));
-}
-
-entryModel.subscribe(render);
-render();
+React.render(<NoteHolder/>, document.getElementById('content'));

@@ -1,5 +1,46 @@
 body {
-	font-family: "Seravek";
-	font-weight: "light";
-    background-color : "#0C2B42";
+    background-color : #0C2B42;
+}
+
+.title {
+	margin: -0.1em 0.1em;
+	font-family: Seravek;
+	letter-spacing: -0.07em;
+	font-size: 5em;
+	font-weight: Bold;
+	clear: both;
+    color : #A9C4D9;
+}
+
+.note-holder{
+    -webkit-columns: 3 500px;
+    -moz-columns: 3 500px;
+    columns: 3 500px;
+
+    -webkit-column-gap : 1em;
+    -moz-column-gap: 1em;
+    column-gap: 1em;
+}
+
+.text-holder{
+    float : left;
+    width : 450px;
+}
+
+.text-style {
+    width : inherit;
+    float : left;
+    /*vertical-align:bottom;*/
+    padding : 0.7em;
+    border-radius : 0.5em;
+    margin : 0.2em;
+    border : none;
+    outline : none;
+    resize : none;
+    font-size : 0.9em;
+    font-family: "TheMixMono";
+    font-weight: lighter;
+    letter-spacing: -0.08em;
+    background-color : #A9C4D9;
+    color : #010E17
 }
