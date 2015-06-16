@@ -13,13 +13,9 @@ body {
 }
 
 .note-holder{
-    -webkit-columns: 3 500px;
-    -moz-columns: 3 500px;
-    columns: 3 500px;
-
-    -webkit-column-gap : 1em;
-    -moz-column-gap: 1em;
-    column-gap: 1em;
+    -webkit-columns: 3 460px;
+    -moz-columns: 3 460px;
+    columns: 3 460px;
 }
 
 .text-holder{
