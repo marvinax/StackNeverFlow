@@ -14,7 +14,7 @@ var views = require('co-views');
 var db = new loki('./data.json'),
 	docs = db.addCollection('docs');
 
-var render = views(__dirname + '../../views', {map:{html:'swig'}});
+var render = views(__dirname + '/../views', {map:{html:'swig'}});
 
 router.get('/', function *index(){
     this.body = yield render('index');
@@ -23,13 +23,9 @@ router.get('/', function *index(){
 router.post('/save', koaBody, function *(){
 
 	console.log(this.request.body);
-
-	var dataToBeInserted = this.request.body.data.split("#$#").map(function(item){
-		return {tag : "docs", content: item};
-	});
 	
 	docs.removeDataOnly();
-	docs.insert(dataToBeInserted);
+	docs.insert({tag:"docs", content: this.request.body.data});
 	db.save();
 
 	this.body = "ok";
@@ -46,12 +42,12 @@ router.get('/load', function *(){
 })
 
 app.use(router.routes());
-app.use(serve(path.join(__dirname, '/../public/')));
+app.use(serve('public/'));
 app.use(compress());
 app.use(logger());
 
 
 if (!module.parent) {
-  app.listen(1337);
-  console.log('listening on port 1337');
+  app.listen(5217);
+  console.log('listening on port 5217');
 }

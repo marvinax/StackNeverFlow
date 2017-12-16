@@ -1,15 +1,14 @@
-var path = require('path')
+var webpack = require('webpack')
 
 module.exports = {
-    entry: "./client/main.jsx",
+    entry: "./client/foundry.js",
     output: {
-        path: path.join(__dirname, 'public/scripts/'),
-        filename: "bundle.js"
+        path: __dirname + '/public/scripts/',
+        filename: "main.js"
     },
     module: {
         loaders: [
-            { test: /\.css$/, loader: "style!css" },
-            { test: /\.jsx?$/, loader: "jsx-loader?harmony?insertPragma=React.DOM"}
+            {test: /\.css$/, loader: 'style-loader!css-loader'}
         ]
     }
 };

@@ -1,0 +1,58 @@
+﻿/* CSS */
+body
+{
+	font-family: helvetica, sans-serif;
+	font-size: 85%;
+	margin: 10px 15px;
+	color: #333;
+	background-color: #ddd;
+}
+
+h1
+{
+	font-family: TheMixMono;
+	font-size: 2.6em;
+	font-weight: black;
+	letter-spacing: -0.09em;
+	margin: 0 0 0.3em 0;
+}
+h1::first-letter{
+	letter-spacing:-0.15em;
+}
+
+h2
+{
+	font-size: 1.4em;
+	font-weight: normal;
+	margin: 1.5em 0 0 0;
+}
+
+#img{
+	width:3em;
+	float: left;
+}
+
+canvas
+{
+	display: inline;
+	float: left;
+	width:  600px;
+	height: 600px;
+	margin: 0 10px 10px 0;
+	background-color: #fff;
+}
+
+#code
+{
+	display: block;
+	width: 500px;
+	height: 4em;
+	font-family: "TheMixMono", monospace;
+	font-size: 1em;
+	padding: 2px 4px;
+	margin: 0;
+	color: #555;
+	background-color: #eee;
+	border: 1px solid #999;
+	overflow: auto;
+}
