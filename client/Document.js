@@ -1,3 +1,10 @@
+
+var Vector = require('./Vector.js');
+var Lever =  require('./Lever.js');
+var Curve = require('./Curve.js');
+var CurveSideOutline = require('./CurveSideOutline.js');
+
+
 class Document{
 	constructor(canvas){
 		this.canvas = canvas;
@@ -5,6 +12,44 @@ class Document{
 		this.curves = [];
 
 		this.status = "Editing Existing Curves.";
+	}
+
+	LoadCurves(curves){
+		this.curves = curves.map(function(x){return this.LoadCurve(x)}.bind(this));
+		this.DrawCurves(null);
+	}
+
+	LoadCurve(curve){
+		var curveRes = new Curve();
+		// console.log(curve);
+		curveRes.lo = this.LoadOutline(curve.lo);
+		curveRes.ro = this.LoadOutline(curve.ro);
+		curveRes.levers = curve.levers.map(function(x){return this.LoadLever(x)}.bind(this));
+		curveRes.orig = this.LoadPoint(curve.orig);
+		curveRes.bounding  = this.LoadBounding(curve.bounding);
+		return curveRes;
+	}
+
+	LoadLever(lever){
+		var leverRes = new Lever();
+		leverRes.leverMode = lever.leverMode;
+		leverRes.points = lever.points.map(function(x){return this.LoadPoint(x)}.bind(this));
+		return leverRes;
+	}
+
+	LoadOutline(outline){
+		var outlineRes = new CurveSideOutline();
+		outlineRes.side = outline.side;
+		outlineRes.points = outline.points.map(function(x){return this.LoadPoint(x)}.bind(this));
+		return outlineRes;
+	}
+
+	LoadPoint(point){
+		return new Vector(point.x, point.y);
+	}
+
+	LoadBounding(bounding){
+		return [new Vector(bounding[0].x, bounding[0].y), new Vector(bounding[1].x, bounding[1].y)];
 	}
 
     DrawCurvesFill(currCurveIndex){
@@ -92,10 +137,6 @@ class Document{
 				this.context.beginPath();
 				this.context.moveTo(this.curves[ith].lo.points[0].x, this.curves[ith].lo.points[0].y);
 				for (var i = 1; i < this.curves[ith].levers.length; i++) {
-					// this.context.lineTo(this.curves[ith].lo.points[3*i-2].x, this.curves[ith].lo.points[3*i-2].y);
-					// this.context.moveTo(this.curves[ith].lo.points[3*i-1].x, this.curves[ith].lo.points[3*i-1].y);
-					// this.context.lineTo(this.curves[ith].lo.points[3*i+0].x, this.curves[ith].lo.points[3*i-0].y);
-					// this.context.moveTo(this.curves[ith].lo.points[3*(i-1)].x, this.curves[ith].lo.points[3*(i-1)].y);
 					this.context.bezierCurveTo(
 						this.curves[ith].lo.points[3*i-2].x, this.curves[ith].lo.points[3*i-2].y,
 						this.curves[ith].lo.points[3*i-1].x, this.curves[ith].lo.points[3*i-1].y,
@@ -106,10 +147,6 @@ class Document{
 				this.context.beginPath();
 				this.context.moveTo(this.curves[ith].ro.points[0].x, this.curves[ith].ro.points[0].y);
 				for (var i = 1; i < this.curves[ith].levers.length; i++) {
-                    // this.context.lineTo(this.curves[ith].ro.points[3*i-2].x, this.curves[ith].ro.points[3*i-2].y);
-                    // this.context.moveTo(this.curves[ith].ro.points[3*i-1].x, this.curves[ith].ro.points[3*i-1].y);
-                    // this.context.lineTo(this.curves[ith].ro.points[3*i+0].x, this.curves[ith].ro.points[3*i-0].y);
-                    // this.context.moveTo(this.curves[ith].ro.points[3*(i-1)].x, this.curves[ith].ro.points[3*(i-1)].y);
 					this.context.bezierCurveTo(
 						this.curves[ith].ro.points[3*i-2].x, this.curves[ith].ro.points[3*i-2].y,
 						this.curves[ith].ro.points[3*i-1].x, this.curves[ith].ro.points[3*i-1].y,

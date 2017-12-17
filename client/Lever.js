@@ -1,3 +1,5 @@
+var Vector = require("./Vector.js");
+
 var LeverMode = Object.freeze({
     BROKEN		: 0,
     LINEAR 		: 1,

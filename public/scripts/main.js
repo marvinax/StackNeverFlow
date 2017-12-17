@@ -58,32 +58,6 @@
 
 	(function(){
 
-		function Save(docu, docu_id){
-			var xhr = new XMLHttpRequest();
-			xhr.open('PUT', 'save/');
-			xhr.setRequestHeader('Content-Type', 'application/json');
-			xhr.onload = function() {
-			    if (xhr.status === 200) {
-			        var userInfo = JSON.parse(xhr.responseText);
-			    }
-			};
-			xhr.send(JSON.stringify({id: docu_id, curves:docu.curves}));
-		}
-
-		function Load(docu_id){
-			var xhr = new XMLHttpRequest();
-			xhr.open('GET', 'load/'+docu_id);
-			xhr.onload = function() {
-			    if (xhr.status === 200) {
-			        console.log(docu_id);
-			    }
-			    else {
-			        alert('Request failed.  Returned status of ' + xhr.status);
-			    }
-			};
-			xhr.send();
-		}
-
 		var Status = Object.freeze({
 			Editing : 0,
 			Creating : 1,
@@ -97,6 +71,39 @@
 			isEditingLever = false;
 
 		var docu = new Document(document.getElementById("canvas"));
+
+		function Save(docu, docu_id){
+			var xhr = new XMLHttpRequest();
+			xhr.open('PUT', 'save/');
+			xhr.setRequestHeader('Content-Type', 'application/json');
+			xhr.onload = function() {
+			    if (xhr.status === 200) {
+			        var userInfo = JSON.parse(xhr.responseText);
+			        console.log(userInfo);
+			    }
+			};
+
+			console.log(docu.curves);
+
+			xhr.send(JSON.stringify({id: docu_id, data:docu.curves}));
+		}
+
+		function Load(docu_id){
+			var xhr = new XMLHttpRequest();
+			xhr.open('GET', 'load/'+docu_id);
+			xhr.onload = function() {
+			    if (xhr.status === 200) {
+			    	console.log(xhr.responseText);
+			        var res = JSON.parse(xhr.responseText);
+			    	console.log(res);
+			        docu.LoadCurves(res);
+			    }
+			    else {
+			        alert('Request failed.  Returned status of ' + xhr.status);
+			    }
+			};
+			xhr.send();
+		}
 
 		function MouseV(event) {
 			var rect = event.target.getBoundingClientRect();
@@ -349,8 +356,8 @@
 	if(false) {
 		// When the styles change, update the <style> tags
 		if(!content.locals) {
-			module.hot.accept("!!../node_modules/_css-loader@0.21.0@css-loader/index.js!./styles.css", function() {
-				var newContent = require("!!../node_modules/_css-loader@0.21.0@css-loader/index.js!./styles.css");
+			module.hot.accept("!!../node_modules/css-loader/index.js!./styles.css", function() {
+				var newContent = require("!!../node_modules/css-loader/index.js!./styles.css");
 				if(typeof newContent === 'string') newContent = [[module.id, newContent, '']];
 				update(newContent);
 			});
@@ -768,7 +775,9 @@
 
 /***/ }),
 /* 6 */
-/***/ (function(module, exports) {
+/***/ (function(module, exports, __webpack_require__) {
+
+	var Vector = __webpack_require__(5);
 
 	var LeverMode = Object.freeze({
 	    BROKEN		: 0,
@@ -976,7 +985,9 @@
 
 /***/ }),
 /* 8 */
-/***/ (function(module, exports) {
+/***/ (function(module, exports, __webpack_require__) {
+
+	var Vector = __webpack_require__(5);
 
 	class CurveMath{
 
@@ -1070,7 +1081,7 @@
 	        var curr_d = 0,
 	        	best_t = 0,
 	        	best_d = Infinity,
-	        	curr_P = Vector.Zero;
+	        	curr_P = new Vector(0, 0);
 
 	        for (var i = 0; i < iter; i++) {
 	            var tick = 0.1 * (end - start) / slices;
@@ -1265,7 +1276,14 @@
 
 /***/ }),
 /* 11 */
-/***/ (function(module, exports) {
+/***/ (function(module, exports, __webpack_require__) {
+
+	
+	var Vector = __webpack_require__(5);
+	var Lever =  __webpack_require__(6);
+	var Curve = __webpack_require__(9);
+	var CurveSideOutline = __webpack_require__(10);
+
 
 	class Document{
 		constructor(canvas){
@@ -1274,6 +1292,44 @@
 			this.curves = [];
 
 			this.status = "Editing Existing Curves.";
+		}
+
+		LoadCurves(curves){
+			this.curves = curves.map(function(x){return this.LoadCurve(x)}.bind(this));
+			this.DrawCurves(null);
+		}
+
+		LoadCurve(curve){
+			var curveRes = new Curve();
+			// console.log(curve);
+			curveRes.lo = this.LoadOutline(curve.lo);
+			curveRes.ro = this.LoadOutline(curve.ro);
+			curveRes.levers = curve.levers.map(function(x){return this.LoadLever(x)}.bind(this));
+			curveRes.orig = this.LoadPoint(curve.orig);
+			curveRes.bounding  = this.LoadBounding(curve.bounding);
+			return curveRes;
+		}
+
+		LoadLever(lever){
+			var leverRes = new Lever();
+			leverRes.leverMode = lever.leverMode;
+			leverRes.points = lever.points.map(function(x){return this.LoadPoint(x)}.bind(this));
+			return leverRes;
+		}
+
+		LoadOutline(outline){
+			var outlineRes = new CurveSideOutline();
+			outlineRes.side = outline.side;
+			outlineRes.points = outline.points.map(function(x){return this.LoadPoint(x)}.bind(this));
+			return outlineRes;
+		}
+
+		LoadPoint(point){
+			return new Vector(point.x, point.y);
+		}
+
+		LoadBounding(bounding){
+			return [new Vector(bounding[0].x, bounding[0].y), new Vector(bounding[1].x, bounding[1].y)];
 		}
 
 	    DrawCurvesFill(currCurveIndex){
@@ -1361,10 +1417,6 @@
 					this.context.beginPath();
 					this.context.moveTo(this.curves[ith].lo.points[0].x, this.curves[ith].lo.points[0].y);
 					for (var i = 1; i < this.curves[ith].levers.length; i++) {
-						// this.context.lineTo(this.curves[ith].lo.points[3*i-2].x, this.curves[ith].lo.points[3*i-2].y);
-						// this.context.moveTo(this.curves[ith].lo.points[3*i-1].x, this.curves[ith].lo.points[3*i-1].y);
-						// this.context.lineTo(this.curves[ith].lo.points[3*i+0].x, this.curves[ith].lo.points[3*i-0].y);
-						// this.context.moveTo(this.curves[ith].lo.points[3*(i-1)].x, this.curves[ith].lo.points[3*(i-1)].y);
 						this.context.bezierCurveTo(
 							this.curves[ith].lo.points[3*i-2].x, this.curves[ith].lo.points[3*i-2].y,
 							this.curves[ith].lo.points[3*i-1].x, this.curves[ith].lo.points[3*i-1].y,
@@ -1375,10 +1427,6 @@
 					this.context.beginPath();
 					this.context.moveTo(this.curves[ith].ro.points[0].x, this.curves[ith].ro.points[0].y);
 					for (var i = 1; i < this.curves[ith].levers.length; i++) {
-	                    // this.context.lineTo(this.curves[ith].ro.points[3*i-2].x, this.curves[ith].ro.points[3*i-2].y);
-	                    // this.context.moveTo(this.curves[ith].ro.points[3*i-1].x, this.curves[ith].ro.points[3*i-1].y);
-	                    // this.context.lineTo(this.curves[ith].ro.points[3*i+0].x, this.curves[ith].ro.points[3*i-0].y);
-	                    // this.context.moveTo(this.curves[ith].ro.points[3*(i-1)].x, this.curves[ith].ro.points[3*(i-1)].y);
 						this.context.bezierCurveTo(
 							this.curves[ith].ro.points[3*i-2].x, this.curves[ith].ro.points[3*i-2].y,
 							this.curves[ith].ro.points[3*i-1].x, this.curves[ith].ro.points[3*i-1].y,

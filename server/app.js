@@ -8,6 +8,8 @@ var koaBody = require('koa-body')();
 var koa = require('koa');
 var path = require('path');
 var loki = require('lokijs');
+var fs = require('fs');
+
 var app = module.exports = koa();
 
 var views = require('co-views');
@@ -23,25 +25,24 @@ router.get('/', function *index(){
 
 router.put('/save', koaBody, function *(){
 
-	console.log(this.request.body.id);
-	
-	docs.removeDataOnly();
-	docs.insert({tag:this.request.body.id, content: this.request.body.data});
-	db.save();
+	var tag = this.request.body.id,
+		data = this.request.body.data;
 
-	this.body = JSON.stringify({res:"ok"});
+	console.log(tag);
+	console.log(data);
+	
+	// docs.removeDataOnly();
+	// docs.insert({tag:this.request.body.id, content: this.request.body.data});
+	// db.save();
+
+	var f = fs.openSync(tag, 'w');
+	var res = fs.writeSync(f, JSON.stringify(data));
+	this.body = JSON.stringify({res:res});
 });
 
-loadRouter.get('/load/*', function *(){
-	console.log(this.request);
-
-	console.log(docs.where(function(item){
-		return item.tag == "docs";
-	}));
-
-	this.body = yield docs.where(function(item){
-		return item.tag == "docs";
-	})
+loadRouter.get('*', function *(next){
+	var tag = this.request.url.split('/').pop();
+	this.body = fs.readFileSync(tag, 'utf8');
 })
 
 app.use(loadRouter.routes());

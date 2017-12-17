@@ -1,3 +1,5 @@
+var Vector = require("./Vector.js");
+
 class CurveMath{
 
     static GetPointOnCurve(t, points){
@@ -90,7 +92,7 @@ class CurveMath{
         var curr_d = 0,
         	best_t = 0,
         	best_d = Infinity,
-        	curr_P = Vector.Zero;
+        	curr_P = new Vector(0, 0);
 
         for (var i = 0; i < iter; i++) {
             var tick = 0.1 * (end - start) / slices;

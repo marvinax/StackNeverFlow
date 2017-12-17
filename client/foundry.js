@@ -12,32 +12,6 @@ var Document = require('./Document.js');
 
 (function(){
 
-	function Save(docu, docu_id){
-		var xhr = new XMLHttpRequest();
-		xhr.open('PUT', 'save/');
-		xhr.setRequestHeader('Content-Type', 'application/json');
-		xhr.onload = function() {
-		    if (xhr.status === 200) {
-		        var userInfo = JSON.parse(xhr.responseText);
-		    }
-		};
-		xhr.send(JSON.stringify({id: docu_id, curves:docu.curves}));
-	}
-
-	function Load(docu_id){
-		var xhr = new XMLHttpRequest();
-		xhr.open('GET', 'load/'+docu_id);
-		xhr.onload = function() {
-		    if (xhr.status === 200) {
-		        console.log(docu_id);
-		    }
-		    else {
-		        alert('Request failed.  Returned status of ' + xhr.status);
-		    }
-		};
-		xhr.send();
-	}
-
 	var Status = Object.freeze({
 		Editing : 0,
 		Creating : 1,
@@ -51,6 +25,39 @@ var Document = require('./Document.js');
 		isEditingLever = false;
 
 	var docu = new Document(document.getElementById("canvas"));
+
+	function Save(docu, docu_id){
+		var xhr = new XMLHttpRequest();
+		xhr.open('PUT', 'save/');
+		xhr.setRequestHeader('Content-Type', 'application/json');
+		xhr.onload = function() {
+		    if (xhr.status === 200) {
+		        var userInfo = JSON.parse(xhr.responseText);
+		        console.log(userInfo);
+		    }
+		};
+
+		console.log(docu.curves);
+
+		xhr.send(JSON.stringify({id: docu_id, data:docu.curves}));
+	}
+
+	function Load(docu_id){
+		var xhr = new XMLHttpRequest();
+		xhr.open('GET', 'load/'+docu_id);
+		xhr.onload = function() {
+		    if (xhr.status === 200) {
+		    	console.log(xhr.responseText);
+		        var res = JSON.parse(xhr.responseText);
+		    	console.log(res);
+		        docu.LoadCurves(res);
+		    }
+		    else {
+		        alert('Request failed.  Returned status of ' + xhr.status);
+		    }
+		};
+		xhr.send();
+	}
 
 	function MouseV(event) {
 		var rect = event.target.getBoundingClientRect();
