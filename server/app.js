@@ -3,6 +3,7 @@ var compress = require('koa-compress');
 var logger = require('koa-logger');
 var serve = require('koa-static');
 var router = require('koa-router')();
+var loadRouter = require('koa-router')({prefix: "/load"});
 var koaBody = require('koa-body')();
 var koa = require('koa');
 var path = require('path');
@@ -20,18 +21,20 @@ router.get('/', function *index(){
     this.body = yield render('index');
 });
 
-router.post('/save', koaBody, function *(){
+router.put('/save', koaBody, function *(){
 
-	console.log(this.request.body);
+	console.log(this.request.body.id);
 	
 	docs.removeDataOnly();
-	docs.insert({tag:"docs", content: this.request.body.data});
+	docs.insert({tag:this.request.body.id, content: this.request.body.data});
 	db.save();
 
-	this.body = "ok";
+	this.body = JSON.stringify({res:"ok"});
 });
 
-router.get('/load', function *(){
+loadRouter.get('/load/*', function *(){
+	console.log(this.request);
+
 	console.log(docs.where(function(item){
 		return item.tag == "docs";
 	}));
@@ -41,6 +44,7 @@ router.get('/load', function *(){
 	})
 })
 
+app.use(loadRouter.routes());
 app.use(router.routes());
 app.use(serve('public/'));
 app.use(compress());

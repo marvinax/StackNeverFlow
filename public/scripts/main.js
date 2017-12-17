@@ -58,6 +58,32 @@
 
 	(function(){
 
+		function Save(docu, docu_id){
+			var xhr = new XMLHttpRequest();
+			xhr.open('PUT', 'save/');
+			xhr.setRequestHeader('Content-Type', 'application/json');
+			xhr.onload = function() {
+			    if (xhr.status === 200) {
+			        var userInfo = JSON.parse(xhr.responseText);
+			    }
+			};
+			xhr.send(JSON.stringify({id: docu_id, curves:docu.curves}));
+		}
+
+		function Load(docu_id){
+			var xhr = new XMLHttpRequest();
+			xhr.open('GET', 'load/'+docu_id);
+			xhr.onload = function() {
+			    if (xhr.status === 200) {
+			        console.log(docu_id);
+			    }
+			    else {
+			        alert('Request failed.  Returned status of ' + xhr.status);
+			    }
+			};
+			xhr.send();
+		}
+
 		var Status = Object.freeze({
 			Editing : 0,
 			Creating : 1,
@@ -230,7 +256,6 @@
 			var cvs = document.getElementById("canvas");
 			
 			document.onkeydown = function(evt) {
-				console.log("key "+ evt.keyCode);
 
 				if(evt.keyCode == 27 && status == Status.Creating){
 					document.getElementById("status").innerHTML = "Editing";
@@ -293,6 +318,17 @@
 
 			cvs.onmousedown = cvs.onmousemove = cvs.onmouseup = Drag;
 
+			var saveButton = document.getElementById("save"),
+				loadButton = document.getElementById("load"),
+				nameInput  = document.getElementById("name");
+
+			saveButton.onclick = function(){
+				Save(docu, nameInput.value);
+			}
+
+			loadButton.onclick = function(){
+				Load(nameInput.value);
+			}
 		}	
 	})();
 
@@ -313,8 +349,8 @@
 	if(false) {
 		// When the styles change, update the <style> tags
 		if(!content.locals) {
-			module.hot.accept("!!../node_modules/css-loader/index.js!./styles.css", function() {
-				var newContent = require("!!../node_modules/css-loader/index.js!./styles.css");
+			module.hot.accept("!!../node_modules/_css-loader@0.21.0@css-loader/index.js!./styles.css", function() {
+				var newContent = require("!!../node_modules/_css-loader@0.21.0@css-loader/index.js!./styles.css");
 				if(typeof newContent === 'string') newContent = [[module.id, newContent, '']];
 				update(newContent);
 			});
@@ -1238,7 +1274,6 @@
 			this.curves = [];
 
 			this.status = "Editing Existing Curves.";
-
 		}
 
 	    DrawCurvesFill(currCurveIndex){

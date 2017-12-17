@@ -5,7 +5,6 @@ class Document{
 		this.curves = [];
 
 		this.status = "Editing Existing Curves.";
-
 	}
 
     DrawCurvesFill(currCurveIndex){
