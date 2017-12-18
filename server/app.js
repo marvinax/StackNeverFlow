@@ -7,7 +7,6 @@ var loadRouter = require('koa-router')({prefix: "/load"});
 var koaBody = require('koa-body')();
 var koa = require('koa');
 var path = require('path');
-var loki = require('lokijs');
 var fs = require('fs');
 
 var app = module.exports = koa();
