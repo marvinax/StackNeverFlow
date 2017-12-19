@@ -9,8 +9,14 @@ var Cast =  require('./Cast.js');
 var Curve = require('./Curve.js');
 
 var Document = require('./Document.js');
+var LoadData = require('./Load.js');
+
+var Draw = require('./Draw.js');
 
 (function(){
+
+	var context = canvas.getContext("2d")
+	console.log(context);
 
 	var Status = Object.freeze({
 		Editing : 0,
@@ -53,7 +59,8 @@ var Document = require('./Document.js');
 		    	console.log(xhr.responseText);
 		        var res = JSON.parse(xhr.responseText);
 		    	console.log(res);
-		        docu.LoadCurves(res);
+		        docu.curves = LoadData.Curves(res);
+		        Draw.Curves(context, docu.curves, null);
 		    }
 		    else {
 		        alert('Request failed.  Returned status of ' + xhr.status);
@@ -206,7 +213,7 @@ var Document = require('./Document.js');
 					}					
 				}
 			}
-			docu.DrawCurves(currCurveIndex);
+			Draw.Curves(context, docu.curves, currCurveIndex);
 		}
 		
 		if (down && (event.type == "mousemove")) {
@@ -221,21 +228,19 @@ var Document = require('./Document.js');
 			} else if (status == Status.MovingLever){
 				// console.log(tempLeverTransArray);
 				docu.curves[currCurveIndex].levers[currLeverIndex].TransFromArray(tempLeverTransArray, curr.Sub(orig));
-                docu.curves[currCurveIndex].UpdateBoundingRect();
                 docu.curves[currCurveIndex].UpdateOutlines();
 
 			} else if (status == Status.EditingLever){
 				console.log(currPoint);
 				docu.curves[currCurveIndex].UpdateLever(currLeverIndex, currPoint, curr);
 			}
-			docu.DrawCurves(currCurveIndex);
+			Draw.Curves(context, docu.curves, currCurveIndex);
 		}
 		
 		if (down && (event.type == "mouseup")) {
 			down = false;
 			orig = null;
 			if(status == Status.Creating){
-				docu.curves[currCurveIndex].UpdateBoundingRect();
 			} else if (status == Status.MovingCurve){
 				status = Status.Editing;
 			} else if (status == Status.MovingLever){
@@ -245,7 +250,7 @@ var Document = require('./Document.js');
 				status = Status.Editing;
 			}
 
-			docu.DrawCurves(currCurveIndex);
+			Draw.Curves(context, docu.curves, currCurveIndex);
 		}
 
 	}
@@ -264,7 +269,7 @@ var Document = require('./Document.js');
 			}
 
 			if(evt.ctrlKey && evt.key == "c" && status == Status.Editing){
-				document.getElementById("status").innerHTML = "Drawing new curve";
+				document.getElementById("status").innerHTML = "Drawing new context, docu.curves, curve";
 				status = Status.Creating;
                 currCurveIndex = null;
 				console.log(status);
@@ -284,11 +289,11 @@ var Document = require('./Document.js');
                         currCurveIndex = null;
                     }
                 }
-                docu.DrawCurves(currCurveIndex);
+                Draw.Curves(context, docu.curves, currCurveIndex);
             }
 
             if(evt.ctrlKey && evt.key=="d"){
-                docu.DrawCurvesFill();
+                Draw.CurvesFill(context, docu.curves);
             }
 
 			if(evt.keyCode == 16){
@@ -305,7 +310,7 @@ var Document = require('./Document.js');
 		document.onkeyup = function(evt){
 
             if(evt.ctrlKey && evt.key=="d"){
-                docu.DrawCurves(currCurveIndex);
+                Draw.Curves(context, docu.curves, currCurveIndex);
             }
 
 			if(evt.keyCode == 16){

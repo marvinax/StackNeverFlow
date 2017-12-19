@@ -55,8 +55,14 @@
 	var Curve = __webpack_require__(9);
 
 	var Document = __webpack_require__(11);
+	var LoadData = __webpack_require__(12);
+
+	var Draw = __webpack_require__(13);
 
 	(function(){
+
+		var context = canvas.getContext("2d")
+		console.log(context);
 
 		var Status = Object.freeze({
 			Editing : 0,
@@ -99,7 +105,8 @@
 			    	console.log(xhr.responseText);
 			        var res = JSON.parse(xhr.responseText);
 			    	console.log(res);
-			        docu.LoadCurves(res);
+			        docu.curves = LoadData.Curves(res);
+			        Draw.Curves(context, docu.curves, null);
 			    }
 			    else {
 			        alert('Request failed.  Returned status of ' + xhr.status);
@@ -252,7 +259,7 @@
 						}					
 					}
 				}
-				docu.DrawCurves(currCurveIndex);
+				Draw.Curves(context, docu.curves, currCurveIndex);
 			}
 			
 			if (down && (event.type == "mousemove")) {
@@ -267,21 +274,19 @@
 				} else if (status == Status.MovingLever){
 					// console.log(tempLeverTransArray);
 					docu.curves[currCurveIndex].levers[currLeverIndex].TransFromArray(tempLeverTransArray, curr.Sub(orig));
-	                docu.curves[currCurveIndex].UpdateBoundingRect();
 	                docu.curves[currCurveIndex].UpdateOutlines();
 
 				} else if (status == Status.EditingLever){
 					console.log(currPoint);
 					docu.curves[currCurveIndex].UpdateLever(currLeverIndex, currPoint, curr);
 				}
-				docu.DrawCurves(currCurveIndex);
+				Draw.Curves(context, docu.curves, currCurveIndex);
 			}
 			
 			if (down && (event.type == "mouseup")) {
 				down = false;
 				orig = null;
 				if(status == Status.Creating){
-					docu.curves[currCurveIndex].UpdateBoundingRect();
 				} else if (status == Status.MovingCurve){
 					status = Status.Editing;
 				} else if (status == Status.MovingLever){
@@ -291,7 +296,7 @@
 					status = Status.Editing;
 				}
 
-				docu.DrawCurves(currCurveIndex);
+				Draw.Curves(context, docu.curves, currCurveIndex);
 			}
 
 		}
@@ -310,7 +315,7 @@
 				}
 
 				if(evt.ctrlKey && evt.key == "c" && status == Status.Editing){
-					document.getElementById("status").innerHTML = "Drawing new curve";
+					document.getElementById("status").innerHTML = "Drawing new context, docu.curves, curve";
 					status = Status.Creating;
 	                currCurveIndex = null;
 					console.log(status);
@@ -330,11 +335,11 @@
 	                        currCurveIndex = null;
 	                    }
 	                }
-	                docu.DrawCurves(currCurveIndex);
+	                Draw.Curves(context, docu.curves, currCurveIndex);
 	            }
 
 	            if(evt.ctrlKey && evt.key=="d"){
-	                docu.DrawCurvesFill();
+	                Draw.CurvesFill(context, docu.curves);
 	            }
 
 				if(evt.keyCode == 16){
@@ -351,7 +356,7 @@
 			document.onkeyup = function(evt){
 
 	            if(evt.ctrlKey && evt.key=="d"){
-	                docu.DrawCurves(currCurveIndex);
+	                Draw.Curves(context, docu.curves, currCurveIndex);
 	            }
 
 				if(evt.keyCode == 16){
@@ -1190,21 +1195,17 @@
 		    this.lo = new CurveSideOutline(1);
 		    this.ro = new CurveSideOutline(3);
 
-		    this.bounding = [new Vector(9999, 9999), new Vector(-9999, -9999)];
-
 	    }
 
 	    Add(mouseV){
 	        this.levers.push(new Lever(mouseV));
 	        this.GetOutlines();
-	        this.UpdateBoundingRect();
 	        return this.levers.length - 1;
 	    }
 
 	    Delete(index){
 	        levers.splice(index, 1);
 	        this.GetOutlines();
-	        this.UpdateBoundingRect();
 	    }
 	    
 	    Insert(curveCast) {
@@ -1213,7 +1214,6 @@
 	        console.log(this.levers.length);
 
 	        this.GetOutlines();
-	        this.UpdateBoundingRect();
 	        
 	        return Math.floor(curveCast+1);
 	    }
@@ -1221,20 +1221,6 @@
 	    UpdateLever(ithLever, ithPoint, value){
 	        this.levers[ithLever].SetControlPoint(ithPoint, value);
 	        this.UpdateOutlines();
-	        this.UpdateBoundingRect();
-	    }
-
-	    UpdateBoundingRect(){
-	        this.bounding[0].Set(Infinity, Infinity);
-	        this.bounding[1].Set(-Infinity, -Infinity);
-	        for(const lever of this.levers) {
-	        	for(const point of lever.points) {
-		            if(point.x < this.bounding[0].x) this.bounding[0].x = point.x;
-		            if(point.x > this.bounding[1].x) this.bounding[1].x = point.x;
-		            if(point.y < this.bounding[0].y) this.bounding[0].y = point.y;
-		            if(point.y > this.bounding[1].y) this.bounding[1].y = point.y;
-		        }
-	        }
 	    }
 
 	    GetOutlines(){
@@ -1329,177 +1315,249 @@
 	var CurveSideOutline = __webpack_require__(10);
 
 
+	class Param{
+	 	constructor(name, value, min, max){
+	        this.name = name;
+	        this.value = value;
+	        this.min = min;
+	        this.max = max;
+	    }
+	}
+
 	class Document{
 		constructor(canvas){
 			this.canvas = canvas;
-			this.context = canvas.getContext("2d")
 			this.curves = [];
+			this.datastack = [];
 
 			this.status = "Editing Existing Curves.";
+			thix.expr = "";
 		}
 
-		LoadCurves(curves){
-			this.curves = curves.map(function(x){return this.LoadCurve(x)}.bind(this));
-			this.DrawCurves(null);
+	    pop(){
+	        return this.datastack.pop();
+	    }
+	    
+	    push(data){
+	        this.datastack.push(data);
+	    }
+	    
+	    eval(expr){
+	        this.stack = split(this.expr, ' ');
+	                        
+	        for(let i = stack.length-1; i >= 0; i--){
+	            if(this.stack[i].equals("curve")){
+					this.push(this.curves[parseInt(stack[i+1])]);
+	            }
+	            
+	            if(stack[i].equals("lever")){
+	                this.push(this.pop().levers[parseInt(stack[i+1])]);    
+	            }
+	            
+	            if(stack[i].equals("point")){
+	                this.push(this.pop().points[parseInt(stack[i+1])]);    
+	            }
+	            
+	            if(stack[i].equals("float")){
+	                this.push (parseFloat(stack[i+1]));
+	            }
+	            
+	            if(stack[i].equals("vec")){
+	                this.push(new Vector(parseFloat(stack[i+1]), parseFloat(stack[i+2])));
+	            }
+	            
+	            if(stack[i].equals("plus")){
+	                var p1 = this.pop();
+	                var p2 = this.pop();
+	                this.push(Vector.Add(p1, p2));
+	            }
+	            if(stack[i].equals("trans")){
+	                var elem = this.pop();
+	                var increm = this.pop();
+	                var array = elem.ExtractArray();
+	                elem.TranslateFromArray(array, increm);
+	            }
+	        }
+	        
+	    } 
+	}
+
+	module.exports = Document;
+
+/***/ }),
+/* 12 */
+/***/ (function(module, exports, __webpack_require__) {
+
+	
+	var Vector = __webpack_require__(5);
+	var Lever =  __webpack_require__(6);
+	var Curve = __webpack_require__(9);
+	var CurveSideOutline = __webpack_require__(10);
+
+	class LoadData {
+		static Curves(curves){
+			return curves.map(function(x){return this.Curve(x)}.bind(this));
 		}
 
-		LoadCurve(curve){
+		static Curve(curve){
 			var curveRes = new Curve();
 			// console.log(curve);
-			curveRes.lo = this.LoadOutline(curve.lo);
-			curveRes.ro = this.LoadOutline(curve.ro);
-			curveRes.levers = curve.levers.map(function(x){return this.LoadLever(x)}.bind(this));
-			curveRes.orig = this.LoadPoint(curve.orig);
-			curveRes.bounding  = this.LoadBounding(curve.bounding);
+			curveRes.lo = this.Outline(curve.lo);
+			curveRes.ro = this.Outline(curve.ro);
+			curveRes.levers = curve.levers.map(function(x){return this.Lever(x)}.bind(this));
+			curveRes.orig = this.Point(curve.orig);
 			return curveRes;
 		}
 
-		LoadLever(lever){
+		static Lever(lever){
 			var leverRes = new Lever();
 			leverRes.leverMode = lever.leverMode;
-			leverRes.points = lever.points.map(function(x){return this.LoadPoint(x)}.bind(this));
+			leverRes.points = lever.points.map(function(x){return this.Point(x)}.bind(this));
 			return leverRes;
 		}
 
-		LoadOutline(outline){
+		static Outline(outline){
 			var outlineRes = new CurveSideOutline();
 			outlineRes.side = outline.side;
-			outlineRes.points = outline.points.map(function(x){return this.LoadPoint(x)}.bind(this));
+			outlineRes.points = outline.points.map(function(x){return this.Point(x)}.bind(this));
 			return outlineRes;
 		}
 
-		LoadPoint(point){
+		static Point(point){
 			return new Vector(point.x, point.y);
 		}
+	}
 
-		LoadBounding(bounding){
-			return [new Vector(bounding[0].x, bounding[0].y), new Vector(bounding[1].x, bounding[1].y)];
-		}
+	module.exports = LoadData;
 
-	    DrawCurvesFill(currCurveIndex){
+/***/ }),
+/* 13 */
+/***/ (function(module, exports) {
 
-	        this.context.clearRect(0,0, this.canvas.width, this.canvas.height);
+	class Draw{
 
-	        for (var ithCurve = this.curves.length - 1; ithCurve >= 0; ithCurve--) {
-	            var curve = this.curves[ithCurve];
+	    static CurvesFill(ctx, curves, currCurveIndex){
 
-	            this.context.lineWidth = 1;
+	        ctx.clearRect(0,0, this.canvas.width, this.canvas.height);
+
+	        for (var ithCurve = curves.length - 1; ithCurve >= 0; ithCurve--) {
+	            var curve = curves[ithCurve];
+
+	            ctx.lineWidth = 1;
 
 	            // for (var i = Things.length - 1; i >= 0; i--) {
 	            //     Things[i]
 	            // }
 
-	            this.context.beginPath();
-	            this.context.moveTo(curve.lo.points[0].x, curve.lo.points[0].y);
+	            ctx.beginPath();
+	            ctx.moveTo(curve.lo.points[0].x, curve.lo.points[0].y);
 	            for(var i = 1; i < curve.levers.length; i++){
 
-	                this.context.lineTo(curve.lo.points[3*i-2].x,   curve.lo.points[3*i-2].y);
-	                this.context.moveTo(curve.lo.points[3*i-1].x,   curve.lo.points[3*i-1].y);
-	                this.context.lineTo(curve.lo.points[3*i+0].x,   curve.lo.points[3*i-0].y);
-	                this.context.moveTo(curve.lo.points[3*(i-1)].x, curve.lo.points[3*(i-1)].y);
+	                ctx.lineTo(curve.lo.points[3*i-2].x,   curve.lo.points[3*i-2].y);
+	                ctx.moveTo(curve.lo.points[3*i-1].x,   curve.lo.points[3*i-1].y);
+	                ctx.lineTo(curve.lo.points[3*i+0].x,   curve.lo.points[3*i-0].y);
+	                ctx.moveTo(curve.lo.points[3*(i-1)].x, curve.lo.points[3*(i-1)].y);
 
-	                this.context.bezierCurveTo(
+	                ctx.bezierCurveTo(
 	                    curve.lo.points[3*i-2].x, curve.lo.points[3*i-2].y,
 	                    curve.lo.points[3*i-1].x, curve.lo.points[3*i-1].y,
 	                    curve.lo.points[3*i+0].x, curve.lo.points[3*i-0].y
 	                )
 	            }
-	            this.context.lineTo(curve.ro.points[curve.ro.points.length-1].x, curve.ro.points[curve.ro.points.length-1].y);
+	            ctx.lineTo(curve.ro.points[curve.ro.points.length-1].x, curve.ro.points[curve.ro.points.length-1].y);
 	            for(var i = curve.levers.length-1; i >0; i--){
 
-	                this.context.lineTo(curve.ro.points[3*i-1].x,   curve.ro.points[3*i-1].y);
-	                this.context.moveTo(curve.ro.points[3*i-2].x,   curve.ro.points[3*i-2].y);
-	                this.context.lineTo(curve.ro.points[3*(i-1)].x,   curve.ro.points[3*(i-1)].y);
-	                this.context.moveTo(curve.ro.points[3*i].x,     curve.ro.points[3*i].y);
+	                ctx.lineTo(curve.ro.points[3*i-1].x,   curve.ro.points[3*i-1].y);
+	                ctx.moveTo(curve.ro.points[3*i-2].x,   curve.ro.points[3*i-2].y);
+	                ctx.lineTo(curve.ro.points[3*(i-1)].x,   curve.ro.points[3*(i-1)].y);
+	                ctx.moveTo(curve.ro.points[3*i].x,     curve.ro.points[3*i].y);
 
-	                this.context.bezierCurveTo(
+	                ctx.bezierCurveTo(
 	                    curve.ro.points[3*i-1].x, curve.ro.points[3*i-1].y,
 	                    curve.ro.points[3*i-2].x, curve.ro.points[3*i-2].y,
 	                    curve.ro.points[3*(i-1)].x, curve.ro.points[3*(i-1)].y
 	                )
 	            }
-	            // this.context.lineTo(curve.lo.points[0].x, curve.lo.points[0].y);
-	            // this.context.closePath();
-	            this.context.stroke();
+	            // ctx.lineTo(curve.lo.points[0].x, curve.lo.points[0].y);
+	            // ctx.closePath();
+	            ctx.stroke();
 	        };
 	    }
 
-		DrawCurves(currCurveIndex){
+	    static Curves(ctx, curves, currCurveIndex){
 
-	        this.context.lineWidth = 1;
-			this.context.clearRect(0,0, this.canvas.width, this.canvas.height);
+	        ctx.lineWidth = 1;
+	        ctx.clearRect(0,0, ctx.canvas.width, ctx.canvas.height);
 
-			if(currCurveIndex != null){			
-				var levers = this.curves[currCurveIndex].levers;
-				for (var i = 0; i < levers.length; i++) {
-					for(var j = 0; j < 5; j++){
-						this.context.beginPath();
-						this.context.arc(levers[i].points[j].x, levers[i].points[j].y, 4, 0, 2 * Math.PI);
-						this.context.stroke();
-					}
-				}
+	        if(currCurveIndex != null){         
+	            var levers = curves[currCurveIndex].levers;
+	            for (var i = 0; i < levers.length; i++) {
+	                for(var j = 0; j < 5; j++){
+	                    ctx.beginPath();
+	                    ctx.arc(levers[i].points[j].x, levers[i].points[j].y, 4, 0, 2 * Math.PI);
+	                    ctx.stroke();
+	                }
+	            }
 
-				this.context.beginPath();
-				for (var i = 0; i < levers.length; i++) {
-					this.context.moveTo(levers[i].points[0].x, levers[i].points[0].y);
-					this.context.lineTo(levers[i].points[2].x, levers[i].points[2].y);
-					this.context.lineTo(levers[i].points[4].x, levers[i].points[4].y);
-					this.context.moveTo(levers[i].points[1].x, levers[i].points[1].y);
-					this.context.lineTo(levers[i].points[2].x, levers[i].points[2].y);
-					this.context.lineTo(levers[i].points[3].x, levers[i].points[3].y);
-				}
-				this.context.stroke();
-			}
+	            ctx.beginPath();
+	            for (var i = 0; i < levers.length; i++) {
+	                ctx.moveTo(levers[i].points[0].x, levers[i].points[0].y);
+	                ctx.lineTo(levers[i].points[2].x, levers[i].points[2].y);
+	                ctx.lineTo(levers[i].points[4].x, levers[i].points[4].y);
+	                ctx.moveTo(levers[i].points[1].x, levers[i].points[1].y);
+	                ctx.lineTo(levers[i].points[2].x, levers[i].points[2].y);
+	                ctx.lineTo(levers[i].points[3].x, levers[i].points[3].y);
+	            }
+	            ctx.stroke();
+	        }
 
 
-			for (var ith = this.curves.length - 1; ith >= 0; ith--) {
-	            this.context.lineWidth = 1;
-				if(this.curves[ith].levers.length > 1){
+	        for (var ith = curves.length - 1; ith >= 0; ith--) {
+	            ctx.lineWidth = 1;
+	            if(curves[ith].levers.length > 1){
 
-					// console.log("entered");
+	                // console.log("entered");
 
-					this.context.beginPath();
-					this.context.moveTo(this.curves[ith].lo.points[0].x, this.curves[ith].lo.points[0].y);
-					for (var i = 1; i < this.curves[ith].levers.length; i++) {
-						this.context.bezierCurveTo(
-							this.curves[ith].lo.points[3*i-2].x, this.curves[ith].lo.points[3*i-2].y,
-							this.curves[ith].lo.points[3*i-1].x, this.curves[ith].lo.points[3*i-1].y,
-							this.curves[ith].lo.points[3*i+0].x, this.curves[ith].lo.points[3*i-0].y
-						)
-					}
-					this.context.stroke();
-					this.context.beginPath();
-					this.context.moveTo(this.curves[ith].ro.points[0].x, this.curves[ith].ro.points[0].y);
-					for (var i = 1; i < this.curves[ith].levers.length; i++) {
-						this.context.bezierCurveTo(
-							this.curves[ith].ro.points[3*i-2].x, this.curves[ith].ro.points[3*i-2].y,
-							this.curves[ith].ro.points[3*i-1].x, this.curves[ith].ro.points[3*i-1].y,
-							this.curves[ith].ro.points[3*i+0].x, this.curves[ith].ro.points[3*i-0].y
-						)
-					}
-					this.context.stroke();
-
-	                this.context.lineWidth = 2;
-	                this.context.beginPath();
-	                this.context.moveTo(this.curves[ith].levers[0].points[2].x, this.curves[ith].levers[0].points[2].y);
-	                for (var i = 0; i < this.curves[ith].levers.length - 1; i++) {
-	                    this.context.bezierCurveTo(
-	                        this.curves[ith].levers[i].points[4].x,   this.curves[ith].levers[i].points[4].y,
-	                        this.curves[ith].levers[i+1].points[0].x, this.curves[ith].levers[i+1].points[0].y,
-	                        this.curves[ith].levers[i+1].points[2].x, this.curves[ith].levers[i+1].points[2].y
+	                ctx.beginPath();
+	                ctx.moveTo(curves[ith].lo.points[0].x, curves[ith].lo.points[0].y);
+	                for (var i = 1; i < curves[ith].levers.length; i++) {
+	                    ctx.bezierCurveTo(
+	                        curves[ith].lo.points[3*i-2].x, curves[ith].lo.points[3*i-2].y,
+	                        curves[ith].lo.points[3*i-1].x, curves[ith].lo.points[3*i-1].y,
+	                        curves[ith].lo.points[3*i+0].x, curves[ith].lo.points[3*i-0].y
 	                    )
 	                }
-	                this.context.stroke();
+	                ctx.stroke();
+	                ctx.beginPath();
+	                ctx.moveTo(curves[ith].ro.points[0].x, curves[ith].ro.points[0].y);
+	                for (var i = 1; i < curves[ith].levers.length; i++) {
+	                    ctx.bezierCurveTo(
+	                        curves[ith].ro.points[3*i-2].x, curves[ith].ro.points[3*i-2].y,
+	                        curves[ith].ro.points[3*i-1].x, curves[ith].ro.points[3*i-1].y,
+	                        curves[ith].ro.points[3*i+0].x, curves[ith].ro.points[3*i-0].y
+	                    )
+	                }
+	                ctx.stroke();
 
-				}
+	                ctx.lineWidth = 2;
+	                ctx.beginPath();
+	                ctx.moveTo(curves[ith].levers[0].points[2].x, curves[ith].levers[0].points[2].y);
+	                for (var i = 0; i < curves[ith].levers.length - 1; i++) {
+	                    ctx.bezierCurveTo(
+	                        curves[ith].levers[i].points[4].x,   curves[ith].levers[i].points[4].y,
+	                        curves[ith].levers[i+1].points[0].x, curves[ith].levers[i+1].points[0].y,
+	                        curves[ith].levers[i+1].points[2].x, curves[ith].levers[i+1].points[2].y
+	                    )
+	                }
+	                ctx.stroke();
 
-			}
+	            }
 
-
-		}
+	        }
+	    }
 	}
 
-	module.exports = Document;
+	module.exports = Draw;
 
 /***/ })
 /******/ ]);

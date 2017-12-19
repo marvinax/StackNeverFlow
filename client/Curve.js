@@ -17,21 +17,17 @@ class Curve {
 	    this.lo = new CurveSideOutline(1);
 	    this.ro = new CurveSideOutline(3);
 
-	    this.bounding = [new Vector(9999, 9999), new Vector(-9999, -9999)];
-
     }
 
     Add(mouseV){
         this.levers.push(new Lever(mouseV));
         this.GetOutlines();
-        this.UpdateBoundingRect();
         return this.levers.length - 1;
     }
 
     Delete(index){
         levers.splice(index, 1);
         this.GetOutlines();
-        this.UpdateBoundingRect();
     }
     
     Insert(curveCast) {
@@ -40,7 +36,6 @@ class Curve {
         console.log(this.levers.length);
 
         this.GetOutlines();
-        this.UpdateBoundingRect();
         
         return Math.floor(curveCast+1);
     }
@@ -48,20 +43,6 @@ class Curve {
     UpdateLever(ithLever, ithPoint, value){
         this.levers[ithLever].SetControlPoint(ithPoint, value);
         this.UpdateOutlines();
-        this.UpdateBoundingRect();
-    }
-
-    UpdateBoundingRect(){
-        this.bounding[0].Set(Infinity, Infinity);
-        this.bounding[1].Set(-Infinity, -Infinity);
-        for(const lever of this.levers) {
-        	for(const point of lever.points) {
-	            if(point.x < this.bounding[0].x) this.bounding[0].x = point.x;
-	            if(point.x > this.bounding[1].x) this.bounding[1].x = point.x;
-	            if(point.y < this.bounding[0].y) this.bounding[0].y = point.y;
-	            if(point.y > this.bounding[1].y) this.bounding[1].y = point.y;
-	        }
-        }
     }
 
     GetOutlines(){
