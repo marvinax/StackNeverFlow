@@ -27,6 +27,7 @@ var Document = require('./Document.js');
 	var docu = new Document(document.getElementById("canvas"));
 
 	function Save(docu, docu_id){
+
 		var xhr = new XMLHttpRequest();
 		xhr.open('PUT', 'save/');
 		xhr.setRequestHeader('Content-Type', 'application/json');
@@ -34,6 +35,7 @@ var Document = require('./Document.js');
 		    if (xhr.status === 200) {
 		        var userInfo = JSON.parse(xhr.responseText);
 		        console.log(userInfo);
+		        LoadName();
 		    }
 		};
 
@@ -43,6 +45,7 @@ var Document = require('./Document.js');
 	}
 
 	function Load(docu_id){
+
 		var xhr = new XMLHttpRequest();
 		xhr.open('GET', 'load/'+docu_id);
 		xhr.onload = function() {
@@ -51,6 +54,40 @@ var Document = require('./Document.js');
 		        var res = JSON.parse(xhr.responseText);
 		    	console.log(res);
 		        docu.LoadCurves(res);
+		    }
+		    else {
+		        alert('Request failed.  Returned status of ' + xhr.status);
+		    }
+		};
+		xhr.send();
+	}
+
+	function LoadName(){
+		var xhr = new XMLHttpRequest();
+		xhr.open('GET', 'load_name/');
+		xhr.onload = function() {
+		    if (xhr.status === 200) {
+		    	console.log(xhr.responseText);
+		        var res = JSON.parse(xhr.responseText);
+		    	console.log(res);
+		    
+		    	var list = document.getElementById("list");
+		    	while (list.firstChild) {
+				    list.removeChild(list.firstChild);
+				}
+		    	for (let r of res.res){
+		    		let a = document.createElement('a');
+		    		a.innerHTML = r.split("_").pop();
+		    		a.class = "char-link";
+		    		a.onclick = function(){
+		    			Load(r);
+		    			document.getElementById("prefix").value = r.split("_")[0];
+		    			document.getElementById("name").value = r.split("_")[1];
+		    		}
+		    		list.appendChild(a);
+		    		list.appendChild(document.createElement('br'));
+		    	}
+
 		    }
 		    else {
 		        alert('Request failed.  Returned status of ' + xhr.status);
@@ -182,7 +219,7 @@ var Document = require('./Document.js');
 				// console.log(tempCurveTransArray);
 				docu.curves[currCurveIndex].TransFromArray(tempCurveTransArray, curr.Sub(orig));
 			} else if (status == Status.MovingLever){
-				console.log(tempLeverTransArray);
+				// console.log(tempLeverTransArray);
 				docu.curves[currCurveIndex].levers[currLeverIndex].TransFromArray(tempLeverTransArray, curr.Sub(orig));
                 docu.curves[currCurveIndex].UpdateBoundingRect();
                 docu.curves[currCurveIndex].UpdateOutlines();
@@ -216,6 +253,8 @@ var Document = require('./Document.js');
 	window.onload = function() {
 		var cvs = document.getElementById("canvas");
 		
+		LoadName();
+
 		document.onkeydown = function(evt) {
 
 			if(evt.keyCode == 27 && status == Status.Creating){
@@ -224,14 +263,14 @@ var Document = require('./Document.js');
 				currCurveIndex = null;
 			}
 
-			if(evt.key == "c" && status == Status.Editing){
+			if(evt.ctrlKey && evt.key == "c" && status == Status.Editing){
 				document.getElementById("status").innerHTML = "Drawing new curve";
 				status = Status.Creating;
                 currCurveIndex = null;
 				console.log(status);
 			}
 
-            if(evt.keyCode == 8){
+            if(evt.ctrlKey && evt.keyCode == 8){
                 if(currCurveIndex != null){
                     var curve = docu.curves[currCurveIndex];
                     if(currLeverIndex != null){
@@ -248,6 +287,10 @@ var Document = require('./Document.js');
                 docu.DrawCurves(currCurveIndex);
             }
 
+            if(evt.ctrlKey && evt.key=="d"){
+                docu.DrawCurvesFill();
+            }
+
 			if(evt.keyCode == 16){
 				// status = Status.MovingLever;
 				isTranslatingLever = true;
@@ -257,12 +300,14 @@ var Document = require('./Document.js');
 				isEditingLever = true;
 			}
 
-            if(evt.key=="d"){
-                docu.DrawCurvesFill();
-            }
 		};
 
 		document.onkeyup = function(evt){
+
+            if(evt.ctrlKey && evt.key=="d"){
+                docu.DrawCurves(currCurveIndex);
+            }
+
 			if(evt.keyCode == 16){
 				isTranslatingLever = false;
 			}
@@ -271,10 +316,6 @@ var Document = require('./Document.js');
 				console.log('leave editing lever');
 				isEditingLever = false;
 			}
-
-            if(evt.key=="d"){
-                docu.DrawCurves(currCurveIndex);
-            }
 		}
 
 		cvs.onmousedown = cvs.onmousemove = cvs.onmouseup = Drag;
@@ -284,11 +325,14 @@ var Document = require('./Document.js');
 			nameInput  = document.getElementById("name");
 
 		saveButton.onclick = function(){
-			Save(docu, nameInput.value);
+			var prefix = document.getElementById("prefix").value;
+			console.log(prefix);
+			Save(docu, prefix + "_" + nameInput.value);
 		}
 
 		loadButton.onclick = function(){
-			Load(nameInput.value);
+			var prefix = document.getElementById("prefix").value;
+			Load(prefix + "_" + nameInput.value);
 		}
 	}	
 })();

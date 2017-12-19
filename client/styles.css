@@ -9,15 +9,12 @@ body
 }
 
 h1
-{
+{	
 	font-family: TheMixMono;
 	font-size: 2.6em;
 	font-weight: black;
-	letter-spacing: -0.09em;
+	letter-spacing: -0.12em;
 	margin: 0 0 0.3em 0;
-}
-h1::first-letter{
-	letter-spacing:-0.15em;
 }
 
 h2
@@ -29,17 +26,32 @@ h2
 
 #img{
 	width:3em;
-	float: left;
 }
 
 canvas
 {
+	clear:left;
+	float:left;
 	display: inline;
-	float: left;
 	width:  600px;
 	height: 600px;
 	margin: 0 10px 10px 0;
 	background-color: #fff;
+}
+
+#button_group{
+}
+
+#list{
+	margin: 10px;
+}
+
+#save_group{
+	clear:left;
+}
+
+.char-link{
+	margin : 10px;
 }
 
 #code

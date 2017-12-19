@@ -73,6 +73,7 @@
 		var docu = new Document(document.getElementById("canvas"));
 
 		function Save(docu, docu_id){
+
 			var xhr = new XMLHttpRequest();
 			xhr.open('PUT', 'save/');
 			xhr.setRequestHeader('Content-Type', 'application/json');
@@ -80,6 +81,7 @@
 			    if (xhr.status === 200) {
 			        var userInfo = JSON.parse(xhr.responseText);
 			        console.log(userInfo);
+			        LoadName();
 			    }
 			};
 
@@ -89,6 +91,7 @@
 		}
 
 		function Load(docu_id){
+
 			var xhr = new XMLHttpRequest();
 			xhr.open('GET', 'load/'+docu_id);
 			xhr.onload = function() {
@@ -97,6 +100,40 @@
 			        var res = JSON.parse(xhr.responseText);
 			    	console.log(res);
 			        docu.LoadCurves(res);
+			    }
+			    else {
+			        alert('Request failed.  Returned status of ' + xhr.status);
+			    }
+			};
+			xhr.send();
+		}
+
+		function LoadName(){
+			var xhr = new XMLHttpRequest();
+			xhr.open('GET', 'load_name/');
+			xhr.onload = function() {
+			    if (xhr.status === 200) {
+			    	console.log(xhr.responseText);
+			        var res = JSON.parse(xhr.responseText);
+			    	console.log(res);
+			    
+			    	var list = document.getElementById("list");
+			    	while (list.firstChild) {
+					    list.removeChild(list.firstChild);
+					}
+			    	for (let r of res.res){
+			    		let a = document.createElement('a');
+			    		a.innerHTML = r.split("_").pop();
+			    		a.class = "char-link";
+			    		a.onclick = function(){
+			    			Load(r);
+			    			document.getElementById("prefix").value = r.split("_")[0];
+			    			document.getElementById("name").value = r.split("_")[1];
+			    		}
+			    		list.appendChild(a);
+			    		list.appendChild(document.createElement('br'));
+			    	}
+
 			    }
 			    else {
 			        alert('Request failed.  Returned status of ' + xhr.status);
@@ -228,7 +265,7 @@
 					// console.log(tempCurveTransArray);
 					docu.curves[currCurveIndex].TransFromArray(tempCurveTransArray, curr.Sub(orig));
 				} else if (status == Status.MovingLever){
-					console.log(tempLeverTransArray);
+					// console.log(tempLeverTransArray);
 					docu.curves[currCurveIndex].levers[currLeverIndex].TransFromArray(tempLeverTransArray, curr.Sub(orig));
 	                docu.curves[currCurveIndex].UpdateBoundingRect();
 	                docu.curves[currCurveIndex].UpdateOutlines();
@@ -262,6 +299,8 @@
 		window.onload = function() {
 			var cvs = document.getElementById("canvas");
 			
+			LoadName();
+
 			document.onkeydown = function(evt) {
 
 				if(evt.keyCode == 27 && status == Status.Creating){
@@ -270,14 +309,14 @@
 					currCurveIndex = null;
 				}
 
-				if(evt.key == "c" && status == Status.Editing){
+				if(evt.ctrlKey && evt.key == "c" && status == Status.Editing){
 					document.getElementById("status").innerHTML = "Drawing new curve";
 					status = Status.Creating;
 	                currCurveIndex = null;
 					console.log(status);
 				}
 
-	            if(evt.keyCode == 8){
+	            if(evt.ctrlKey && evt.keyCode == 8){
 	                if(currCurveIndex != null){
 	                    var curve = docu.curves[currCurveIndex];
 	                    if(currLeverIndex != null){
@@ -294,6 +333,10 @@
 	                docu.DrawCurves(currCurveIndex);
 	            }
 
+	            if(evt.ctrlKey && evt.key=="d"){
+	                docu.DrawCurvesFill();
+	            }
+
 				if(evt.keyCode == 16){
 					// status = Status.MovingLever;
 					isTranslatingLever = true;
@@ -303,12 +346,14 @@
 					isEditingLever = true;
 				}
 
-	            if(evt.key=="d"){
-	                docu.DrawCurvesFill();
-	            }
 			};
 
 			document.onkeyup = function(evt){
+
+	            if(evt.ctrlKey && evt.key=="d"){
+	                docu.DrawCurves(currCurveIndex);
+	            }
+
 				if(evt.keyCode == 16){
 					isTranslatingLever = false;
 				}
@@ -317,10 +362,6 @@
 					console.log('leave editing lever');
 					isEditingLever = false;
 				}
-
-	            if(evt.key=="d"){
-	                docu.DrawCurves(currCurveIndex);
-	            }
 			}
 
 			cvs.onmousedown = cvs.onmousemove = cvs.onmouseup = Drag;
@@ -330,11 +371,14 @@
 				nameInput  = document.getElementById("name");
 
 			saveButton.onclick = function(){
-				Save(docu, nameInput.value);
+				var prefix = document.getElementById("prefix").value;
+				console.log(prefix);
+				Save(docu, prefix + "_" + nameInput.value);
 			}
 
 			loadButton.onclick = function(){
-				Load(nameInput.value);
+				var prefix = document.getElementById("prefix").value;
+				Load(prefix + "_" + nameInput.value);
 			}
 		}	
 	})();
@@ -375,7 +419,7 @@
 
 
 	// module
-	exports.push([module.id, "/* CSS */\nbody\n{\n\tfont-family: helvetica, sans-serif;\n\tfont-size: 85%;\n\tmargin: 10px 15px;\n\tcolor: #333;\n\tbackground-color: #ddd;\n}\n\nh1\n{\n\tfont-family: TheMixMono;\n\tfont-size: 2.6em;\n\tfont-weight: black;\n\tletter-spacing: -0.09em;\n\tmargin: 0 0 0.3em 0;\n}\nh1::first-letter{\n\tletter-spacing:-0.15em;\n}\n\nh2\n{\n\tfont-size: 1.4em;\n\tfont-weight: normal;\n\tmargin: 1.5em 0 0 0;\n}\n\n#img{\n\twidth:3em;\n\tfloat: left;\n}\n\ncanvas\n{\n\tdisplay: inline;\n\tfloat: left;\n\twidth:  600px;\n\theight: 600px;\n\tmargin: 0 10px 10px 0;\n\tbackground-color: #fff;\n}\n\n#code\n{\n\tdisplay: block;\n\twidth: 500px;\n\theight: 4em;\n\tfont-family: \"TheMixMono\", monospace;\n\tfont-size: 1em;\n\tpadding: 2px 4px;\n\tmargin: 0;\n\tcolor: #555;\n\tbackground-color: #eee;\n\tborder: 1px solid #999;\n\toverflow: auto;\n}", ""]);
+	exports.push([module.id, "/* CSS */\nbody\n{\n\tfont-family: helvetica, sans-serif;\n\tfont-size: 85%;\n\tmargin: 10px 15px;\n\tcolor: #333;\n\tbackground-color: #ddd;\n}\n\nh1\n{\t\n\tfont-family: TheMixMono;\n\tfont-size: 2.6em;\n\tfont-weight: black;\n\tletter-spacing: -0.12em;\n\tmargin: 0 0 0.3em 0;\n}\n\nh2\n{\n\tfont-size: 1.4em;\n\tfont-weight: normal;\n\tmargin: 1.5em 0 0 0;\n}\n\n#img{\n\twidth:3em;\n}\n\ncanvas\n{\n\tclear:left;\n\tfloat:left;\n\tdisplay: inline;\n\twidth:  600px;\n\theight: 600px;\n\tmargin: 0 10px 10px 0;\n\tbackground-color: #fff;\n}\n\n#button_group{\n}\n\n#list{\n\tmargin: 10px;\n}\n\n#save_group{\n\tclear:left;\n}\n\n.char-link{\n\tmargin : 10px;\n}\n\n#code\n{\n\tdisplay: block;\n\twidth: 500px;\n\theight: 4em;\n\tfont-family: \"TheMixMono\", monospace;\n\tfont-size: 1em;\n\tpadding: 2px 4px;\n\tmargin: 0;\n\tcolor: #555;\n\tbackground-color: #eee;\n\tborder: 1px solid #999;\n\toverflow: auto;\n}", ""]);
 
 	// exports
 
