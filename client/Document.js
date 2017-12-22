@@ -18,10 +18,12 @@ class Document{
 	constructor(canvas){
 		this.canvas = canvas;
 		this.curves = [];
+
 		this.datastack = [];
+		this.params = [];
+		this.exprs = [];
 
 		this.status = "Editing Existing Curves.";
-		thix.expr = "";
 	}
 
     pop(){

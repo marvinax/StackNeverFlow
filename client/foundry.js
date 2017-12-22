@@ -13,10 +13,82 @@ var LoadData = require('./Load.js');
 
 var Draw = require('./Draw.js');
 
+
+function Save(docu, docu_id){
+
+	var xhr = new XMLHttpRequest();
+	xhr.open('PUT', 'save/');
+	xhr.setRequestHeader('Content-Type', 'application/json');
+	xhr.onload = function() {
+	    if (xhr.status === 200) {
+	        var userInfo = JSON.parse(xhr.responseText);
+	        console.log(userInfo);
+	        LoadName();
+	    }
+	};
+
+	console.log(docu.curves);
+
+	xhr.send(JSON.stringify({id: docu_id, data:docu.curves}));
+}
+
+function Load(context, docu, docu_id){
+
+	var xhr = new XMLHttpRequest();
+	xhr.open('GET', 'load/'+docu_id);
+	xhr.onload = function() {
+	    if (xhr.status === 200) {
+	    	console.log(xhr.responseText);
+	        var res = JSON.parse(xhr.responseText);
+	    	console.log(res);
+	        docu.curves = LoadData.Curves(res);
+	        Draw.Curves(context, docu.curves, null);
+	    }
+	    else {
+	        alert('Request failed.  Returned status of ' + xhr.status);
+	    }
+	};
+	xhr.send();
+}
+
+function LoadName(context, docu){
+	var xhr = new XMLHttpRequest();
+	xhr.open('GET', 'load_name/');
+	xhr.onload = function() {
+	    if (xhr.status === 200) {
+	    	console.log(xhr.responseText);
+	        var res = JSON.parse(xhr.responseText);
+	    	console.log(res);
+	    
+	    	var list = document.getElementById("list");
+	    	while (list.firstChild) {
+			    list.removeChild(list.firstChild);
+			}
+	    	for (let r of res.res){
+	    		let a = document.createElement('a');
+	    		a.innerHTML = r.split("_").pop();
+	    		a.class = "char-link";
+	    		a.onclick = function(){
+	    			Load(context, docu, r);
+	    			document.getElementById("prefix").value = r.split("_")[0];
+	    			document.getElementById("name").value = r.split("_")[1];
+	    		}
+	    		list.appendChild(a);
+	    		list.appendChild(document.createElement('br'));
+	    	}
+
+	    }
+	    else {
+	        alert('Request failed.  Returned status of ' + xhr.status);
+	    }
+	};
+	xhr.send();
+}
+
+
 (function(){
 
 	var context = canvas.getContext("2d")
-	console.log(context);
 
 	var Status = Object.freeze({
 		Editing : 0,
@@ -32,76 +104,6 @@ var Draw = require('./Draw.js');
 
 	var docu = new Document(document.getElementById("canvas"));
 
-	function Save(docu, docu_id){
-
-		var xhr = new XMLHttpRequest();
-		xhr.open('PUT', 'save/');
-		xhr.setRequestHeader('Content-Type', 'application/json');
-		xhr.onload = function() {
-		    if (xhr.status === 200) {
-		        var userInfo = JSON.parse(xhr.responseText);
-		        console.log(userInfo);
-		        LoadName();
-		    }
-		};
-
-		console.log(docu.curves);
-
-		xhr.send(JSON.stringify({id: docu_id, data:docu.curves}));
-	}
-
-	function Load(docu_id){
-
-		var xhr = new XMLHttpRequest();
-		xhr.open('GET', 'load/'+docu_id);
-		xhr.onload = function() {
-		    if (xhr.status === 200) {
-		    	console.log(xhr.responseText);
-		        var res = JSON.parse(xhr.responseText);
-		    	console.log(res);
-		        docu.curves = LoadData.Curves(res);
-		        Draw.Curves(context, docu.curves, null);
-		    }
-		    else {
-		        alert('Request failed.  Returned status of ' + xhr.status);
-		    }
-		};
-		xhr.send();
-	}
-
-	function LoadName(){
-		var xhr = new XMLHttpRequest();
-		xhr.open('GET', 'load_name/');
-		xhr.onload = function() {
-		    if (xhr.status === 200) {
-		    	console.log(xhr.responseText);
-		        var res = JSON.parse(xhr.responseText);
-		    	console.log(res);
-		    
-		    	var list = document.getElementById("list");
-		    	while (list.firstChild) {
-				    list.removeChild(list.firstChild);
-				}
-		    	for (let r of res.res){
-		    		let a = document.createElement('a');
-		    		a.innerHTML = r.split("_").pop();
-		    		a.class = "char-link";
-		    		a.onclick = function(){
-		    			Load(r);
-		    			document.getElementById("prefix").value = r.split("_")[0];
-		    			document.getElementById("name").value = r.split("_")[1];
-		    		}
-		    		list.appendChild(a);
-		    		list.appendChild(document.createElement('br'));
-		    	}
-
-		    }
-		    else {
-		        alert('Request failed.  Returned status of ' + xhr.status);
-		    }
-		};
-		xhr.send();
-	}
 
 	function MouseV(event) {
 		var rect = event.target.getBoundingClientRect();
@@ -128,7 +130,6 @@ var Draw = require('./Draw.js');
 	function Drag(event) {
 		
 		event.stopPropagation();
-
 
 		if (!down && (event.type == "mousedown")) {
 			down   = true;
@@ -258,7 +259,7 @@ var Draw = require('./Draw.js');
 	window.onload = function() {
 		var cvs = document.getElementById("canvas");
 		
-		LoadName();
+		LoadName(context, docu);
 
 		document.onkeydown = function(evt) {
 
@@ -297,7 +298,7 @@ var Draw = require('./Draw.js');
             }
 
 			if(evt.keyCode == 16){
-				// status = Status.MovingLever;
+				evt.preventFromDefault();
 				isTranslatingLever = true;
 			}
 
@@ -337,7 +338,7 @@ var Draw = require('./Draw.js');
 
 		loadButton.onclick = function(){
 			var prefix = document.getElementById("prefix").value;
-			Load(prefix + "_" + nameInput.value);
+			Load(context, docu, prefix + "_" + nameInput.value);
 		}
 	}	
 })();
