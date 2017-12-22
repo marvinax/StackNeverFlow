@@ -13,9 +13,134 @@ var LoadData = require('./Load.js');
 
 var Draw = require('./Draw.js');
 
+function ClearDOMChildren(elem){
+	while (elem.firstChild) {
+	    elem.removeChild(elem.firstChild);
+	}
+}
+
+function AddParamUIOfExistingParam(param){
+	var paramUI = document.getElementById("param-group");
+
+	var paramElem = document.createElement("div");
+	paramElem.id = "param-"+param.name;
+
+	var name = document.createElement("block");
+	name.className = "param-name-label";
+	name.innerHTML = param.name;
+
+	var valueInput = document.createElement("input");
+	valueInput.value = param.value;
+	valueInput.setAttribute("type", "number");
+
+	var valueSlider = document.createElement("input");
+	valueSlider.setAttribute("type", "range");
+	valueSlider.value = param.value;
+	valueSlider.min = param.min;
+	valueSlider.max = param.max;
+	valueSlider.step = 0.01;
+
+	valueInput.onchange = valueInput.oninput = function(){
+		valueSlider.value = valueInput.value;
+	}
+
+	valueSlider.onchange = valueSlider.oninput = function(){
+		valueInput.value = valueSlider.value;
+	}
+
+	// var minInput = document.createElement("input");
+	// minInput.value = param.min;
+	// minInput.setAttribute("type", "number");
+
+	// var maxInput = document.createElement("input");
+	// maxInput.value = param.max;
+	// maxInput.setAttribute("type", "number");
+
+
+	paramElem.appendChild(name);
+ 	paramElem.appendChild(valueInput);
+ 	paramElem.appendChild(valueSlider);
+
+	paramUI.appendChild(paramElem);
+}
+
+function AddParamUI(docu){
+	var paramUI = document.getElementById("param-group");
+
+	var paramElem = document.createElement("div");
+
+	var nameInput = document.createElement("input");
+	nameInput.id = "param-name";
+
+	var defaultValueInput = document.createElement("input");
+	defaultValueInput.id = "param-default-value";
+	defaultValueInput.setAttribute("type", "number");
+
+	var minInput = document.createElement("input");
+	minInput.id = "param-min-value";
+	minInput.setAttribute("type", "number");
+
+	var maxInput = document.createElement("input");
+	maxInput.id = "param-max-value";
+	maxInput.setAttribute("type", "number");
+
+	var saveButton = document.createElement("button");
+	saveButton.id = "param-save-button";
+	saveButton.innerHTML = "save param";
+	
+	saveButton.onclick = function(){
+		var nameInput = document.getElementById("param-name"),
+			defaultValueInput = document.getElementById("param-default-value"),
+			minInput = document.getElementById("param-min-value"),
+			maxInput = document.getElementById("param-max-value");
+
+		var param = {
+			name :nameInput.value,
+			value : defaultValueInput.value,
+			min : minInput.value,
+			max : maxInput.value
+		};
+		docu.params.push(param);
+
+		var paramUI = document.getElementById("param-group");
+
+		ClearDOMChildren(paramUI);
+		for(let param of docu.params) {
+			console.log(param);
+			AddParamUIOfExistingParam(param);
+		}
+
+		AddParamUI(docu);
+	}
+
+	paramElem.appendChild(nameInput);
+	paramElem.appendChild(defaultValueInput);
+	paramElem.appendChild(minInput);
+	paramElem.appendChild(maxInput);
+	paramElem.appendChild(saveButton);
+
+	paramUI.appendChild(paramElem);
+}
+
+function SetUI(param, id){
+	var paramElem = document.getElementById(id);
+	var children = paramElem.childNodes;
+	children[0].value = param.name;
+	children[1].value = param.value;
+	children[2].value = param.min;
+	children[3].value = param.max;
+}
+
+function GetParam(param, id){
+	var paramElem = document.getElementById(id);
+	var children = paramElem.childNodes;
+	children[0].value = param.name;
+	children[1].value = param.value;
+	children[2].value = param.min;
+	children[3].value = param.max;
+}
 
 function Save(context, docu, docu_id){
-
 	var xhr = new XMLHttpRequest();
 	xhr.open('PUT', 'save/');
 	xhr.setRequestHeader('Content-Type', 'application/json');
@@ -26,11 +151,9 @@ function Save(context, docu, docu_id){
 	        LoadName(context, docu);
 	    }
 	};
-
-	console.log(docu.curves);
-
-	xhr.send(JSON.stringify({id: docu_id, data:docu.curves}));
+	xhr.send(JSON.stringify({id: docu_id, data:docu}));
 }
+
 
 function Load(context, docu, docu_id){
 
@@ -38,11 +161,19 @@ function Load(context, docu, docu_id){
 	xhr.open('GET', 'load/'+docu_id);
 	xhr.onload = function() {
 	    if (xhr.status === 200) {
-	    	console.log(xhr.responseText);
 	        var res = JSON.parse(xhr.responseText);
 	    	console.log(res);
-	        docu.curves = LoadData.Curves(res);
+	        docu.curves = LoadData.Curves(res.curves);
+	        docu.params = res.params;
 	        Draw.Curves(context, docu.curves, null);
+
+	        ClearDOMChildren(document.getElementById("param-group"));
+    		for(let param of docu.params) {
+				console.log(param);
+				AddParamUIOfExistingParam(param);
+			}
+	        AddParamUI(docu);
+
 	    }
 	    else {
 	        alert('Request failed.  Returned status of ' + xhr.status);
@@ -60,10 +191,8 @@ function LoadName(context, docu){
 	        var res = JSON.parse(xhr.responseText);
 	    	console.log(res);
 	    
-	    	var list = document.getElementById("list");
-	    	while (list.firstChild) {
-			    list.removeChild(list.firstChild);
-			}
+			ClearDOMChildren(document.getElementById("list"));
+
 	    	for (let r of res.res){
 	    		let a = document.createElement('a');
 	    		a.innerHTML = r.split("_").pop();
@@ -296,7 +425,6 @@ function LoadName(context, docu){
             }
 
 			if(evt.keyCode == 16){
-				evt.preventFromDefault();
 				isTranslatingLever = true;
 			}
 

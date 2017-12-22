@@ -59,9 +59,134 @@
 
 	var Draw = __webpack_require__(13);
 
+	function ClearDOMChildren(elem){
+		while (elem.firstChild) {
+		    elem.removeChild(elem.firstChild);
+		}
+	}
+
+	function AddParamUIOfExistingParam(param){
+		var paramUI = document.getElementById("param-group");
+
+		var paramElem = document.createElement("div");
+		paramElem.id = "param-"+param.name;
+
+		var name = document.createElement("block");
+		name.className = "param-name-label";
+		name.innerHTML = param.name;
+
+		var valueInput = document.createElement("input");
+		valueInput.value = param.value;
+		valueInput.setAttribute("type", "number");
+
+		var valueSlider = document.createElement("input");
+		valueSlider.setAttribute("type", "range");
+		valueSlider.value = param.value;
+		valueSlider.min = param.min;
+		valueSlider.max = param.max;
+		valueSlider.step = 0.01;
+
+		valueInput.onchange = valueInput.oninput = function(){
+			valueSlider.value = valueInput.value;
+		}
+
+		valueSlider.onchange = valueSlider.oninput = function(){
+			valueInput.value = valueSlider.value;
+		}
+
+		// var minInput = document.createElement("input");
+		// minInput.value = param.min;
+		// minInput.setAttribute("type", "number");
+
+		// var maxInput = document.createElement("input");
+		// maxInput.value = param.max;
+		// maxInput.setAttribute("type", "number");
+
+
+		paramElem.appendChild(name);
+	 	paramElem.appendChild(valueInput);
+	 	paramElem.appendChild(valueSlider);
+
+		paramUI.appendChild(paramElem);
+	}
+
+	function AddParamUI(docu){
+		var paramUI = document.getElementById("param-group");
+
+		var paramElem = document.createElement("div");
+
+		var nameInput = document.createElement("input");
+		nameInput.id = "param-name";
+
+		var defaultValueInput = document.createElement("input");
+		defaultValueInput.id = "param-default-value";
+		defaultValueInput.setAttribute("type", "number");
+
+		var minInput = document.createElement("input");
+		minInput.id = "param-min-value";
+		minInput.setAttribute("type", "number");
+
+		var maxInput = document.createElement("input");
+		maxInput.id = "param-max-value";
+		maxInput.setAttribute("type", "number");
+
+		var saveButton = document.createElement("button");
+		saveButton.id = "param-save-button";
+		saveButton.innerHTML = "save param";
+		
+		saveButton.onclick = function(){
+			var nameInput = document.getElementById("param-name"),
+				defaultValueInput = document.getElementById("param-default-value"),
+				minInput = document.getElementById("param-min-value"),
+				maxInput = document.getElementById("param-max-value");
+
+			var param = {
+				name :nameInput.value,
+				value : defaultValueInput.value,
+				min : minInput.value,
+				max : maxInput.value
+			};
+			docu.params.push(param);
+
+			var paramUI = document.getElementById("param-group");
+
+			ClearDOMChildren(paramUI);
+			for(let param of docu.params) {
+				console.log(param);
+				AddParamUIOfExistingParam(param);
+			}
+
+			AddParamUI(docu);
+		}
+
+		paramElem.appendChild(nameInput);
+		paramElem.appendChild(defaultValueInput);
+		paramElem.appendChild(minInput);
+		paramElem.appendChild(maxInput);
+		paramElem.appendChild(saveButton);
+
+		paramUI.appendChild(paramElem);
+	}
+
+	function SetUI(param, id){
+		var paramElem = document.getElementById(id);
+		var children = paramElem.childNodes;
+		children[0].value = param.name;
+		children[1].value = param.value;
+		children[2].value = param.min;
+		children[3].value = param.max;
+	}
+
+	function GetParam(param, id){
+		var paramElem = document.getElementById(id);
+		var children = paramElem.childNodes;
+		children[0].value = param.name;
+		children[1].value = param.value;
+		children[2].value = param.min;
+		children[3].value = param.max;
+	}
 
 	function Save(context, docu, docu_id){
-
 		var xhr = new XMLHttpRequest();
 		xhr.open('PUT', 'save/');
 		xhr.setRequestHeader('Content-Type', 'application/json');
@@ -72,11 +197,9 @@
 		        LoadName(context, docu);
 		    }
 		};
-
-		console.log(docu.curves);
-
-		xhr.send(JSON.stringify({id: docu_id, data:docu.curves}));
+		xhr.send(JSON.stringify({id: docu_id, data:docu}));
 	}
+
 
 	function Load(context, docu, docu_id){
 
@@ -84,11 +207,19 @@
 		xhr.open('GET', 'load/'+docu_id);
 		xhr.onload = function() {
 		    if (xhr.status === 200) {
-		    	console.log(xhr.responseText);
 		        var res = JSON.parse(xhr.responseText);
 		    	console.log(res);
-		        docu.curves = LoadData.Curves(res);
+		        docu.curves = LoadData.Curves(res.curves);
+		        docu.params = res.params;
 		        Draw.Curves(context, docu.curves, null);
+
+		        ClearDOMChildren(document.getElementById("param-group"));
+	    		for(let param of docu.params) {
+					console.log(param);
+					AddParamUIOfExistingParam(param);
+				}
+		        AddParamUI(docu);
+
 		    }
 		    else {
 		        alert('Request failed.  Returned status of ' + xhr.status);
@@ -106,10 +237,8 @@
 		        var res = JSON.parse(xhr.responseText);
 		    	console.log(res);
 		    
-		    	var list = document.getElementById("list");
-		    	while (list.firstChild) {
-				    list.removeChild(list.firstChild);
-				}
+				ClearDOMChildren(document.getElementById("list"));
+
 		    	for (let r of res.res){
 		    		let a = document.createElement('a');
 		    		a.innerHTML = r.split("_").pop();
@@ -342,7 +471,6 @@
 	            }
 
 				if(evt.keyCode == 16){
-					evt.preventFromDefault();
 					isTranslatingLever = true;
 				}
 
@@ -423,7 +551,7 @@
 
 
 	// module
-	exports.push([module.id, "/* CSS */\nbody\n{\n\tfont-family: helvetica, sans-serif;\n\tfont-size: 85%;\n\tmargin: 10px 15px;\n\tcolor: #333;\n\tbackground-color: #ddd;\n}\n\nh1\n{\t\n\tfont-family: TheMixMono;\n\tfont-size: 2.6em;\n\tfont-weight: black;\n\tletter-spacing: -0.12em;\n\tmargin: 0 0 0.3em 0;\n}\n\nh2\n{\n\tfont-size: 1.4em;\n\tfont-weight: normal;\n\tmargin: 1.5em 0 0 0;\n}\n\n#img{\n\twidth:3em;\n}\n\ncanvas\n{\n\tclear:left;\n\tfloat:left;\n\tdisplay: inline;\n\twidth:  600px;\n\theight: 600px;\n\tmargin: 0 10px 10px 0;\n\tbackground-color: #fff;\n}\n\n#button_group{\n}\n\n#list{\n\tmargin: 10px;\n}\n\n#save_group{\n\tclear:left;\n}\n\n.char-link{\n\tmargin : 10px;\n}\n\n#code\n{\n\tdisplay: block;\n\twidth: 500px;\n\theight: 4em;\n\tfont-family: \"TheMixMono\", monospace;\n\tfont-size: 1em;\n\tpadding: 2px 4px;\n\tmargin: 0;\n\tcolor: #555;\n\tbackground-color: #eee;\n\tborder: 1px solid #999;\n\toverflow: auto;\n}", ""]);
+	exports.push([module.id, "/* CSS */\nbody\n{\n\tfont-family: helvetica, sans-serif;\n\tfont-size: 85%;\n\tmargin: 10px 15px;\n\tcolor: #333;\n\tbackground-color: #ddd;\n}\n\nh1\n{\t\n\tfont-family: TheMixMono;\n\tfont-size: 2.6em;\n\tfont-weight: black;\n\tletter-spacing: -0.12em;\n\tmargin: 0 0 0.3em 0;\n}\n\nh2\n{\n\tfont-size: 1.4em;\n\tfont-weight: normal;\n\tmargin: 1.5em 0 0 0;\n}\n\n#img{\n\twidth:3em;\n}\n\ncanvas\n{\n\tclear:left;\n\tfloat:left;\n\tdisplay: inline;\n\twidth:  600px;\n\theight: 600px;\n\tmargin: 0 10px 10px 0;\n\tbackground-color: #fff;\n}\n\n#button_group{\n}\n\n#list{\n\tmargin: 10px;\n}\n\n#save_group{\n\tclear:left;\n}\n\n.char-link{\n\tmargin : 10px;\n}\n\n#code\n{\n\tdisplay: block;\n\twidth: 500px;\n\theight: 4em;\n\tfont-family: \"TheMixMono\", monospace;\n\tfont-size: 1em;\n\tpadding: 2px 4px;\n\tmargin: 0;\n\tcolor: #555;\n\tbackground-color: #eee;\n\tborder: 1px solid #999;\n\toverflow: auto;\n}\n\n#param-group{\n\tmargin : 10px;\n}\n\n#param-name{\n\tmargin-top: 3px;\n\twidth:74px;\n}\n\n.param-name-label{\n\t/*margin-right: 50px;*/\n\t/*float:left;*/\n\t/*margin-top: 50px;*/\n\tdisplay: inline-block;\n\twidth:80px;\n}", ""]);
 
 	// exports
 

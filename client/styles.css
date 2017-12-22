@@ -68,3 +68,20 @@ canvas
 	border: 1px solid #999;
 	overflow: auto;
 }
+
+#param-group{
+	margin : 10px;
+}
+
+#param-name{
+	margin-top: 3px;
+	width:74px;
+}
+
+.param-name-label{
+	/*margin-right: 50px;*/
+	/*float:left;*/
+	/*margin-top: 50px;*/
+	display: inline-block;
+	width:80px;
+}
