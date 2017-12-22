@@ -14,7 +14,7 @@ var LoadData = require('./Load.js');
 var Draw = require('./Draw.js');
 
 
-function Save(docu, docu_id){
+function Save(context, docu, docu_id){
 
 	var xhr = new XMLHttpRequest();
 	xhr.open('PUT', 'save/');
@@ -23,7 +23,7 @@ function Save(docu, docu_id){
 	    if (xhr.status === 200) {
 	        var userInfo = JSON.parse(xhr.responseText);
 	        console.log(userInfo);
-	        LoadName();
+	        LoadName(context, docu);
 	    }
 	};
 
@@ -88,7 +88,9 @@ function LoadName(context, docu){
 
 (function(){
 
+	var canvas = document.getElementById("canvas");
 	var context = canvas.getContext("2d")
+	var docu = new Document(canvas);
 
 	var Status = Object.freeze({
 		Editing : 0,
@@ -101,9 +103,6 @@ function LoadName(context, docu){
 	var status = Status.Editing,
 		isTranslatingLever = false,
 		isEditingLever = false;
-
-	var docu = new Document(document.getElementById("canvas"));
-
 
 	function MouseV(event) {
 		var rect = event.target.getBoundingClientRect();
@@ -257,7 +256,6 @@ function LoadName(context, docu){
 	}
 
 	window.onload = function() {
-		var cvs = document.getElementById("canvas");
 		
 		LoadName(context, docu);
 
@@ -324,7 +322,7 @@ function LoadName(context, docu){
 			}
 		}
 
-		cvs.onmousedown = cvs.onmousemove = cvs.onmouseup = Drag;
+		canvas.onmousedown = canvas.onmousemove = canvas.onmouseup = Drag;
 
 		var saveButton = document.getElementById("save"),
 			loadButton = document.getElementById("load"),
@@ -333,7 +331,7 @@ function LoadName(context, docu){
 		saveButton.onclick = function(){
 			var prefix = document.getElementById("prefix").value;
 			console.log(prefix);
-			Save(docu, prefix + "_" + nameInput.value);
+			Save(context, docu, prefix + "_" + nameInput.value);
 		}
 
 		loadButton.onclick = function(){
