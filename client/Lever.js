@@ -2,15 +2,19 @@ var Vector = require("./Vector.js");
 
 var LeverMode = Object.freeze({
     BROKEN		: 0,
-    LINEAR 		: 1,
-    PROPER 		: 2,
+    LINEAR 		: 2,
+    PROPER 		: 3,
     SYMMETRIC	: 4
 });
 
+var StrokeMode = Object.freeze({
+    FREE : 0,
+    PERP : 1
+})
+
 var SelectMode = Object.freeze({
 	NONE 		 : 0,
-	CURVE_SELECT : 1,
-	LEVER_SELECT : 2
+	LEVER_SELECT : 1
 });
 
 var LeverPoint = Object.freeze({
@@ -49,6 +53,7 @@ class Lever {
 
 		this.leverMode = LeverMode.SYMMETRIC;
 		this.selectMode = SelectMode.NONE;
+        this.strokeMode = StrokeMode.FREE;
 	}
 
     OppoOf(ith){
@@ -83,18 +88,18 @@ class Lever {
             /// recalculate to make proportional lever, the distance
             /// is calculated from the new distance between origin
             /// and currently selected control point.
-	        case PROPER:
+	        case LeverMode.PROPER:
 	            this.SetOppo(ith, oppoNorm, ratioOppo * this.points[2].Dist(newPoint));
 
             /// recalculate to make three points aligned on same
             /// line. use new direction and original distance of
             /// opposite control point.
-	        case LINEAR:
+	        case LeverMode.LINEAR:
 	            this.SetOppo(ith, oppoNorm, this.points[2].Dist(this.points[this.OppoOf(ith)]));
 
             /// set new control point without affecting the oppo-
             /// site. The tangent will be broken.
-     	   case BROKEN:
+     	   case LeverMode.BROKEN:
 	            this.points[ith].Set(newPoint);
 
     	}

@@ -94,15 +94,6 @@
 			valueInput.value = valueSlider.value;
 		}
 
-		// var minInput = document.createElement("input");
-		// minInput.value = param.min;
-		// minInput.setAttribute("type", "number");
-
-		// var maxInput = document.createElement("input");
-		// maxInput.value = param.max;
-		// maxInput.setAttribute("type", "number");
-
-
 		paramElem.appendChild(name);
 	 	paramElem.appendChild(valueInput);
 	 	paramElem.appendChild(valueSlider);
@@ -266,6 +257,7 @@
 		var canvas = document.getElementById("canvas");
 		var context = canvas.getContext("2d")
 		var docu = new Document(canvas);
+		var docu_group = null;
 
 		var Status = Object.freeze({
 			Editing : 0,
@@ -293,7 +285,8 @@
 			orig,
 			curr;
 
-		var currCurveIndex = null,
+		var currGroupIndex = null,
+			currCurveIndex = null,
 			currLeverIndex = null,
 			currPoint = null;
 
@@ -310,6 +303,11 @@
 				orig = MouseV(event);
 				curr = MouseV(event);
 				if(status == Status.Creating){
+					if(currGroupIndex == null){
+						currGroupIndex = docu.groups.push({curves:[]}) - 1;
+						docu_group = docu.groups[0];
+					}
+
 					if(currCurveIndex == null){
 						currCurveIndex = docu.curves.push(new Curve(orig)) - 1;	
 						console.log(currCurveIndex);
@@ -331,13 +329,14 @@
 	                if(res == -1){
 	                    currLeverIndex = docu.curves[currCurveIndex].Add(orig);
 	                }
+
 				} else if (status == Status.Editing){
 					if(isEditingLever){
 						if(currCurveIndex != null){
 							var curve = docu.curves[currCurveIndex];
 							for (var j = curve.levers.length-1; j >=0; j--){
 								var res = Cast.Lever(curve.levers[j], curr);
-								if(res != -1){
+								if(res != -1 && res != 2){
 									currLeverIndex = j;
 									currPoint = res;
 									status = Status.EditingLever;
@@ -388,7 +387,7 @@
 						}					
 					}
 				}
-				Draw.Curves(context, docu.curves, currCurveIndex);
+				Draw.Curves(context, docu.curves, currCurveIndex, currLeverIndex);
 			}
 			
 			if (down && (event.type == "mousemove")) {
@@ -409,7 +408,7 @@
 					console.log(currPoint);
 					docu.curves[currCurveIndex].UpdateLever(currLeverIndex, currPoint, curr);
 				}
-				Draw.Curves(context, docu.curves, currCurveIndex);
+				Draw.Curves(context, docu.curves, currCurveIndex, currLeverIndex);
 			}
 			
 			if (down && (event.type == "mouseup")) {
@@ -425,7 +424,7 @@
 					status = Status.Editing;
 				}
 
-				Draw.Curves(context, docu.curves, currCurveIndex);
+				Draw.Curves(context, docu.curves, currCurveIndex, currLeverIndex);
 			}
 
 		}
@@ -463,7 +462,7 @@
 	                        currCurveIndex = null;
 	                    }
 	                }
-	                Draw.Curves(context, docu.curves, currCurveIndex);
+	                Draw.Curves(context, docu.curves, currCurveIndex, currLeverIndex);
 	            }
 
 	            if(evt.ctrlKey && evt.key=="d"){
@@ -476,6 +475,34 @@
 
 				if(evt.keyCode == 18){
 					isEditingLever = true;
+				}
+
+				if(evt.key == "1" && evt.ctrlKey){
+					if(currCurveIndex != null && currLeverIndex != null){
+						docu.curves[currCurveIndex].levers[currLeverIndex].leverMode = 4;
+						Draw.Curves(context, docu.curves, currCurveIndex, currLeverIndex);
+					}
+				}
+
+				if(evt.key == "2" && evt.ctrlKey){
+					if(currCurveIndex != null && currLeverIndex != null){
+						docu.curves[currCurveIndex].levers[currLeverIndex].leverMode = 3;
+						Draw.Curves(context, docu.curves, currCurveIndex, currLeverIndex);
+					}
+				}
+
+				if(evt.key == "3" && evt.ctrlKey){
+					if(currCurveIndex != null && currLeverIndex != null){
+						docu.curves[currCurveIndex].levers[currLeverIndex].leverMode = 2;
+						Draw.Curves(context, docu.curves, currCurveIndex, currLeverIndex);
+					}
+				}
+
+				if(evt.key == "4" && evt.ctrlKey){
+					if(currCurveIndex != null && currLeverIndex != null){
+						docu.curves[currCurveIndex].levers[currLeverIndex].leverMode = 0;
+						Draw.Curves(context, docu.curves, currCurveIndex, currLeverIndex);
+					}
 				}
 
 			};
@@ -551,7 +578,7 @@
 
 
 	// module
-	exports.push([module.id, "/* CSS */\nbody\n{\n\tfont-family: helvetica, sans-serif;\n\tfont-size: 85%;\n\tmargin: 10px 15px;\n\tcolor: #333;\n\tbackground-color: #ddd;\n}\n\nh1\n{\t\n\tfont-family: TheMixMono;\n\tfont-size: 2.6em;\n\tfont-weight: black;\n\tletter-spacing: -0.12em;\n\tmargin: 0 0 0.3em 0;\n}\n\nh2\n{\n\tfont-size: 1.4em;\n\tfont-weight: normal;\n\tmargin: 1.5em 0 0 0;\n}\n\n#img{\n\twidth:3em;\n}\n\ncanvas\n{\n\tclear:left;\n\tfloat:left;\n\tdisplay: inline;\n\twidth:  600px;\n\theight: 600px;\n\tmargin: 0 10px 10px 0;\n\tbackground-color: #fff;\n}\n\n#button_group{\n}\n\n#list{\n\tmargin: 10px;\n}\n\n#save_group{\n\tclear:left;\n}\n\n.char-link{\n\tmargin : 10px;\n}\n\n#code\n{\n\tdisplay: block;\n\twidth: 500px;\n\theight: 4em;\n\tfont-family: \"TheMixMono\", monospace;\n\tfont-size: 1em;\n\tpadding: 2px 4px;\n\tmargin: 0;\n\tcolor: #555;\n\tbackground-color: #eee;\n\tborder: 1px solid #999;\n\toverflow: auto;\n}\n\n#param-group{\n\tmargin : 10px;\n}\n\n#param-name{\n\tmargin-top: 3px;\n\twidth:74px;\n}\n\n.param-name-label{\n\t/*margin-right: 50px;*/\n\t/*float:left;*/\n\t/*margin-top: 50px;*/\n\tdisplay: inline-block;\n\twidth:80px;\n}", ""]);
+	exports.push([module.id, "/* CSS */\nbody\n{\n\tfont-family: helvetica, sans-serif;\n\tfont-size: 85%;\n\tmargin: 10px 15px;\n\tcolor: #333;\n\tbackground-color: #ddd;\n}\n\nh1\n{\t\n\tfont-family: TheMixMono;\n\tfont-size: 2.6em;\n\tfont-weight: black;\n\tletter-spacing: -0.12em;\n\tmargin: 0 0 0.3em 0;\n}\n\nh2\n{\n\tfont-size: 1.4em;\n\tfont-weight: normal;\n\tmargin: 1.5em 0 0 0;\n}\n\n#img{\n\twidth:3em;\n}\n\ncanvas\n{\n\tclear:left;\n\tfloat:left;\n\tdisplay: inline;\n\twidth:  600px;\n\theight: 600px;\n\tmargin: 0 10px 10px 0;\n\tbackground-color: #fff;\n}\n\n#button_group{\n}\n\n#list{\n\tmargin: 10px;\n}\n\n#save_group{\n\tclear:left;\n}\n\n.char-link{\n\tmargin : 10px;\n}\n\n.code\n{\n\tdisplay: block;\n\twidth: 580px;\n\toutline: none;\n\tborder:none;\n    border-color: Transparent; \n    border-radius: 4px;\n    resize:none;\n\n\theight: 8em;\n\tfont-family: \"TheMixMono\", monospace;\n\tfont-size: 1em;\n\t/*padding: 2px 4px;*/\n\tmargin: 8px;\n\tcolor: #555;\n\tbackground-color: #eee;\n\tborder: 1px solid #999;\n\toverflow: auto;\n}\n\n#param-group{\n\tmargin : 10px;\n}\n\n#param-name{\n\tmargin-top: 3px;\n\twidth:74px;\n}\n\n.param-name-label{\n\t/*margin-right: 50px;*/\n\t/*float:left;*/\n\t/*margin-top: 50px;*/\n\tdisplay: inline-block;\n\twidth:80px;\n}", ""]);
 
 	// exports
 
@@ -957,15 +984,19 @@
 
 	var LeverMode = Object.freeze({
 	    BROKEN		: 0,
-	    LINEAR 		: 1,
-	    PROPER 		: 2,
+	    LINEAR 		: 2,
+	    PROPER 		: 3,
 	    SYMMETRIC	: 4
 	});
 
+	var StrokeMode = Object.freeze({
+	    FREE : 0,
+	    PERP : 1
+	})
+
 	var SelectMode = Object.freeze({
 		NONE 		 : 0,
-		CURVE_SELECT : 1,
-		LEVER_SELECT : 2
+		LEVER_SELECT : 1
 	});
 
 	var LeverPoint = Object.freeze({
@@ -1004,6 +1035,7 @@
 
 			this.leverMode = LeverMode.SYMMETRIC;
 			this.selectMode = SelectMode.NONE;
+	        this.strokeMode = StrokeMode.FREE;
 		}
 
 	    OppoOf(ith){
@@ -1038,18 +1070,18 @@
 	            /// recalculate to make proportional lever, the distance
 	            /// is calculated from the new distance between origin
 	            /// and currently selected control point.
-		        case PROPER:
+		        case LeverMode.PROPER:
 		            this.SetOppo(ith, oppoNorm, ratioOppo * this.points[2].Dist(newPoint));
 
 	            /// recalculate to make three points aligned on same
 	            /// line. use new direction and original distance of
 	            /// opposite control point.
-		        case LINEAR:
+		        case LeverMode.LINEAR:
 		            this.SetOppo(ith, oppoNorm, this.points[2].Dist(this.points[this.OppoOf(ith)]));
 
 	            /// set new control point without affecting the oppo-
 	            /// site. The tangent will be broken.
-	     	   case BROKEN:
+	     	   case LeverMode.BROKEN:
 		            this.points[ith].Set(newPoint);
 
 	    	}
@@ -1456,9 +1488,10 @@
 			this.canvas = canvas;
 			this.curves = [];
 
-			this.datastack = [];
+			this.stack = [];
 			this.params = [];
-			this.exprs = [];
+			this.init = "";
+			this.update = "";
 
 			this.status = "Editing Existing Curves.";
 		}
@@ -1471,6 +1504,24 @@
 	        this.datastack.push(data);
 	    }
 	    
+	    import(name){
+			var xhr = new XMLHttpRequest();
+			xhr.open('GET', 'load/'+name);
+			xhr.onload = function() {
+			    if (xhr.status === 200) {
+			        var res = JSON.parse(xhr.responseText);
+			    	console.log(res);
+
+			        this.push(LoadData.Curves(res.curves));
+			        
+			    }
+			    else {
+			        alert('Request failed.  Returned status of ' + xhr.status);
+			    }
+			};
+			xhr.send();
+	    }
+
 	    eval(expr){
 	        this.stack = split(this.expr, ' ');
 	                        
@@ -1508,6 +1559,7 @@
 	            }
 	        }
 	        
+	        console.log(this.stack)
 	    } 
 	}
 
@@ -1567,16 +1619,12 @@
 
 	    static CurvesFill(ctx, curves, currCurveIndex){
 
-	        ctx.clearRect(0,0, this.canvas.width, this.canvas.height);
+	        ctx.clearRect(0,0, ctx.canvas.width, ctx.canvas.height);
 
 	        for (var ithCurve = curves.length - 1; ithCurve >= 0; ithCurve--) {
 	            var curve = curves[ithCurve];
 
 	            ctx.lineWidth = 1;
-
-	            // for (var i = Things.length - 1; i >= 0; i--) {
-	            //     Things[i]
-	            // }
 
 	            ctx.beginPath();
 	            ctx.moveTo(curve.lo.points[0].x, curve.lo.points[0].y);
@@ -1611,41 +1659,61 @@
 	            // ctx.closePath();
 	            ctx.stroke();
 	        };
+
 	    }
 
-	    static Curves(ctx, curves, currCurveIndex){
+	    static Curves(ctx, curves, currCurveIndex, currLeverIndex){
 
 	        ctx.lineWidth = 1;
 	        ctx.clearRect(0,0, ctx.canvas.width, ctx.canvas.height);
 
+	        ctx.font = "16px TheMixMono";
 	        if(currCurveIndex != null){         
 	            var levers = curves[currCurveIndex].levers;
+
 	            for (var i = 0; i < levers.length; i++) {
-	                for(var j = 0; j < 5; j++){
+
+	                if(i == currLeverIndex){                
+	                    for(var j = 0; j < 5; j++){
+	                        ctx.beginPath();
+	                        ctx.arc(levers[i].points[j].x, levers[i].points[j].y, 4, 0, 2 * Math.PI);
+	                        ctx.stroke();
+	                    }
+
 	                    ctx.beginPath();
-	                    ctx.arc(levers[i].points[j].x, levers[i].points[j].y, 4, 0, 2 * Math.PI);
+	                    // for (var i = 0; i < levers.length; i++) {
+	                        ctx.moveTo(levers[i].points[0].x, levers[i].points[0].y);
+	                        ctx.lineTo(levers[i].points[2].x, levers[i].points[2].y);
+	                        ctx.lineTo(levers[i].points[4].x, levers[i].points[4].y);
+	                        ctx.moveTo(levers[i].points[1].x, levers[i].points[1].y);
+	                        ctx.lineTo(levers[i].points[2].x, levers[i].points[2].y);
+	                        ctx.lineTo(levers[i].points[3].x, levers[i].points[3].y);
+	                    // }
 	                    ctx.stroke();
+
+	                    var s;
+	                    switch(levers[i].leverMode){
+	                        case 0: s = "broken"; break;
+	                        case 2: s = "linear"; break;
+	                        case 3: s = "proper"; break;
+	                        case 4: s = "symmetric"; break;
+	                    }
+
+	                    ctx.fillText(s, levers[i].points[4].x + 10, levers[i].points[4].y + 5);
+
+	                } else {
+	                    ctx.beginPath();
+	                    ctx.arc(levers[i].points[2].x, levers[i].points[2].y, 4, 0, 2 * Math.PI);
+	                    ctx.stroke();                    
 	                }
 	            }
-
-	            ctx.beginPath();
-	            for (var i = 0; i < levers.length; i++) {
-	                ctx.moveTo(levers[i].points[0].x, levers[i].points[0].y);
-	                ctx.lineTo(levers[i].points[2].x, levers[i].points[2].y);
-	                ctx.lineTo(levers[i].points[4].x, levers[i].points[4].y);
-	                ctx.moveTo(levers[i].points[1].x, levers[i].points[1].y);
-	                ctx.lineTo(levers[i].points[2].x, levers[i].points[2].y);
-	                ctx.lineTo(levers[i].points[3].x, levers[i].points[3].y);
-	            }
-	            ctx.stroke();
 	        }
 
-
+	        ctx.font = "20px TheMixMono";
 	        for (var ith = curves.length - 1; ith >= 0; ith--) {
 	            ctx.lineWidth = 1;
 	            if(curves[ith].levers.length > 1){
 
-	                // console.log("entered");
 
 	                ctx.beginPath();
 	                ctx.moveTo(curves[ith].lo.points[0].x, curves[ith].lo.points[0].y);
@@ -1669,6 +1737,17 @@
 	                ctx.stroke();
 
 	                ctx.lineWidth = 2;
+
+	                var first = curves[ith].levers[0].points[2],
+	                    sec   = curves[ith].levers[0].points[1],
+	                    diam  = sec.Sub(first).Normalize().Mult(20);
+	                ctx.fillText("C"+ith, first.x + diam.y - 10, first.y -diam.x - 10);
+
+	                for (var i = 0; i < curves[ith].levers.length - 1; i++) {
+	                    var point = curves[ith].levers[i].points[2];
+	                    ctx.fillText(i, point.x+10, point.y-10);
+	                }
+	                
 	                ctx.beginPath();
 	                ctx.moveTo(curves[ith].levers[0].points[2].x, curves[ith].levers[0].points[2].y);
 	                for (var i = 0; i < curves[ith].levers.length - 1; i++) {

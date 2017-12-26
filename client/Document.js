@@ -19,9 +19,10 @@ class Document{
 		this.canvas = canvas;
 		this.curves = [];
 
-		this.datastack = [];
+		this.stack = [];
 		this.params = [];
-		this.exprs = [];
+		this.init = "";
+		this.update = "";
 
 		this.status = "Editing Existing Curves.";
 	}
@@ -34,6 +35,24 @@ class Document{
         this.datastack.push(data);
     }
     
+    import(name){
+		var xhr = new XMLHttpRequest();
+		xhr.open('GET', 'load/'+name);
+		xhr.onload = function() {
+		    if (xhr.status === 200) {
+		        var res = JSON.parse(xhr.responseText);
+		    	console.log(res);
+
+		        this.push(LoadData.Curves(res.curves));
+		        
+		    }
+		    else {
+		        alert('Request failed.  Returned status of ' + xhr.status);
+		    }
+		};
+		xhr.send();
+    }
+
     eval(expr){
         this.stack = split(this.expr, ' ');
                         
@@ -71,6 +90,7 @@ class Document{
             }
         }
         
+        console.log(this.stack)
     } 
 }
 

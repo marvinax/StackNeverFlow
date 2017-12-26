@@ -54,15 +54,21 @@ canvas
 	margin : 10px;
 }
 
-#code
+.code
 {
 	display: block;
-	width: 500px;
-	height: 4em;
+	width: 580px;
+	outline: none;
+	border:none;
+    border-color: Transparent; 
+    border-radius: 4px;
+    resize:none;
+
+	height: 8em;
 	font-family: "TheMixMono", monospace;
 	font-size: 1em;
-	padding: 2px 4px;
-	margin: 0;
+	/*padding: 2px 4px;*/
+	margin: 8px;
 	color: #555;
 	background-color: #eee;
 	border: 1px solid #999;

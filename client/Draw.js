@@ -2,16 +2,12 @@ class Draw{
 
     static CurvesFill(ctx, curves, currCurveIndex){
 
-        ctx.clearRect(0,0, this.canvas.width, this.canvas.height);
+        ctx.clearRect(0,0, ctx.canvas.width, ctx.canvas.height);
 
         for (var ithCurve = curves.length - 1; ithCurve >= 0; ithCurve--) {
             var curve = curves[ithCurve];
 
             ctx.lineWidth = 1;
-
-            // for (var i = Things.length - 1; i >= 0; i--) {
-            //     Things[i]
-            // }
 
             ctx.beginPath();
             ctx.moveTo(curve.lo.points[0].x, curve.lo.points[0].y);
@@ -46,41 +42,61 @@ class Draw{
             // ctx.closePath();
             ctx.stroke();
         };
+
     }
 
-    static Curves(ctx, curves, currCurveIndex){
+    static Curves(ctx, curves, currCurveIndex, currLeverIndex){
 
         ctx.lineWidth = 1;
         ctx.clearRect(0,0, ctx.canvas.width, ctx.canvas.height);
 
+        ctx.font = "16px TheMixMono";
         if(currCurveIndex != null){         
             var levers = curves[currCurveIndex].levers;
+
             for (var i = 0; i < levers.length; i++) {
-                for(var j = 0; j < 5; j++){
+
+                if(i == currLeverIndex){                
+                    for(var j = 0; j < 5; j++){
+                        ctx.beginPath();
+                        ctx.arc(levers[i].points[j].x, levers[i].points[j].y, 4, 0, 2 * Math.PI);
+                        ctx.stroke();
+                    }
+
                     ctx.beginPath();
-                    ctx.arc(levers[i].points[j].x, levers[i].points[j].y, 4, 0, 2 * Math.PI);
+                    // for (var i = 0; i < levers.length; i++) {
+                        ctx.moveTo(levers[i].points[0].x, levers[i].points[0].y);
+                        ctx.lineTo(levers[i].points[2].x, levers[i].points[2].y);
+                        ctx.lineTo(levers[i].points[4].x, levers[i].points[4].y);
+                        ctx.moveTo(levers[i].points[1].x, levers[i].points[1].y);
+                        ctx.lineTo(levers[i].points[2].x, levers[i].points[2].y);
+                        ctx.lineTo(levers[i].points[3].x, levers[i].points[3].y);
+                    // }
                     ctx.stroke();
+
+                    var s;
+                    switch(levers[i].leverMode){
+                        case 0: s = "broken"; break;
+                        case 2: s = "linear"; break;
+                        case 3: s = "proper"; break;
+                        case 4: s = "symmetric"; break;
+                    }
+
+                    ctx.fillText(s, levers[i].points[4].x + 10, levers[i].points[4].y + 5);
+
+                } else {
+                    ctx.beginPath();
+                    ctx.arc(levers[i].points[2].x, levers[i].points[2].y, 4, 0, 2 * Math.PI);
+                    ctx.stroke();                    
                 }
             }
-
-            ctx.beginPath();
-            for (var i = 0; i < levers.length; i++) {
-                ctx.moveTo(levers[i].points[0].x, levers[i].points[0].y);
-                ctx.lineTo(levers[i].points[2].x, levers[i].points[2].y);
-                ctx.lineTo(levers[i].points[4].x, levers[i].points[4].y);
-                ctx.moveTo(levers[i].points[1].x, levers[i].points[1].y);
-                ctx.lineTo(levers[i].points[2].x, levers[i].points[2].y);
-                ctx.lineTo(levers[i].points[3].x, levers[i].points[3].y);
-            }
-            ctx.stroke();
         }
 
-
+        ctx.font = "20px TheMixMono";
         for (var ith = curves.length - 1; ith >= 0; ith--) {
             ctx.lineWidth = 1;
             if(curves[ith].levers.length > 1){
 
-                // console.log("entered");
 
                 ctx.beginPath();
                 ctx.moveTo(curves[ith].lo.points[0].x, curves[ith].lo.points[0].y);
@@ -104,6 +120,17 @@ class Draw{
                 ctx.stroke();
 
                 ctx.lineWidth = 2;
+
+                var first = curves[ith].levers[0].points[2],
+                    sec   = curves[ith].levers[0].points[1],
+                    diam  = sec.Sub(first).Normalize().Mult(20);
+                ctx.fillText("C"+ith, first.x + diam.y - 10, first.y -diam.x - 10);
+
+                for (var i = 0; i < curves[ith].levers.length - 1; i++) {
+                    var point = curves[ith].levers[i].points[2];
+                    ctx.fillText(i, point.x+10, point.y-10);
+                }
+                
                 ctx.beginPath();
                 ctx.moveTo(curves[ith].levers[0].points[2].x, curves[ith].levers[0].points[2].y);
                 for (var i = 0; i < curves[ith].levers.length - 1; i++) {

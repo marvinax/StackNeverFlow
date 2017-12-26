@@ -48,15 +48,6 @@ function AddParamUIOfExistingParam(param){
 		valueInput.value = valueSlider.value;
 	}
 
-	// var minInput = document.createElement("input");
-	// minInput.value = param.min;
-	// minInput.setAttribute("type", "number");
-
-	// var maxInput = document.createElement("input");
-	// maxInput.value = param.max;
-	// maxInput.setAttribute("type", "number");
-
-
 	paramElem.appendChild(name);
  	paramElem.appendChild(valueInput);
  	paramElem.appendChild(valueSlider);
@@ -220,6 +211,7 @@ function LoadName(context, docu){
 	var canvas = document.getElementById("canvas");
 	var context = canvas.getContext("2d")
 	var docu = new Document(canvas);
+	var docu_group = null;
 
 	var Status = Object.freeze({
 		Editing : 0,
@@ -247,7 +239,8 @@ function LoadName(context, docu){
 		orig,
 		curr;
 
-	var currCurveIndex = null,
+	var currGroupIndex = null,
+		currCurveIndex = null,
 		currLeverIndex = null,
 		currPoint = null;
 
@@ -264,6 +257,11 @@ function LoadName(context, docu){
 			orig = MouseV(event);
 			curr = MouseV(event);
 			if(status == Status.Creating){
+				if(currGroupIndex == null){
+					currGroupIndex = docu.groups.push({curves:[]}) - 1;
+					docu_group = docu.groups[0];
+				}
+
 				if(currCurveIndex == null){
 					currCurveIndex = docu.curves.push(new Curve(orig)) - 1;	
 					console.log(currCurveIndex);
@@ -285,13 +283,14 @@ function LoadName(context, docu){
                 if(res == -1){
                     currLeverIndex = docu.curves[currCurveIndex].Add(orig);
                 }
+
 			} else if (status == Status.Editing){
 				if(isEditingLever){
 					if(currCurveIndex != null){
 						var curve = docu.curves[currCurveIndex];
 						for (var j = curve.levers.length-1; j >=0; j--){
 							var res = Cast.Lever(curve.levers[j], curr);
-							if(res != -1){
+							if(res != -1 && res != 2){
 								currLeverIndex = j;
 								currPoint = res;
 								status = Status.EditingLever;
@@ -342,7 +341,7 @@ function LoadName(context, docu){
 					}					
 				}
 			}
-			Draw.Curves(context, docu.curves, currCurveIndex);
+			Draw.Curves(context, docu.curves, currCurveIndex, currLeverIndex);
 		}
 		
 		if (down && (event.type == "mousemove")) {
@@ -363,7 +362,7 @@ function LoadName(context, docu){
 				console.log(currPoint);
 				docu.curves[currCurveIndex].UpdateLever(currLeverIndex, currPoint, curr);
 			}
-			Draw.Curves(context, docu.curves, currCurveIndex);
+			Draw.Curves(context, docu.curves, currCurveIndex, currLeverIndex);
 		}
 		
 		if (down && (event.type == "mouseup")) {
@@ -379,7 +378,7 @@ function LoadName(context, docu){
 				status = Status.Editing;
 			}
 
-			Draw.Curves(context, docu.curves, currCurveIndex);
+			Draw.Curves(context, docu.curves, currCurveIndex, currLeverIndex);
 		}
 
 	}
@@ -417,7 +416,7 @@ function LoadName(context, docu){
                         currCurveIndex = null;
                     }
                 }
-                Draw.Curves(context, docu.curves, currCurveIndex);
+                Draw.Curves(context, docu.curves, currCurveIndex, currLeverIndex);
             }
 
             if(evt.ctrlKey && evt.key=="d"){
@@ -430,6 +429,34 @@ function LoadName(context, docu){
 
 			if(evt.keyCode == 18){
 				isEditingLever = true;
+			}
+
+			if(evt.key == "1" && evt.ctrlKey){
+				if(currCurveIndex != null && currLeverIndex != null){
+					docu.curves[currCurveIndex].levers[currLeverIndex].leverMode = 4;
+					Draw.Curves(context, docu.curves, currCurveIndex, currLeverIndex);
+				}
+			}
+
+			if(evt.key == "2" && evt.ctrlKey){
+				if(currCurveIndex != null && currLeverIndex != null){
+					docu.curves[currCurveIndex].levers[currLeverIndex].leverMode = 3;
+					Draw.Curves(context, docu.curves, currCurveIndex, currLeverIndex);
+				}
+			}
+
+			if(evt.key == "3" && evt.ctrlKey){
+				if(currCurveIndex != null && currLeverIndex != null){
+					docu.curves[currCurveIndex].levers[currLeverIndex].leverMode = 2;
+					Draw.Curves(context, docu.curves, currCurveIndex, currLeverIndex);
+				}
+			}
+
+			if(evt.key == "4" && evt.ctrlKey){
+				if(currCurveIndex != null && currLeverIndex != null){
+					docu.curves[currCurveIndex].levers[currLeverIndex].leverMode = 0;
+					Draw.Curves(context, docu.curves, currCurveIndex, currLeverIndex);
+				}
 			}
 
 		};
