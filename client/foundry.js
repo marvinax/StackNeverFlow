@@ -43,24 +43,15 @@ function AddParamUIOfExistingParam(context, docu, param){
 	valueInput.onchange = valueInput.oninput = function(){
 		param.value = valueSlider.value = valueInput.value;
 
-        docu.eval(docu.update);
-
-		for(let curve of docu.curves){
-			curve.UpdateOutlines();
-		}
-        Draw.Curves(context, docu.curves, null);
-
+        docu.Eval(docu.update);
+        docu.UpdateDraw(context);
 	}
 
 	valueSlider.onchange = valueSlider.oninput = function(){
 		param.value = valueInput.value = valueSlider.value;
 
-        docu.eval(docu.update);
-
-		for(let curve of docu.curves){
-			curve.UpdateOutlines();
-		}
-        Draw.Curves(context, docu.curves, null);
+        docu.Eval(docu.update);
+        docu.UpdateDraw(context);
 
 	}
 
@@ -176,7 +167,6 @@ function Load(context, docu, docu_id){
 	        docu.params = res.params;
 	        docu.init   = res.init;
 	        docu.update = res.update;
-	        Draw.Curves(context, docu.curves, null);
 
 	        ClearDOMChildren(document.getElementById("param-group"));
     		for(let param of docu.params) {
@@ -188,14 +178,10 @@ function Load(context, docu, docu_id){
 	        document.getElementById("init-code").value = docu.init;
 	        document.getElementById("update-code").value = docu.update;
 
-	        docu.init_eval();
-	        docu.eval(docu.init);
-	        docu.eval(docu.update);
-
-			for(let curve of docu.curves){
-				curve.UpdateOutlines();
-			}
-	        Draw.Curves(context, docu.curves, null);
+	        docu.InitEval();
+	        docu.Eval(docu.init);
+	        docu.Eval(docu.update);
+	        docu.UpdateDraw(context);
 
 	    }
 	    else {
@@ -527,11 +513,8 @@ function LoadName(context, docu){
 		}
 
 		document.getElementById("init-eval").onclick = function(){
-			docu.eval(document.getElementById("init-code").value);
-			for(let curve of docu.curves){
-				curve.UpdateOutlines();
-			}
-	        Draw.Curves(context, docu.curves, null);
+			docu.Eval(document.getElementById("init-code").value);
+			docu.UpdateDraw(context);
 		};
 
 		document.getElementById("init-code").onchange = function(){

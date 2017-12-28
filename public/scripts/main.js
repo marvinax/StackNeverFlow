@@ -89,24 +89,15 @@
 		valueInput.onchange = valueInput.oninput = function(){
 			param.value = valueSlider.value = valueInput.value;
 
-	        docu.eval(docu.update);
-
-			for(let curve of docu.curves){
-				curve.UpdateOutlines();
-			}
-	        Draw.Curves(context, docu.curves, null);
-
+	        docu.Eval(docu.update);
+	        docu.UpdateDraw(context);
 		}
 
 		valueSlider.onchange = valueSlider.oninput = function(){
 			param.value = valueInput.value = valueSlider.value;
 
-	        docu.eval(docu.update);
-
-			for(let curve of docu.curves){
-				curve.UpdateOutlines();
-			}
-	        Draw.Curves(context, docu.curves, null);
+	        docu.Eval(docu.update);
+	        docu.UpdateDraw(context);
 
 		}
 
@@ -222,7 +213,6 @@
 		        docu.params = res.params;
 		        docu.init   = res.init;
 		        docu.update = res.update;
-		        Draw.Curves(context, docu.curves, null);
 
 		        ClearDOMChildren(document.getElementById("param-group"));
 	    		for(let param of docu.params) {
@@ -234,14 +224,10 @@
 		        document.getElementById("init-code").value = docu.init;
 		        document.getElementById("update-code").value = docu.update;
 
-		        docu.init_eval();
-		        docu.eval(docu.init);
-		        docu.eval(docu.update);
-
-				for(let curve of docu.curves){
-					curve.UpdateOutlines();
-				}
-		        Draw.Curves(context, docu.curves, null);
+		        docu.InitEval();
+		        docu.Eval(docu.init);
+		        docu.Eval(docu.update);
+		        docu.UpdateDraw(context);
 
 		    }
 		    else {
@@ -573,11 +559,8 @@
 			}
 
 			document.getElementById("init-eval").onclick = function(){
-				docu.eval(document.getElementById("init-code").value);
-				for(let curve of docu.curves){
-					curve.UpdateOutlines();
-				}
-		        Draw.Curves(context, docu.curves, null);
+				docu.Eval(document.getElementById("init-code").value);
+				docu.UpdateDraw(context);
 			};
 
 			document.getElementById("init-code").onchange = function(){
@@ -1538,6 +1521,7 @@
 	var Vector = __webpack_require__(5);
 	var Lever =  __webpack_require__(6);
 	var Curve = __webpack_require__(9);
+	var Draw = __webpack_require__(13);
 	var CurveSideOutline = __webpack_require__(10);
 
 
@@ -1562,12 +1546,19 @@
 			this.status = "Editing Existing Curves.";
 		}
 
-		init_eval(){
+		InitEval(){
 			this.dstack = [];
 			this.consts = [];
 		}
 
-	    eval(expr){
+		UpdateDraw(context){
+			for(let curve of this.curves){
+				curve.UpdateOutlines();
+			}
+	        Draw.Curves(context, this.curves, null);
+		}
+
+	    Eval(expr){
 	        var text = expr.split('\n'),
 	        	exec_hold_flag = false,
 	        	exec_err_flag = false;
@@ -1761,7 +1752,7 @@
 		        	// console.log(JSON.stringify(this.consts));
 		        }
 		        if(exec_err_flag){
-		        	console.log("error raised, further eval stopped");
+		        	console.log("error raised, further Eval stopped");
 		        	break;
 		        }
 		    }

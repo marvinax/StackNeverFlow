@@ -2,6 +2,7 @@
 var Vector = require('./Vector.js');
 var Lever =  require('./Lever.js');
 var Curve = require('./Curve.js');
+var Draw = require('./Draw.js');
 var CurveSideOutline = require('./CurveSideOutline.js');
 
 
@@ -26,12 +27,19 @@ class Document{
 		this.status = "Editing Existing Curves.";
 	}
 
-	init_eval(){
+	InitEval(){
 		this.dstack = [];
 		this.consts = [];
 	}
 
-    eval(expr){
+	UpdateDraw(context){
+		for(let curve of this.curves){
+			curve.UpdateOutlines();
+		}
+        Draw.Curves(context, this.curves, null);
+	}
+
+    Eval(expr){
         var text = expr.split('\n'),
         	exec_hold_flag = false,
         	exec_err_flag = false;
@@ -225,7 +233,7 @@ class Document{
 	        	// console.log(JSON.stringify(this.consts));
 	        }
 	        if(exec_err_flag){
-	        	console.log("error raised, further eval stopped");
+	        	console.log("error raised, further Eval stopped");
 	        	break;
 	        }
 	    }
