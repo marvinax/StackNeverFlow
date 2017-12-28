@@ -19,7 +19,7 @@ function ClearDOMChildren(elem){
 	}
 }
 
-function AddParamUIOfExistingParam(param){
+function AddParamUIOfExistingParam(context, docu, param){
 	var paramUI = document.getElementById("param-group");
 
 	var paramElem = document.createElement("div");
@@ -41,11 +41,27 @@ function AddParamUIOfExistingParam(param){
 	valueSlider.step = 0.01;
 
 	valueInput.onchange = valueInput.oninput = function(){
-		valueSlider.value = valueInput.value;
+		param.value = valueSlider.value = valueInput.value;
+
+        docu.eval(docu.update);
+
+		for(let curve of docu.curves){
+			curve.UpdateOutlines();
+		}
+        Draw.Curves(context, docu.curves, null);
+
 	}
 
 	valueSlider.onchange = valueSlider.oninput = function(){
-		valueInput.value = valueSlider.value;
+		param.value = valueInput.value = valueSlider.value;
+
+        docu.eval(docu.update);
+
+		for(let curve of docu.curves){
+			curve.UpdateOutlines();
+		}
+        Draw.Curves(context, docu.curves, null);
+
 	}
 
 	paramElem.appendChild(name);
@@ -79,6 +95,8 @@ function AddParamUI(docu){
 	saveButton.id = "param-save-button";
 	saveButton.innerHTML = "save param";
 	
+	var context = document.getElementById("canvas").getContext("2d");
+
 	saveButton.onclick = function(){
 		var nameInput = document.getElementById("param-name"),
 			defaultValueInput = document.getElementById("param-default-value"),
@@ -98,7 +116,7 @@ function AddParamUI(docu){
 		ClearDOMChildren(paramUI);
 		for(let param of docu.params) {
 			console.log(param);
-			AddParamUIOfExistingParam(param);
+			AddParamUIOfExistingParam(context, docu, param);
 		}
 
 		AddParamUI(docu);
@@ -157,16 +175,27 @@ function Load(context, docu, docu_id){
 	        docu.curves = LoadData.Curves(res.curves);
 	        docu.params = res.params;
 	        docu.init   = res.init;
+	        docu.update = res.update;
 	        Draw.Curves(context, docu.curves, null);
 
 	        ClearDOMChildren(document.getElementById("param-group"));
     		for(let param of docu.params) {
 				console.log(param);
-				AddParamUIOfExistingParam(param);
+				AddParamUIOfExistingParam(context, docu, param);
 			}
 	        AddParamUI(docu);
 
 	        document.getElementById("init-code").value = docu.init;
+	        document.getElementById("update-code").value = docu.update;
+
+	        docu.init_eval();
+	        docu.eval(docu.init);
+	        docu.eval(docu.update);
+
+			for(let curve of docu.curves){
+				curve.UpdateOutlines();
+			}
+	        Draw.Curves(context, docu.curves, null);
 
 	    }
 	    else {
@@ -507,6 +536,10 @@ function LoadName(context, docu){
 
 		document.getElementById("init-code").onchange = function(){
 			docu.init = document.getElementById("init-code").value;
+		}
+
+		document.getElementById("update-code").onchange = function(){
+			docu.update = document.getElementById("update-code").value;
 		}
 	}	
 })();

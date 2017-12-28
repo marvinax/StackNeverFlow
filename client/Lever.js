@@ -139,8 +139,15 @@ class Lever {
     }
 
     Trans(inc){
-    	var array = ExtractArray();
-    	TransFromArray(array, inc);
+    	var array = this.ExtractArray();
+    	this.TransFromArray(array, inc);
+    }
+
+    TransCreate(inc){
+        console.log(JSON.stringify(inc));
+        var lever = this.Copy();
+        lever.Trans(inc);
+        return lever;
     }
 }
 
