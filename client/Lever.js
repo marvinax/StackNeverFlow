@@ -56,6 +56,18 @@ class Lever {
         this.strokeMode = StrokeMode.FREE;
 	}
 
+    Copy(){
+        var newLever = new Lever();
+        for (var i = newLever.points.length - 1; i >= 0; i--) {
+            newLever.points[i] = this.points[i].Copy();
+        }
+        newLever.leverMode = this.leverMode;
+        newLever.selectMode = this.selectMode;
+        newLever.strokeMode = this.strokeMode;
+
+        return newLever;
+    }
+
     OppoOf(ith){
     	return 4 - ith;
     }

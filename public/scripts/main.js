@@ -202,6 +202,7 @@
 		    	console.log(res);
 		        docu.curves = LoadData.Curves(res.curves);
 		        docu.params = res.params;
+		        docu.init   = res.init;
 		        Draw.Curves(context, docu.curves, null);
 
 		        ClearDOMChildren(document.getElementById("param-group"));
@@ -210,6 +211,8 @@
 					AddParamUIOfExistingParam(param);
 				}
 		        AddParamUI(docu);
+
+		        document.getElementById("init-code").value = docu.init;
 
 		    }
 		    else {
@@ -538,6 +541,18 @@
 			loadButton.onclick = function(){
 				var prefix = document.getElementById("prefix").value;
 				Load(context, docu, prefix + "_" + nameInput.value);
+			}
+
+			document.getElementById("init-eval").onclick = function(){
+				docu.eval(document.getElementById("init-code").value);
+				for(let curve of docu.curves){
+					curve.UpdateOutlines();
+				}
+		        Draw.Curves(context, docu.curves, null);
+			};
+
+			document.getElementById("init-code").onchange = function(){
+				docu.init = document.getElementById("init-code").value;
 			}
 		}	
 	})();
@@ -1038,6 +1053,18 @@
 	        this.strokeMode = StrokeMode.FREE;
 		}
 
+	    Copy(){
+	        var newLever = new Lever();
+	        for (var i = newLever.points.length - 1; i >= 0; i--) {
+	            newLever.points[i] = this.points[i].Copy();
+	        }
+	        newLever.leverMode = this.leverMode;
+	        newLever.selectMode = this.selectMode;
+	        newLever.strokeMode = this.strokeMode;
+
+	        return newLever;
+	    }
+
 	    OppoOf(ith){
 	    	return 4 - ith;
 	    }
@@ -1488,78 +1515,187 @@
 			this.canvas = canvas;
 			this.curves = [];
 
-			this.stack = [];
 			this.params = [];
 			this.init = "";
 			this.update = "";
 
 			this.status = "Editing Existing Curves.";
 		}
-
-	    pop(){
-	        return this.datastack.pop();
-	    }
 	    
-	    push(data){
-	        this.datastack.push(data);
-	    }
-	    
-	    import(name){
-			var xhr = new XMLHttpRequest();
-			xhr.open('GET', 'load/'+name);
-			xhr.onload = function() {
-			    if (xhr.status === 200) {
-			        var res = JSON.parse(xhr.responseText);
-			    	console.log(res);
-
-			        this.push(LoadData.Curves(res.curves));
-			        
-			    }
-			    else {
-			        alert('Request failed.  Returned status of ' + xhr.status);
-			    }
-			};
-			xhr.send();
-	    }
-
 	    eval(expr){
-	        this.stack = split(this.expr, ' ');
-	                        
-	        for(let i = stack.length-1; i >= 0; i--){
-	            if(this.stack[i].equals("curve")){
-					this.push(this.curves[parseInt(stack[i+1])]);
-	            }
-	            
-	            if(stack[i].equals("lever")){
-	                this.push(this.pop().levers[parseInt(stack[i+1])]);    
-	            }
-	            
-	            if(stack[i].equals("point")){
-	                this.push(this.pop().points[parseInt(stack[i+1])]);    
-	            }
-	            
-	            if(stack[i].equals("float")){
-	                this.push (parseFloat(stack[i+1]));
-	            }
-	            
-	            if(stack[i].equals("vec")){
-	                this.push(new Vector(parseFloat(stack[i+1]), parseFloat(stack[i+2])));
-	            }
-	            
-	            if(stack[i].equals("plus")){
-	                var p1 = this.pop();
-	                var p2 = this.pop();
-	                this.push(Vector.Add(p1, p2));
-	            }
-	            if(stack[i].equals("trans")){
-	                var elem = this.pop();
-	                var increm = this.pop();
-	                var array = elem.ExtractArray();
-	                elem.TranslateFromArray(array, increm);
-	            }
-	        }
-	        
-	        console.log(this.stack)
+	        var text = expr.split('\n'),
+	        	dstack = [],
+	        	consts = [],
+	        	err_flag = false;
+
+	        var pop = function(){
+	        	return dstack.pop();
+	        };
+
+	        var push = function(elem){
+	        	dstack.push(elem);
+	        	// console.log(JSON.stringify(dstack));
+	        };
+
+	        var refer = function(){
+		    	var name = pop();
+				var xhr = new XMLHttpRequest();
+				xhr.open('GET', 'load/'+name);
+				xhr.onload = function() {
+				    if (xhr.status === 200) {
+				        var res = JSON.parse(xhr.responseText);
+				        push(LoadData.Curves(res.curves));
+				        
+				    }
+				    else {
+				        console.log('Request failed.  Returned status of ' + xhr.status);
+				        err_flag = true;
+				    }
+				};
+				xhr.send();
+		    };
+
+		    var put = function(){
+		    	var key = pop();
+		    	var val = pop();
+				if(consts.some(function(elem){return elem.key == key;})){
+		    		console.log('existing key. consider change a name');
+		    		err_flag = true;
+	    		}else
+		    		consts.push({key:key, val:val.Copy()});
+		    }
+
+		    var vec = function(){
+		    	var x = pop();
+		    	var y = pop();
+		    	push(new Vector(parseFloat(x), parseFloat(y)));
+		    }
+
+		    var get = function(){
+		    	var key = pop();
+		    	var res = consts.filter(function(elem){return elem.key == key});
+		    	if(res.length == 0){
+		    		console.log('key not found');
+		    		err_flag = true;
+		    	} else 
+		    		push(res[0].val);
+		    }
+
+		    var plus = function(){
+		        var p1 = pop();
+		        var p2 = pop();
+
+		        push(p1.Add(p2));    	
+		    }
+
+		    var mult = function(){
+		    	var p = pop();
+				console.log(p);
+		    	var n  = pop();
+		    	console.log(n);
+		    	if(typeof p == "number" && typeof n == "number")
+		    		push(n * p);
+		    	else if(typeof p == "object" && typeof p.x == "number" && typeof n == "number")
+		    		push(p.Mult(n));
+		    	else{
+		    		console.log("mult type error");
+		    		err_flag = true;
+		    	}
+		    }
+
+		    var trans = function(){
+		    	var elem = pop(),
+		    		increm = pop(),
+		    		array = elem.ExtractArray();
+
+		    	console.log(elem);
+		    	console.log(increm);
+
+		    	elem.TransFromArray(array, increm);
+		    }
+
+		    var set = function(){
+		    	var elem = pop(),
+		    		newPoint = pop(),
+		    		ith = parseInt(pop());
+		    	elem.SetControlPoint(ith, newPoint);
+		    }
+
+		    var curve = function(){
+		    	var ith = parseInt(pop());
+		    	push(this.curves[ith]);
+		    }.bind(this);
+
+		    var lever = function(){
+		    	var ith = parseInt(pop());
+		    	var elem = pop();
+		    	if(elem.levers != undefined)
+		    		push(elem.levers[ith]);
+		    	else{
+		    		console.log("lever needs a curve ref ahead");
+		    		err_flag = true;
+		    	}
+		    }
+
+		    var point = function(){
+		    	var ith = parseInt(pop());
+		    	var elem = pop();
+		    	if(elem.points != undefined)
+		    		push(elem.levers[ith]);
+		    	else{
+		    		console.log("point needs a lever ref ahead");
+	    			err_flag = true;
+	    		}
+		    }
+
+	    	var param = function(){
+		    	var name = pop();
+		    	var byName = this.params.filter(function(param){return param.name == name});
+		    	if(byName == []){
+		    		var usingIndex = this.params[parseInt(name)];
+		    		if(usingIndex != undefined){
+		    			push(parseFloat(usingIndex.value));
+		    		}
+		    	} else {
+		    		push(parseFloat(byName[0].value));
+		    	}
+		    	console.log(dstack)
+		    }.bind(this);
+
+		    var curr;
+		    var stack;
+
+		    for (var i = 0; i < text.length; i++) {
+		    	stack = text[i].split(" ");
+		        while(true){
+		    		curr = stack.pop();
+		        	switch(curr){
+		        		case "vec"   : vec();      break;
+		        		case "get"   : get();	   break;
+		        		case "put"   : put();      break;
+		        		case "c":
+		        		case "curve" : curve();    break;
+		        		case "l":
+		        		case "lever" : lever();    break;
+		        		case "p":
+		        		case "point" : point();    break;
+		        		case "plus"  : plus();     break;
+		        		case "mult"  : mult();     break;
+		        		case "trans" : trans();    break;
+		        		case "set"   : set();      break;
+		        		case "param" : param();    break;
+		        		default      : push(curr);
+		        	}
+		        	if(stack.length == 0) break;
+		        	if(err_flag) break;
+		        	console.log(JSON.stringify(consts));
+		        }
+		        if(err_flag){
+		        	console.log("error raised, further eval stopped");
+		        	break;
+		        }
+		    }
+	        console.log(dstack);
 	    } 
 	}
 

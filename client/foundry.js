@@ -156,6 +156,7 @@ function Load(context, docu, docu_id){
 	    	console.log(res);
 	        docu.curves = LoadData.Curves(res.curves);
 	        docu.params = res.params;
+	        docu.init   = res.init;
 	        Draw.Curves(context, docu.curves, null);
 
 	        ClearDOMChildren(document.getElementById("param-group"));
@@ -164,6 +165,8 @@ function Load(context, docu, docu_id){
 				AddParamUIOfExistingParam(param);
 			}
 	        AddParamUI(docu);
+
+	        document.getElementById("init-code").value = docu.init;
 
 	    }
 	    else {
@@ -492,6 +495,18 @@ function LoadName(context, docu){
 		loadButton.onclick = function(){
 			var prefix = document.getElementById("prefix").value;
 			Load(context, docu, prefix + "_" + nameInput.value);
+		}
+
+		document.getElementById("init-eval").onclick = function(){
+			docu.eval(document.getElementById("init-code").value);
+			for(let curve of docu.curves){
+				curve.UpdateOutlines();
+			}
+	        Draw.Curves(context, docu.curves, null);
+		};
+
+		document.getElementById("init-code").onchange = function(){
+			docu.init = document.getElementById("init-code").value;
 		}
 	}	
 })();
