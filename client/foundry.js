@@ -5,7 +5,6 @@ require('./styles.css')
 var Vector = require('./Vector.js');
 var Lever =  require('./Lever.js');
 
-var Cast =  require('./Cast.js');
 var Curve = require('./Curve.js');
 
 var Document = require('./Document.js');
@@ -262,8 +261,7 @@ function LoadName(context, docu){
 		currLeverIndex = null,
 		currPoint = null;
 
-	var tempCurveTransArray=[],
-		tempLeverTransArray=[];
+	var tempTransArray=[];
 
 
 	function Drag(event) {
@@ -274,129 +272,40 @@ function LoadName(context, docu){
 			down   = true;
 			orig = MouseV(event);
 			curr = MouseV(event);
-			if(status == Status.Creating){
-				if(currGroupIndex == null){
-					currGroupIndex = docu.groups.push({curves:[]}) - 1;
-					docu_group = docu.groups[0];
-				}
+			if(docu.status == Status.Creating){
+				console.log("creating");
+    			docu.AddPoint(orig);
 
-				if(currCurveIndex == null){
-					currCurveIndex = docu.curves.push(new Curve(orig)) - 1;	
-					console.log(currCurveIndex);
-				}
-				console.log(docu.curves[currCurveIndex]);
-
-                var res = -1;
-                var curve = docu.curves[currCurveIndex];
-                for (var j = curve.levers.length-1; j >=0; j--){
-                    var res = Cast.Lever(curve.levers[j], curr);
-                    if(res != -1){
-                        currLeverIndex = j;
-                        currPoint = res;
-                        status = Status.EditingLever;
-                        document.getElementById("status").innerHTML = "Editing";
-                        break;
-                    }
-                }
-                if(res == -1){
-                    currLeverIndex = docu.curves[currCurveIndex].Add(orig);
-                }
-
-			} else if (status == Status.Editing){
+			} else if (docu.status == Status.Editing){
+				var cast;
 				if(isEditingLever){
-					if(currCurveIndex != null){
-						var curve = docu.curves[currCurveIndex];
-						for (var j = curve.levers.length-1; j >=0; j--){
-							var res = Cast.Lever(curve.levers[j], curr);
-							if(res != -1 && res != 2){
-								currLeverIndex = j;
-								currPoint = res;
-								status = Status.EditingLever;
-								break;
-							}
-						}						
-					}
+
+					cast = docu.SelectControlPoint(curr);
+
 				} else {
-                    console.log(docu.curves.length + " curves");
-					for (var i = docu.curves.length-1; i >= 0 ; i--){
-						var res = Cast.Curve(docu.curves[i], curr);
-                        console.log("casted " + res);
-						if(res != -1) {
 
-                            var newCast = res;
+					tempTransArray = docu.PrepareTrans(curr);
+				}
 
-                            res = -1;
-							currCurveIndex = i;
-							var curve = docu.curves[currCurveIndex];
-							for (var j = curve.levers.length-1; j >=0; j--){
-								res = Cast.Lever(curve.levers[j], curr);
-								if(res != -1){
-									currLeverIndex = j;
-									currPoint = res;
-									if(isTranslatingLever){
-										console.log("moving_lever");
-										status = Status.MovingLever;
-										tempLeverTransArray = curve.levers[currLeverIndex].ExtractArray();
-										console.log(tempLeverTransArray);
-									}
-                                    break;
-								}
-							}
-
-							if(res == -1){
-                                console.log(currCurveIndex);
-                                if(isTranslatingLever){
-                                    currLeverIndex = docu.curves[currCurveIndex].Insert(newCast);
-                                } else {                                
-                                    status = Status.MovingCurve;
-                                    tempCurveTransArray = docu.curves[currCurveIndex].ExtractArray();
-                                }
-                                break;
-							}
-
-						}
-
-					}					
+				if (cast == -1 || tempTransArray.length == 0){
+					docu.Deselect();
 				}
 			}
-			Draw.Curves(context, docu.curves, currCurveIndex, currLeverIndex);
+			Draw.Curves(context, docu);
 		}
 		
 		if (down && (event.type == "mousemove")) {
 			curr = MouseV(event);
-			if(status == Status.Creating){
-				docu.curves[currCurveIndex].UpdateLever(currLeverIndex, 4, curr);
-			} else if (status == Status.Editing){
-
-			} else if (status == Status.MovingCurve){
-				// console.log(tempCurveTransArray);
-				docu.curves[currCurveIndex].TransFromArray(tempCurveTransArray, curr.Sub(orig));
-			} else if (status == Status.MovingLever){
-				// console.log(tempLeverTransArray);
-				docu.curves[currCurveIndex].levers[currLeverIndex].TransFromArray(tempLeverTransArray, curr.Sub(orig));
-                docu.curves[currCurveIndex].UpdateOutlines();
-
-			} else if (status == Status.EditingLever){
-				console.log(currPoint);
-				docu.curves[currCurveIndex].UpdateLever(currLeverIndex, currPoint, curr);
-			}
-			Draw.Curves(context, docu.curves, currCurveIndex, currLeverIndex);
+			docu.UpdateEdit(curr, orig, tempTransArray);
+			Draw.Curves(context, docu);
 		}
 		
 		if (down && (event.type == "mouseup")) {
 			down = false;
 			orig = null;
-			if(status == Status.Creating){
-			} else if (status == Status.MovingCurve){
-				status = Status.Editing;
-			} else if (status == Status.MovingLever){
-				status = Status.Editing;
-			} else if (status == Status.EditingLever){
-				console.log(docu.curves[currCurveIndex].lo);
-				status = Status.Editing;
-			}
-
-			Draw.Curves(context, docu.curves, currCurveIndex, currLeverIndex);
+			docu.FinishEdit();
+			docu.Eval(docu.init);
+			Draw.Curves(context, docu);
 		}
 
 	}
@@ -407,43 +316,39 @@ function LoadName(context, docu){
 
 		document.onkeydown = function(evt) {
 
-			if(evt.keyCode == 27 && status == Status.Creating){
+			if(evt.keyCode == 27 && docu.status == Status.Creating){
 				document.getElementById("status").innerHTML = "Editing";
-				status = Status.Editing;
-				currCurveIndex = null;
+				docu.status = Status.Editing;
+				docu.Deselect();
 			}
 
-			if(evt.ctrlKey && evt.key == "c" && status == Status.Editing){
+			if(evt.ctrlKey && evt.key == "c" && docu.status == Status.Editing){
 				document.getElementById("status").innerHTML = "Drawing new context, docu.curves, curve";
-				status = Status.Creating;
-                currCurveIndex = null;
+				docu.status = Status.Creating;
+                docu.Deselect();
 				console.log(status);
 			}
 
             if(evt.ctrlKey && evt.keyCode == 8){
-                if(currCurveIndex != null){
-                    var curve = docu.curves[currCurveIndex];
-                    if(currLeverIndex != null){
-                        curve.levers.splice(currLeverIndex, 1);
+                if(docu.currCurveIndex != null){
+                    var curve = docu.CurrCurve();
+                    if(docu.currLeverIndex != null){
+                        curve.levers.splice(docu.currLeverIndex, 1);
                         curve.UpdateOutlines();
-                        currLeverIndex = null;
+                        docu.currLeverIndex = null;
                     }
 
                     if(curve.levers.length == 1){
-                        docu.curves.splice(currCurveIndex, 1);
-                        currCurveIndex = null;
+                        docu.curves.splice(docu.currCurveIndex, 1);
+                        docu.currCurveIndex = null;
                     }
                 }
-                Draw.Curves(context, docu.curves, currCurveIndex, currLeverIndex);
+                Draw.Curves(context, docu);
             }
 
-            if(evt.ctrlKey && evt.key=="d"){
-                Draw.CurvesFill(context, docu.curves);
-            }
-
-			if(evt.keyCode == 16){
-				isTranslatingLever = true;
-			}
+            // if(evt.ctrlKey && evt.key=="d"){
+            //     Draw.CurvesFill(context, docu);
+            // }
 
 			if(evt.keyCode == 18){
 				isEditingLever = true;
@@ -452,28 +357,28 @@ function LoadName(context, docu){
 			if(evt.key == "1" && evt.ctrlKey){
 				if(currCurveIndex != null && currLeverIndex != null){
 					docu.curves[currCurveIndex].levers[currLeverIndex].leverMode = 4;
-					Draw.Curves(context, docu.curves, currCurveIndex, currLeverIndex);
+					Draw.Curves(context, docu);
 				}
 			}
 
 			if(evt.key == "2" && evt.ctrlKey){
 				if(currCurveIndex != null && currLeverIndex != null){
 					docu.curves[currCurveIndex].levers[currLeverIndex].leverMode = 3;
-					Draw.Curves(context, docu.curves, currCurveIndex, currLeverIndex);
+					Draw.Curves(context, docu);
 				}
 			}
 
 			if(evt.key == "3" && evt.ctrlKey){
 				if(currCurveIndex != null && currLeverIndex != null){
 					docu.curves[currCurveIndex].levers[currLeverIndex].leverMode = 2;
-					Draw.Curves(context, docu.curves, currCurveIndex, currLeverIndex);
+					Draw.Curves(context, docu);
 				}
 			}
 
 			if(evt.key == "4" && evt.ctrlKey){
 				if(currCurveIndex != null && currLeverIndex != null){
 					docu.curves[currCurveIndex].levers[currLeverIndex].leverMode = 0;
-					Draw.Curves(context, docu.curves, currCurveIndex, currLeverIndex);
+					Draw.Curves(context, docu);
 				}
 			}
 
@@ -482,7 +387,7 @@ function LoadName(context, docu){
 		document.onkeyup = function(evt){
 
             if(evt.ctrlKey && evt.key=="d"){
-                Draw.Curves(context, docu.curves, currCurveIndex);
+                Draw.Curves(context, docu);
             }
 
 			if(evt.keyCode == 16){

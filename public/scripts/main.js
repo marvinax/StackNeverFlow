@@ -51,13 +51,12 @@
 	var Vector = __webpack_require__(5);
 	var Lever =  __webpack_require__(6);
 
-	var Cast =  __webpack_require__(7);
 	var Curve = __webpack_require__(9);
 
 	var Document = __webpack_require__(11);
-	var LoadData = __webpack_require__(12);
+	var LoadData = __webpack_require__(13);
 
-	var Draw = __webpack_require__(13);
+	var Draw = __webpack_require__(12);
 
 	function ClearDOMChildren(elem){
 		while (elem.firstChild) {
@@ -308,8 +307,7 @@
 			currLeverIndex = null,
 			currPoint = null;
 
-		var tempCurveTransArray=[],
-			tempLeverTransArray=[];
+		var tempTransArray=[];
 
 
 		function Drag(event) {
@@ -320,129 +318,40 @@
 				down   = true;
 				orig = MouseV(event);
 				curr = MouseV(event);
-				if(status == Status.Creating){
-					if(currGroupIndex == null){
-						currGroupIndex = docu.groups.push({curves:[]}) - 1;
-						docu_group = docu.groups[0];
-					}
+				if(docu.status == Status.Creating){
+					console.log("creating");
+	    			docu.AddPoint(orig);
 
-					if(currCurveIndex == null){
-						currCurveIndex = docu.curves.push(new Curve(orig)) - 1;	
-						console.log(currCurveIndex);
-					}
-					console.log(docu.curves[currCurveIndex]);
-
-	                var res = -1;
-	                var curve = docu.curves[currCurveIndex];
-	                for (var j = curve.levers.length-1; j >=0; j--){
-	                    var res = Cast.Lever(curve.levers[j], curr);
-	                    if(res != -1){
-	                        currLeverIndex = j;
-	                        currPoint = res;
-	                        status = Status.EditingLever;
-	                        document.getElementById("status").innerHTML = "Editing";
-	                        break;
-	                    }
-	                }
-	                if(res == -1){
-	                    currLeverIndex = docu.curves[currCurveIndex].Add(orig);
-	                }
-
-				} else if (status == Status.Editing){
+				} else if (docu.status == Status.Editing){
+					var cast;
 					if(isEditingLever){
-						if(currCurveIndex != null){
-							var curve = docu.curves[currCurveIndex];
-							for (var j = curve.levers.length-1; j >=0; j--){
-								var res = Cast.Lever(curve.levers[j], curr);
-								if(res != -1 && res != 2){
-									currLeverIndex = j;
-									currPoint = res;
-									status = Status.EditingLever;
-									break;
-								}
-							}						
-						}
+
+						cast = docu.SelectControlPoint(curr);
+
 					} else {
-	                    console.log(docu.curves.length + " curves");
-						for (var i = docu.curves.length-1; i >= 0 ; i--){
-							var res = Cast.Curve(docu.curves[i], curr);
-	                        console.log("casted " + res);
-							if(res != -1) {
 
-	                            var newCast = res;
+						tempTransArray = docu.PrepareTrans(curr);
+					}
 
-	                            res = -1;
-								currCurveIndex = i;
-								var curve = docu.curves[currCurveIndex];
-								for (var j = curve.levers.length-1; j >=0; j--){
-									res = Cast.Lever(curve.levers[j], curr);
-									if(res != -1){
-										currLeverIndex = j;
-										currPoint = res;
-										if(isTranslatingLever){
-											console.log("moving_lever");
-											status = Status.MovingLever;
-											tempLeverTransArray = curve.levers[currLeverIndex].ExtractArray();
-											console.log(tempLeverTransArray);
-										}
-	                                    break;
-									}
-								}
-
-								if(res == -1){
-	                                console.log(currCurveIndex);
-	                                if(isTranslatingLever){
-	                                    currLeverIndex = docu.curves[currCurveIndex].Insert(newCast);
-	                                } else {                                
-	                                    status = Status.MovingCurve;
-	                                    tempCurveTransArray = docu.curves[currCurveIndex].ExtractArray();
-	                                }
-	                                break;
-								}
-
-							}
-
-						}					
+					if (cast == -1 || tempTransArray.length == 0){
+						docu.Deselect();
 					}
 				}
-				Draw.Curves(context, docu.curves, currCurveIndex, currLeverIndex);
+				Draw.Curves(context, docu);
 			}
 			
 			if (down && (event.type == "mousemove")) {
 				curr = MouseV(event);
-				if(status == Status.Creating){
-					docu.curves[currCurveIndex].UpdateLever(currLeverIndex, 4, curr);
-				} else if (status == Status.Editing){
-
-				} else if (status == Status.MovingCurve){
-					// console.log(tempCurveTransArray);
-					docu.curves[currCurveIndex].TransFromArray(tempCurveTransArray, curr.Sub(orig));
-				} else if (status == Status.MovingLever){
-					// console.log(tempLeverTransArray);
-					docu.curves[currCurveIndex].levers[currLeverIndex].TransFromArray(tempLeverTransArray, curr.Sub(orig));
-	                docu.curves[currCurveIndex].UpdateOutlines();
-
-				} else if (status == Status.EditingLever){
-					console.log(currPoint);
-					docu.curves[currCurveIndex].UpdateLever(currLeverIndex, currPoint, curr);
-				}
-				Draw.Curves(context, docu.curves, currCurveIndex, currLeverIndex);
+				docu.UpdateEdit(curr, orig, tempTransArray);
+				Draw.Curves(context, docu);
 			}
 			
 			if (down && (event.type == "mouseup")) {
 				down = false;
 				orig = null;
-				if(status == Status.Creating){
-				} else if (status == Status.MovingCurve){
-					status = Status.Editing;
-				} else if (status == Status.MovingLever){
-					status = Status.Editing;
-				} else if (status == Status.EditingLever){
-					console.log(docu.curves[currCurveIndex].lo);
-					status = Status.Editing;
-				}
-
-				Draw.Curves(context, docu.curves, currCurveIndex, currLeverIndex);
+				docu.FinishEdit();
+				docu.Eval(docu.init);
+				Draw.Curves(context, docu);
 			}
 
 		}
@@ -453,43 +362,39 @@
 
 			document.onkeydown = function(evt) {
 
-				if(evt.keyCode == 27 && status == Status.Creating){
+				if(evt.keyCode == 27 && docu.status == Status.Creating){
 					document.getElementById("status").innerHTML = "Editing";
-					status = Status.Editing;
-					currCurveIndex = null;
+					docu.status = Status.Editing;
+					docu.Deselect();
 				}
 
-				if(evt.ctrlKey && evt.key == "c" && status == Status.Editing){
+				if(evt.ctrlKey && evt.key == "c" && docu.status == Status.Editing){
 					document.getElementById("status").innerHTML = "Drawing new context, docu.curves, curve";
-					status = Status.Creating;
-	                currCurveIndex = null;
+					docu.status = Status.Creating;
+	                docu.Deselect();
 					console.log(status);
 				}
 
 	            if(evt.ctrlKey && evt.keyCode == 8){
-	                if(currCurveIndex != null){
-	                    var curve = docu.curves[currCurveIndex];
-	                    if(currLeverIndex != null){
-	                        curve.levers.splice(currLeverIndex, 1);
+	                if(docu.currCurveIndex != null){
+	                    var curve = docu.CurrCurve();
+	                    if(docu.currLeverIndex != null){
+	                        curve.levers.splice(docu.currLeverIndex, 1);
 	                        curve.UpdateOutlines();
-	                        currLeverIndex = null;
+	                        docu.currLeverIndex = null;
 	                    }
 
 	                    if(curve.levers.length == 1){
-	                        docu.curves.splice(currCurveIndex, 1);
-	                        currCurveIndex = null;
+	                        docu.curves.splice(docu.currCurveIndex, 1);
+	                        docu.currCurveIndex = null;
 	                    }
 	                }
-	                Draw.Curves(context, docu.curves, currCurveIndex, currLeverIndex);
+	                Draw.Curves(context, docu);
 	            }
 
-	            if(evt.ctrlKey && evt.key=="d"){
-	                Draw.CurvesFill(context, docu.curves);
-	            }
-
-				if(evt.keyCode == 16){
-					isTranslatingLever = true;
-				}
+	            // if(evt.ctrlKey && evt.key=="d"){
+	            //     Draw.CurvesFill(context, docu);
+	            // }
 
 				if(evt.keyCode == 18){
 					isEditingLever = true;
@@ -498,28 +403,28 @@
 				if(evt.key == "1" && evt.ctrlKey){
 					if(currCurveIndex != null && currLeverIndex != null){
 						docu.curves[currCurveIndex].levers[currLeverIndex].leverMode = 4;
-						Draw.Curves(context, docu.curves, currCurveIndex, currLeverIndex);
+						Draw.Curves(context, docu);
 					}
 				}
 
 				if(evt.key == "2" && evt.ctrlKey){
 					if(currCurveIndex != null && currLeverIndex != null){
 						docu.curves[currCurveIndex].levers[currLeverIndex].leverMode = 3;
-						Draw.Curves(context, docu.curves, currCurveIndex, currLeverIndex);
+						Draw.Curves(context, docu);
 					}
 				}
 
 				if(evt.key == "3" && evt.ctrlKey){
 					if(currCurveIndex != null && currLeverIndex != null){
 						docu.curves[currCurveIndex].levers[currLeverIndex].leverMode = 2;
-						Draw.Curves(context, docu.curves, currCurveIndex, currLeverIndex);
+						Draw.Curves(context, docu);
 					}
 				}
 
 				if(evt.key == "4" && evt.ctrlKey){
 					if(currCurveIndex != null && currLeverIndex != null){
 						docu.curves[currCurveIndex].levers[currLeverIndex].leverMode = 0;
-						Draw.Curves(context, docu.curves, currCurveIndex, currLeverIndex);
+						Draw.Curves(context, docu);
 					}
 				}
 
@@ -528,7 +433,7 @@
 			document.onkeyup = function(evt){
 
 	            if(evt.ctrlKey && evt.key=="d"){
-	                Draw.Curves(context, docu.curves, currCurveIndex);
+	                Draw.Curves(context, docu);
 	            }
 
 				if(evt.keyCode == 16){
@@ -590,8 +495,8 @@
 	if(false) {
 		// When the styles change, update the <style> tags
 		if(!content.locals) {
-			module.hot.accept("!!../node_modules/_css-loader@0.21.0@css-loader/index.js!./styles.css", function() {
-				var newContent = require("!!../node_modules/_css-loader@0.21.0@css-loader/index.js!./styles.css");
+			module.hot.accept("!!../node_modules/css-loader/index.js!./styles.css", function() {
+				var newContent = require("!!../node_modules/css-loader/index.js!./styles.css");
 				if(typeof newContent === 'string') newContent = [[module.id, newContent, '']];
 				update(newContent);
 			});
@@ -1521,18 +1426,27 @@
 	var Vector = __webpack_require__(5);
 	var Lever =  __webpack_require__(6);
 	var Curve = __webpack_require__(9);
-	var Draw = __webpack_require__(13);
+	var Cast =  __webpack_require__(7);
+	var Draw = __webpack_require__(12);
 	var CurveSideOutline = __webpack_require__(10);
 
 
 	class Param{
 	 	constructor(name, value, min, max){
-	        this.name = name;
-	        this.value = value;
-	        this.min = min;
-	        this.max = max;
-	    }
+			this.name = name;
+			this.value = value;
+			this.min = min;
+			this.max = max;
+		}
 	}
+
+	var Status = Object.freeze({
+			Editing : 0,
+			Creating : 1,
+			MovingCurve : 2,
+			MovingLever : 3,
+			EditingLever : 4
+		});
 
 	class Document{
 		constructor(canvas){
@@ -1543,7 +1457,134 @@
 			this.init = "";
 			this.update = "";
 
-			this.status = "Editing Existing Curves.";
+			this.status = Status.Editing;
+			this.isTranslatingLever = false;
+			this.isEditingLever = false;
+
+			this.currCurveIndex = null,
+			this.currLeverIndex = null,
+			this.currPoint = null;
+
+
+		}
+
+		CurrCurve(){
+			return this.curves[this.currCurveIndex];
+		}
+
+		CurrLever(){
+			return this.curves[this.currCurveIndex].levers[this.currLeverIndex];
+		}
+
+		AddCurve(curve){
+			this.currCurveIndex = this.curves.push(curve) - 1;
+		}
+
+		AddPoint(point){
+			if(this.currCurveIndex == null){
+				this.AddCurve(new Curve(point));
+			} else {
+				if(this.SelectControlPoint(point, false) == -1){
+					this.currLeverIndex = this.CurrCurve().Add(point);
+					console.log(this.currLeverIndex);
+				}
+			}
+
+			// otherwise the status will be switched to EditingLever.
+			// watchout the side effect.
+
+		}
+
+		Deselect(){
+			this.currCurveIndex = null,
+			this.currLeverIndex = null,
+			this.currPoint = null;
+		}
+
+		/**
+		 * Once a casted control point of a lever found, set up current
+		 * lever index and control point index, and set the status
+		 * @param {[type]} point [description]
+		 */
+		SelectControlPoint(point, no_center){
+
+			var cast = -1;
+			if(this.currCurveIndex != null){
+
+				for (const [i, lever] of this.CurrCurve().levers.entries()){
+					cast = Cast.Lever(lever, point);
+					if(cast != -1 && cast != (no_center ? 2 : -1)){
+						this.currLeverIndex = i;
+						this.currPoint = cast;
+						this.status = Status.EditingLever;
+						break;
+					}
+				}
+			}
+
+			return cast;
+		}
+
+		PrepareLeverTrans(ith, point){
+			var transArray = [];
+			var curve = this.curves[ith];
+
+			for (const [i, lever] of this.CurrCurve().levers.entries()){
+				var cast = Cast.Lever(lever, point);
+				if(cast != -1){
+					this.currLeverIndex = i;
+					this.currPoint = cast;
+					this.status = Status.MovingLever;
+					transArray = this.CurrLever().ExtractArray();
+					break;
+				}
+			}
+
+			return transArray;
+
+		}
+
+		PrepareTrans(point){
+			var transArray = [];
+			for (const [ith, curve] of this.curves.entries()){
+				if(Cast.Curve(curve, point) != -1) {
+					this.currCurveIndex = ith;
+					transArray = this.PrepareLeverTrans(ith, point);
+					if(transArray.length == 0){
+						this.status = Status.MovingCurve;
+						transArray = this.CurrCurve().ExtractArray();
+					}
+					break;
+				}
+			}
+			return transArray;
+		}
+
+		UpdateEdit(curr, orig, transArray){
+
+			switch(this.status){
+				case Status.Creating:
+					this.CurrCurve().UpdateLever(this.currLeverIndex, 4, curr);
+					break;
+				case Status.MovingCurve:
+					this.CurrCurve().TransFromArray(transArray, curr.Sub(orig));
+					break;
+				case Status.MovingLever:
+					this.CurrLever().TransFromArray(transArray, curr.Sub(orig));
+		            this.CurrCurve().UpdateOutlines();
+		            break;
+				case Status.EditingLever:
+					console.log(this.currPoint);
+					this.CurrCurve().UpdateLever(this.currLeverIndex, this.currPoint, curr);
+					break;
+
+			}
+		}
+
+		FinishEdit(){
+			if(this.status != Status.Editing && this.status != Status.Creating){
+				this.status = Status.Editing;
+			}
 		}
 
 		InitEval(){
@@ -1555,260 +1596,228 @@
 			for(let curve of this.curves){
 				curve.UpdateOutlines();
 			}
-	        Draw.Curves(context, this.curves, null);
+			Draw.Curves(context, this);
 		}
 
-	    Eval(expr){
-	        var text = expr.split('\n'),
-	        	exec_hold_flag = false,
-	        	exec_err_flag = false;
+		Eval(expr){
+			var text = expr.split('\n'),
+				exec_hold_flag = false,
+				exec_err_flag = false;
 
-	        var hold = function(){
-	        	exec_hold_flag = true;
-	        }
+			var hold = function(){
+				exec_hold_flag = true;
+			}
 
-	        var unhold = function(){
-	        	exec_hold_flag = false;
-	        }
+			var unhold = function(){
+				exec_hold_flag = false;
+			}
 
-	        var pop = function(){
-	        	return this.dstack.pop();
-	        }.bind(this);
+			var pop = function(){
+				return this.dstack.pop();
+			}.bind(this);
 
-	        var push = function(elem){
-	        	this.dstack.push(elem);
-	        	// console.log(JSON.stringify(dstack));
-	        }.bind(this);
+			var push = function(elem){
+				this.dstack.push(elem);
+				// console.log(JSON.stringify(dstack));
+			}.bind(this);
 
-	        var refer = function(){
-		    	var name = pop();
+			var refer = function(){
+				var name = pop();
 				var xhr = new XMLHttpRequest();
 				xhr.open('GET', 'load/'+name);
 				xhr.onload = function() {
-				    if (xhr.status === 200) {
-				        var res = JSON.parse(xhr.responseText);
-				        push(LoadData.Curves(res.curves));
-				        
-				    }
-				    else {
-				        console.log('Request failed.  Returned status of ' + xhr.status);
-				        exec_err_flag = true;
-				    }
+					if (xhr.status === 200) {
+						var res = JSON.parse(xhr.responseText);
+						push(LoadData.Curves(res.curves));
+
+					}
+					else {
+						console.log('Request failed.  Returned status of ' + xhr.status);
+						exec_err_flag = true;
+					}
 				};
 				xhr.send();
-		    };
+			};
 
-		    var put = function(){
-		    	var key = pop();
-		    	var val = pop();
-				if(this.consts.some(function(elem){return elem.key == key;})){
-		    		console.log('existing key. consider change a name');
-		    		exec_err_flag = true;
-	    		}else
-		    		this.consts.push({key:key, val:val.Copy()});
-		    }.bind(this);
+			var put = function(){
+				var key = pop();
+				var val = pop();
+				this.consts.push({key:key, val:val.Copy()});
+			}.bind(this);
 
-		    var get = function(){
-		    	var key = pop();
-		    	var res = this.consts.filter(function(elem){return elem.key == key});
-		    	if(res.length == 0){
-		    		console.log('key not found');
-		    		exec_err_flag = true;
-		    	} else 
-		    		push(res[0].val);
-		    }.bind(this);
+			var get = function(){
+				var key = pop();
+				var res = this.consts.filter(function(elem){return elem.key == key});
+				if(res.length == 0){
+					console.log('key "'+ key +'" not found');
+					exec_err_flag = true;
+				} else
+					push(res[0].val);
+			}.bind(this);
 
-		    var vec = function(){
-		    	var x = pop();
-		    	var y = pop();
-		    	push(new Vector(parseFloat(x), parseFloat(y)));
-		    }
+			var vec = function(){
+				var x = pop();
+				var y = pop();
+				push(new Vector(parseFloat(x), parseFloat(y)));
+			}
 
-		    var set = function(){
-		    	var first_arg = pop();
-		    	var second_arg;
-		    	if(first_arg == "c" || first_arg == "curve"){
-					second_arg = parseInt(pop());
-					this.curves[second_arg] = pop();	    		
-		    	} else if (first_arg == "l" || first_arg == "lever") {
-	    			second_arg = parseInt(pop());
-	    			var third = pop();
-	    			if(third == "c" || third == "curve"){
-	    				var forth = pop();
-	    				console.log(forth);
-	    				var fifth = pop();
-	    				console.log(JSON.stringify(fifth));
-	    				this.curves[forth].levers[second_arg] = fifth;
-	    			}
-		    	}
-		    }.bind(this);
+			var set = function(){
+				var first = pop();
+				var second;
+				if(first == "c" || first == "curve"){
+					second = parseInt(pop());
+					this.curves[second] = pop();
+				} else if (first == "l" || first == "lever") {
+					second = parseInt(pop());
+					var third = pop();
+					if(third == "c" || third == "curve"){
+						var fourth = parseInt(pop());
+						console.log(fourth);
+						var fifth = pop();
+						console.log(JSON.stringify(fifth));
+						this.curves[fourth].levers[second] = fifth;
+					}
+				} else if (first == "p") {
+					second = parseInt(pop());
+					var third = pop();
+					if(third == "l" || third == "curve"){
+						var fourth = parseInt(pop());
+						console.log(fourth);
+						var fifth = pop();
+						if(fifth == "c" || fifth == "curve"){
+							var sixth = parseInt(pop());
+							this.curves[sixth].levers[fourth].SetControlPoint(second, pop());
+						}
+					}
+				}
+			}.bind(this);
 
-		    var plus = function(){
-		        var p1 = pop();
-		        var p2 = pop();
+			var plus = function(){
+				var p1 = pop();
+				var p2 = pop();
 
-		        push(p1.Add(p2));    	
-		    }
+				push(p1.Add(p2));
+			}
 
-		    var mult = function(){
-		    	var p = pop();
-		    	var n  = pop();
-		    	if(typeof p == "number" && typeof n == "number")
-		    		push(n * p);
-		    	else if(typeof p == "object" && typeof p.x == "number" && typeof n == "number")
-		    		push(p.Mult(n));
-		    	else{
-		    		console.log("mult type error");
-		    		exec_err_flag = true;
-		    	}
-		    }
+			var mult = function(){
+				var p = pop();
+				var n  = pop();
+				if(typeof p == "number" && typeof n == "number")
+					push(n * p);
+				else if(typeof p == "object" && typeof p.x == "number" && typeof n == "number")
+					push(p.Mult(n));
+				else{
+					console.log("mult type error");
+					exec_err_flag = true;
+				}
+			}
 
-		    var trans = function(){
-		    	var elem = pop(),
-		    		increm = pop();
-		    	push(elem.TransCreate(increm));
-		    }
+			var trans = function(){
+				var elem = pop(),
+					increm = pop();
+				push(elem.TransCreate(increm));
+			}
 
-		    var drag = function(){
-		    	var elem = pop(),
-		    		newPoint = pop(),
-		    		ith = parseInt(pop());
-		    	elem.SetControlPoint(ith, newPoint);
-		    }
+			var drag = function(){
+				var elem = pop(),
+					newPoint = pop(),
+					ith = parseInt(pop());
+				elem.SetControlPoint(ith, newPoint);
+			}
 
-		    var curve = function(){
-		    	var ith = parseInt(pop());
-		    	push(this.curves[ith]);
-		    }.bind(this);
+			var curve = function(){
+				var ith = parseInt(pop());
+				push(this.curves[ith]);
+			}.bind(this);
 
-		    var lever = function(){
-		    	var ith = parseInt(pop());
-		    	var elem = pop();
-		    	if(elem.levers != undefined)
-		    		push(elem.levers[ith]);
-		    	else{
-		    		console.log("lever needs a curve ref ahead");
-		    		exec_err_flag = true;
-		    	}
-		    }
+			var lever = function(){
+				var ith = parseInt(pop());
+				var elem = pop();
+				if(elem.levers != undefined)
+					push(elem.levers[ith]);
+				else{
+					console.log("lever needs a curve ref ahead");
+					exec_err_flag = true;
+				}
+			}
 
-		    var point = function(){
-		    	var ith = parseInt(pop());
-		    	var elem = pop();
-		    	if(elem.points != undefined)
-		    		push(elem.levers[ith]);
-		    	else{
-		    		console.log("point needs a lever ref ahead");
-	    			exec_err_flag = true;
-	    		}
-		    }
+			var point = function(){
+				var ith = parseInt(pop());
+				var elem = pop();
+				if(elem.points != undefined)
+					push(elem.points[ith]);
+				else{
+					console.log("point needs a lever ref ahead");
+					exec_err_flag = true;
+				}
+			}
 
-	    	var param = function(){
-		    	var name = pop();
-		    	var byName = this.params.filter(function(param){return param.name == name});
-		    	if(byName == []){
-		    		var usingIndex = this.params[parseInt(name)];
-		    		if(usingIndex != undefined){
-		    			push(parseFloat(usingIndex.value));
-		    		}
-		    	} else {
-		    		push(parseFloat(byName[0].value));
-		    	}
-		    }.bind(this);
+			var param = function(){
+				var name = pop();
+				var byName = this.params.filter(function(param){return param.name == name});
+				if(byName == []){
+					var usingIndex = this.params[parseInt(name)];
+					if(usingIndex != undefined){
+						push(parseFloat(usingIndex.value));
+					} else {
+						console.log("param not found");
+						exec_err_flag = true;
+					}
+				} else {
+					push(parseFloat(byName[0].value));
+				}
+			}.bind(this);
 
-		    var curr;
-		    var stack;
+			var curr;
+			var stack;
 
-		    for (var i = 0; i < text.length; i++) {
-		    	stack = text[i].split(" ");
-		        while(true){
-		    		curr = stack.pop();
-		    		if(exec_hold_flag && curr != "unhold"){
-		    			push(curr);
-		    		} else {
-			        	switch(curr){
-			        		case "hold"	 : hold();     break;
-			        		case "unhold": unhold();   break;
-			        		case "set"   : set();      break;
-			        		case "vec"   : vec();      break;
-			        		case "get"   : get();	   break;
-			        		case "put"   : put();      break;
-			        		case "c":
-			        		case "curve" : curve();    break;
-			        		case "l":
-			        		case "lever" : lever();    break;
-			        		case "p":
-			        		case "point" : point();    break;
-			        		case "plus"  : plus();     break;
-			        		case "mult"  : mult();     break;
-			        		case "trans" : trans();    break;
-			        		case "drag"  : drag();     break;
-			        		case "param" : param();    break;
-			        		default      : push(curr);
-			        	}	    			
-		    		}
-		        	if(stack.length == 0) break;
-		        	if(exec_err_flag) break;
-		        	// console.log(JSON.stringify(this.consts));
-		        }
-		        if(exec_err_flag){
-		        	console.log("error raised, further Eval stopped");
-		        	break;
-		        }
-		    }
-	    } 
+			for (var i = 0; i < text.length; i++) {
+				stack = text[i].split(" ");
+				while(true){
+					curr = stack.pop();
+					if(exec_hold_flag && curr != "unhold"){
+						push(curr);
+					} else {
+						switch(curr){
+							case "hold"	 : hold();	 break;
+							case "unhold": unhold();   break;
+							case "set"   : set();	  break;
+							case "vec"   : vec();	  break;
+							case "get"   : get();	   break;
+							case "put"   : put();	  break;
+							case "c":
+							case "curve" : curve();	break;
+							case "l":
+							case "lever" : lever();	break;
+							case "p":
+							case "point" : point();	break;
+							case "plus"  : plus();	 break;
+							case "mult"  : mult();	 break;
+							case "trans" : trans();	break;
+							case "drag"  : drag();	 break;
+							case "param" : param();	break;
+							default	  : push(curr);
+						}
+					}
+					if(stack.length == 0) break;
+					if(exec_err_flag) {
+						console.log("at "+curr);
+						break;
+					}
+					// console.log(JSON.stringify(this.consts));
+				}
+				if(exec_err_flag){
+					console.log("error raised, further Eval stopped");
+					break;
+				}
+			}
+		}
 	}
 
 	module.exports = Document;
 
 /***/ }),
 /* 12 */
-/***/ (function(module, exports, __webpack_require__) {
-
-	
-	var Vector = __webpack_require__(5);
-	var Lever =  __webpack_require__(6);
-	var Curve = __webpack_require__(9);
-	var CurveSideOutline = __webpack_require__(10);
-
-	class LoadData {
-		static Curves(curves){
-			return curves.map(function(x){return this.Curve(x)}.bind(this));
-		}
-
-		static Curve(curve){
-			var curveRes = new Curve();
-			// console.log(curve);
-			curveRes.lo = this.Outline(curve.lo);
-			curveRes.ro = this.Outline(curve.ro);
-			curveRes.levers = curve.levers.map(function(x){return this.Lever(x)}.bind(this));
-			curveRes.orig = this.Point(curve.orig);
-			return curveRes;
-		}
-
-		static Lever(lever){
-			var leverRes = new Lever();
-			leverRes.leverMode = lever.leverMode;
-			leverRes.points = lever.points.map(function(x){return this.Point(x)}.bind(this));
-			return leverRes;
-		}
-
-		static Outline(outline){
-			var outlineRes = new CurveSideOutline();
-			outlineRes.side = outline.side;
-			outlineRes.points = outline.points.map(function(x){return this.Point(x)}.bind(this));
-			return outlineRes;
-		}
-
-		static Point(point){
-			return new Vector(point.x, point.y);
-		}
-	}
-
-	module.exports = LoadData;
-
-/***/ }),
-/* 13 */
 /***/ (function(module, exports) {
 
 	class Draw{
@@ -1858,7 +1867,11 @@
 
 	    }
 
-	    static Curves(ctx, curves, currCurveIndex, currLeverIndex){
+	    static Curves(ctx, docu){
+
+	        var curves = docu.curves,
+	            currCurveIndex = docu.currCurveIndex,
+	            currLeverIndex = docu.currLeverIndex;
 
 	        ctx.lineWidth = 1;
 	        ctx.clearRect(0,0, ctx.canvas.width, ctx.canvas.height);
@@ -1939,7 +1952,7 @@
 	                    diam  = sec.Sub(first).Normalize().Mult(20);
 	                ctx.fillText("C"+ith, first.x + diam.y - 10, first.y -diam.x - 10);
 
-	                for (var i = 0; i < curves[ith].levers.length - 1; i++) {
+	                for (var i = 0; i < curves[ith].levers.length; i++) {
 	                    var point = curves[ith].levers[i].points[2];
 	                    ctx.fillText(i, point.x+10, point.y-10);
 	                }
@@ -1962,6 +1975,52 @@
 	}
 
 	module.exports = Draw;
+
+/***/ }),
+/* 13 */
+/***/ (function(module, exports, __webpack_require__) {
+
+	
+	var Vector = __webpack_require__(5);
+	var Lever =  __webpack_require__(6);
+	var Curve = __webpack_require__(9);
+	var CurveSideOutline = __webpack_require__(10);
+
+	class LoadData {
+		static Curves(curves){
+			return curves.map(function(x){return this.Curve(x)}.bind(this));
+		}
+
+		static Curve(curve){
+			var curveRes = new Curve();
+			// console.log(curve);
+			curveRes.lo = this.Outline(curve.lo);
+			curveRes.ro = this.Outline(curve.ro);
+			curveRes.levers = curve.levers.map(function(x){return this.Lever(x)}.bind(this));
+			curveRes.orig = this.Point(curve.orig);
+			return curveRes;
+		}
+
+		static Lever(lever){
+			var leverRes = new Lever();
+			leverRes.leverMode = lever.leverMode;
+			leverRes.points = lever.points.map(function(x){return this.Point(x)}.bind(this));
+			return leverRes;
+		}
+
+		static Outline(outline){
+			var outlineRes = new CurveSideOutline();
+			outlineRes.side = outline.side;
+			outlineRes.points = outline.points.map(function(x){return this.Point(x)}.bind(this));
+			return outlineRes;
+		}
+
+		static Point(point){
+			return new Vector(point.x, point.y);
+		}
+	}
+
+	module.exports = LoadData;
 
 /***/ })
 /******/ ]);

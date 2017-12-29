@@ -45,7 +45,11 @@ class Draw{
 
     }
 
-    static Curves(ctx, curves, currCurveIndex, currLeverIndex){
+    static Curves(ctx, docu){
+
+        var curves = docu.curves,
+            currCurveIndex = docu.currCurveIndex,
+            currLeverIndex = docu.currLeverIndex;
 
         ctx.lineWidth = 1;
         ctx.clearRect(0,0, ctx.canvas.width, ctx.canvas.height);
@@ -126,7 +130,7 @@ class Draw{
                     diam  = sec.Sub(first).Normalize().Mult(20);
                 ctx.fillText("C"+ith, first.x + diam.y - 10, first.y -diam.x - 10);
 
-                for (var i = 0; i < curves[ith].levers.length - 1; i++) {
+                for (var i = 0; i < curves[ith].levers.length; i++) {
                     var point = curves[ith].levers[i].points[2];
                     ctx.fillText(i, point.x+10, point.y-10);
                 }
