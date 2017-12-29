@@ -305,6 +305,7 @@ function LoadName(context, docu){
 			orig = null;
 			docu.FinishEdit();
 			docu.Eval(docu.init);
+			console.log(docu.consts);
 			Draw.Curves(context, docu);
 		}
 

@@ -165,7 +165,7 @@ class Document{
 
 	InitEval(){
 		this.dstack = [];
-		this.consts = [];
+		this.consts = {};
 	}
 
 	UpdateDraw(context){
@@ -218,17 +218,17 @@ class Document{
 		var put = function(){
 			var key = pop();
 			var val = pop();
-			this.consts.push({key:key, val:val.Copy()});
+			this.consts[key] = val.Copy();
 		}.bind(this);
 
 		var get = function(){
 			var key = pop();
-			var res = this.consts.filter(function(elem){return elem.key == key});
-			if(res.length == 0){
+			var res = this.consts[key];
+			if(res == undefined){
 				console.log('key "'+ key +'" not found');
 				exec_err_flag = true;
 			} else
-				push(res[0].val);
+				push(res);
 		}.bind(this);
 
 		var vec = function(){

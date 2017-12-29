@@ -51,9 +51,9 @@
 	var Vector = __webpack_require__(5);
 	var Lever =  __webpack_require__(6);
 
-	var Curve = __webpack_require__(9);
+	var Curve = __webpack_require__(7);
 
-	var Document = __webpack_require__(11);
+	var Document = __webpack_require__(10);
 	var LoadData = __webpack_require__(13);
 
 	var Draw = __webpack_require__(12);
@@ -351,6 +351,7 @@
 				orig = null;
 				docu.FinishEdit();
 				docu.Eval(docu.init);
+				console.log(docu.consts);
 				Draw.Curves(context, docu);
 			}
 
@@ -1076,78 +1077,135 @@
 /***/ (function(module, exports, __webpack_require__) {
 
 	
-	var CurveMath = __webpack_require__(8);
+	var CurveSideOutline = __webpack_require__(8);
 
-	class Cast{
-	    
-	    static CurveRect(curve, mouseV){
-	        return curve.bounding[0].x < mouseV.x && curve.bounding[1].x > mouseV.x &&
-	               curve.bounding[0].y < mouseV.y && curve.bounding[1].y > mouseV.y;
+	var Vector = __webpack_require__(5);
+	var Lever =  __webpack_require__(6);
+
+	var CurveMath = __webpack_require__(9);
+
+	class Curve {
+
+	    constructor(orig){
+
+		    this.levers = [];
+
+		    this.orig = orig; 
+
+		    this.lo = new CurveSideOutline(1);
+		    this.ro = new CurveSideOutline(3);
+
+	    }
+
+	    Add(mouseV){
+	        this.levers.push(new Lever(mouseV));
+	        this.GetOutlines();
+	        return this.levers.length - 1;
+	    }
+
+	    Delete(index){
+	        levers.splice(index, 1);
+	        this.GetOutlines();
 	    }
 	    
-	    static CurveBody(curve, mouseV) {
+	    Insert(curveCast) {
+	        this.levers.splice(Math.floor(curveCast+1), 0, new Lever(new Vector(0, 0)));
+	        CurveMath.SetInsertedLeverOnCurveGroup(this.levers, Math.floor(curveCast+1), curveCast - Math.floor(curveCast));
+	        console.log(this.levers.length);
+
+	        this.GetOutlines();
 	        
-	    	var CAST_DIST = 9;
-
-	        var t, p, dist;
-	        console.log(JSON.stringify(curve));
-	        for (var i = 0; i < curve.levers.length - 1; i++) {
-
-	            t = CurveMath.GetClosestTFromGivenPoint(curve.levers[i], curve.levers[i+1], mouseV, 6, 4);
-	            p = CurveMath.GetPointOnCurveBetweenLever(t, curve.levers[i], curve.levers[i+1]);
-	            dist = p.Dist(mouseV);
-	            if (dist < CAST_DIST)
-	                return i + t;
-	        }
-	        return -1;
-	    } 
-
-	    static Curve(curve, mouseV){
-	    	// console.log(curve.bounding);
-	        // if(this.CurveRect(curve, mouseV)){
-	            return this.CurveBody(curve, mouseV);
-	        // }
-	        // else
-	        //     return -1;
+	        return Math.floor(curveCast+1);
 	    }
 
-	    static CurveIthLever(curve, mouseV) {
-
-	    	var CAST_DIST = 9;
-
-	        var i = 0,
-	        	found = false;
-
-	        for (; i < curve.levers.length; i ++) {
-	        	found = PVector.dist(curve.levers[i].points[2], mouseV) < CAST_DIST;
-	        	if(found) break;	
-	        } 
-
-	        if(!found) i = -1;
-
-	        return i;
+	    UpdateLever(ithLever, ithPoint, value){
+	        this.levers[ithLever].SetControlPoint(ithPoint, value);
+	        this.UpdateOutlines();
 	    }
 
-	    static Lever(lever, mouseV){
+	    GetOutlines(){
+	        this.lo.GetPointFromLevers(this.levers);
+	        this.ro.GetPointFromLevers(this.levers);
+	    }
 
-			var CAST_DIST = 9;    
-	        var castSequence = [0, 4, 1, 3, 2];
-	        
-	        var res = -1;
-	        for(var ith = 0; ith < 5; ith++)
-	            if(lever.points[castSequence[ith]].Dist(mouseV) < CAST_DIST){
-	            	console.log(ith + " " + castSequence[ith]);
-	                res = castSequence[ith];
-	                break;
-	            }
+	    UpdateOutlines(){
+	        this.lo.SetPointFromLevers(this.levers);
+	        this.ro.SetPointFromLevers(this.levers);
+	    }
+
+
+	    ExtractArray(){
+	    	var res = [];
+	        for(var lever of this.levers) res.push(lever.ExtractArray());
 	        return res;
+	    }
+
+	    TransFromArray(array, increment) {
+	    	// console.log(array);
+	        for (var i = 0; i < this.levers.length; i++) {
+	            this.levers[i].TransFromArray(array[i], increment);
+	        }
+	        this.UpdateOutlines();
 	    }
 	}
 
-	module.exports = Cast;
+	module.exports = Curve;
 
 /***/ }),
 /* 8 */
+/***/ (function(module, exports, __webpack_require__) {
+
+	var CurveSide = Object.freeze({
+	    LEFT :  1,
+	    RIGHT : 3
+	});
+
+	var Vector = __webpack_require__(5);
+	var Lever =  __webpack_require__(6);
+	var CurveMath = __webpack_require__(9);
+
+	class CurveSideOutline{
+
+		constructor(side){
+			this.points = [];
+			this.side = side;
+		}
+
+	    /// this should be called immediately after a new curve is formed.
+	    GetPointFromLevers(levers){
+
+	        this.points = [];
+	        for (var i = 0; i < levers.length * 3 - 2; i ++){
+	            this.points.push(new Vector(0, 0));
+	        }
+	        this.SetPointFromLevers(levers);
+	    }
+
+		GetIdenticalCurve(p1, p2){
+	        return CurveMath.GetIdenticalCurve(p1.points[this.side], p2.points[this.side], p1, p2);
+	    }
+
+	    /// update with every redraw.
+	    SetPointFromLevers(levers){
+	        if(this.points != null){
+	            for(var i = 0; i < levers.length; i++){
+
+	                this.points[3*i].Set(levers[i].points[this.side]);
+
+	                if(i < levers.length - 1){
+	                    var aux = this.GetIdenticalCurve(levers[i], levers[i+1]);
+	                    this.points[3 * i + 1].Set(aux[0]);
+	                    this.points[3 * i + 2].Set(aux[1]);
+	                }
+	            }
+	        }
+	    }
+	}
+
+	module.exports = CurveSideOutline;
+
+/***/ }),
+/* 9 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	var Vector = __webpack_require__(5);
@@ -1287,148 +1345,16 @@
 	module.exports = CurveMath;
 
 /***/ }),
-/* 9 */
-/***/ (function(module, exports, __webpack_require__) {
-
-	
-	var CurveSideOutline = __webpack_require__(10);
-
-	var Vector = __webpack_require__(5);
-	var Lever =  __webpack_require__(6);
-
-	var CurveMath = __webpack_require__(8);
-
-	class Curve {
-
-	    constructor(orig){
-
-		    this.levers = [];
-
-		    this.orig = orig; 
-
-		    this.lo = new CurveSideOutline(1);
-		    this.ro = new CurveSideOutline(3);
-
-	    }
-
-	    Add(mouseV){
-	        this.levers.push(new Lever(mouseV));
-	        this.GetOutlines();
-	        return this.levers.length - 1;
-	    }
-
-	    Delete(index){
-	        levers.splice(index, 1);
-	        this.GetOutlines();
-	    }
-	    
-	    Insert(curveCast) {
-	        this.levers.splice(Math.floor(curveCast+1), 0, new Lever(new Vector(0, 0)));
-	        CurveMath.SetInsertedLeverOnCurveGroup(this.levers, Math.floor(curveCast+1), curveCast - Math.floor(curveCast));
-	        console.log(this.levers.length);
-
-	        this.GetOutlines();
-	        
-	        return Math.floor(curveCast+1);
-	    }
-
-	    UpdateLever(ithLever, ithPoint, value){
-	        this.levers[ithLever].SetControlPoint(ithPoint, value);
-	        this.UpdateOutlines();
-	    }
-
-	    GetOutlines(){
-	        this.lo.GetPointFromLevers(this.levers);
-	        this.ro.GetPointFromLevers(this.levers);
-	    }
-
-	    UpdateOutlines(){
-	        this.lo.SetPointFromLevers(this.levers);
-	        this.ro.SetPointFromLevers(this.levers);
-	    }
-
-
-	    ExtractArray(){
-	    	var res = [];
-	        for(var lever of this.levers) res.push(lever.ExtractArray());
-	        return res;
-	    }
-
-	    TransFromArray(array, increment) {
-	    	// console.log(array);
-	        for (var i = 0; i < this.levers.length; i++) {
-	            this.levers[i].TransFromArray(array[i], increment);
-	        }
-	        this.UpdateOutlines();
-	    }
-	}
-
-	module.exports = Curve;
-
-/***/ }),
 /* 10 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	var CurveSide = Object.freeze({
-	    LEFT :  1,
-	    RIGHT : 3
-	});
-
-	var Vector = __webpack_require__(5);
-	var Lever =  __webpack_require__(6);
-	var CurveMath = __webpack_require__(8);
-
-	class CurveSideOutline{
-
-		constructor(side){
-			this.points = [];
-			this.side = side;
-		}
-
-	    /// this should be called immediately after a new curve is formed.
-	    GetPointFromLevers(levers){
-
-	        this.points = [];
-	        for (var i = 0; i < levers.length * 3 - 2; i ++){
-	            this.points.push(new Vector(0, 0));
-	        }
-	        this.SetPointFromLevers(levers);
-	    }
-
-		GetIdenticalCurve(p1, p2){
-	        return CurveMath.GetIdenticalCurve(p1.points[this.side], p2.points[this.side], p1, p2);
-	    }
-
-	    /// update with every redraw.
-	    SetPointFromLevers(levers){
-	        if(this.points != null){
-	            for(var i = 0; i < levers.length; i++){
-
-	                this.points[3*i].Set(levers[i].points[this.side]);
-
-	                if(i < levers.length - 1){
-	                    var aux = this.GetIdenticalCurve(levers[i], levers[i+1]);
-	                    this.points[3 * i + 1].Set(aux[0]);
-	                    this.points[3 * i + 2].Set(aux[1]);
-	                }
-	            }
-	        }
-	    }
-	}
-
-	module.exports = CurveSideOutline;
-
-/***/ }),
-/* 11 */
-/***/ (function(module, exports, __webpack_require__) {
-
 	
 	var Vector = __webpack_require__(5);
 	var Lever =  __webpack_require__(6);
-	var Curve = __webpack_require__(9);
-	var Cast =  __webpack_require__(7);
+	var Curve = __webpack_require__(7);
+	var Cast =  __webpack_require__(11);
 	var Draw = __webpack_require__(12);
-	var CurveSideOutline = __webpack_require__(10);
+	var CurveSideOutline = __webpack_require__(8);
 
 
 	class Param{
@@ -1589,7 +1515,7 @@
 
 		InitEval(){
 			this.dstack = [];
-			this.consts = [];
+			this.consts = {};
 		}
 
 		UpdateDraw(context){
@@ -1642,17 +1568,17 @@
 			var put = function(){
 				var key = pop();
 				var val = pop();
-				this.consts.push({key:key, val:val.Copy()});
+				this.consts[key] = val.Copy();
 			}.bind(this);
 
 			var get = function(){
 				var key = pop();
-				var res = this.consts.filter(function(elem){return elem.key == key});
-				if(res.length == 0){
+				var res = this.consts[key];
+				if(res == undefined){
 					console.log('key "'+ key +'" not found');
 					exec_err_flag = true;
 				} else
-					push(res[0].val);
+					push(res);
 			}.bind(this);
 
 			var vec = function(){
@@ -1815,6 +1741,81 @@
 	}
 
 	module.exports = Document;
+
+/***/ }),
+/* 11 */
+/***/ (function(module, exports, __webpack_require__) {
+
+	
+	var CurveMath = __webpack_require__(9);
+
+	class Cast{
+	    
+	    static CurveRect(curve, mouseV){
+	        return curve.bounding[0].x < mouseV.x && curve.bounding[1].x > mouseV.x &&
+	               curve.bounding[0].y < mouseV.y && curve.bounding[1].y > mouseV.y;
+	    }
+	    
+	    static CurveBody(curve, mouseV) {
+	        
+	    	var CAST_DIST = 9;
+
+	        var t, p, dist;
+	        console.log(JSON.stringify(curve));
+	        for (var i = 0; i < curve.levers.length - 1; i++) {
+
+	            t = CurveMath.GetClosestTFromGivenPoint(curve.levers[i], curve.levers[i+1], mouseV, 6, 4);
+	            p = CurveMath.GetPointOnCurveBetweenLever(t, curve.levers[i], curve.levers[i+1]);
+	            dist = p.Dist(mouseV);
+	            if (dist < CAST_DIST)
+	                return i + t;
+	        }
+	        return -1;
+	    } 
+
+	    static Curve(curve, mouseV){
+	    	// console.log(curve.bounding);
+	        // if(this.CurveRect(curve, mouseV)){
+	            return this.CurveBody(curve, mouseV);
+	        // }
+	        // else
+	        //     return -1;
+	    }
+
+	    static CurveIthLever(curve, mouseV) {
+
+	    	var CAST_DIST = 9;
+
+	        var i = 0,
+	        	found = false;
+
+	        for (; i < curve.levers.length; i ++) {
+	        	found = PVector.dist(curve.levers[i].points[2], mouseV) < CAST_DIST;
+	        	if(found) break;	
+	        } 
+
+	        if(!found) i = -1;
+
+	        return i;
+	    }
+
+	    static Lever(lever, mouseV){
+
+			var CAST_DIST = 9;    
+	        var castSequence = [0, 4, 1, 3, 2];
+	        
+	        var res = -1;
+	        for(var ith = 0; ith < 5; ith++)
+	            if(lever.points[castSequence[ith]].Dist(mouseV) < CAST_DIST){
+	            	console.log(ith + " " + castSequence[ith]);
+	                res = castSequence[ith];
+	                break;
+	            }
+	        return res;
+	    }
+	}
+
+	module.exports = Cast;
 
 /***/ }),
 /* 12 */
@@ -1983,8 +1984,8 @@
 	
 	var Vector = __webpack_require__(5);
 	var Lever =  __webpack_require__(6);
-	var Curve = __webpack_require__(9);
-	var CurveSideOutline = __webpack_require__(10);
+	var Curve = __webpack_require__(7);
+	var CurveSideOutline = __webpack_require__(8);
 
 	class LoadData {
 		static Curves(curves){
