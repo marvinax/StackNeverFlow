@@ -48,13 +48,9 @@
 
 	__webpack_require__(1)
 
-	var Vector = __webpack_require__(5);
-	var Lever =  __webpack_require__(6);
-
-	var Curve = __webpack_require__(7);
-
+	var Vector   = __webpack_require__(5);
 	var Document = __webpack_require__(10);
-	var LoadData = __webpack_require__(13);
+	var LoadData = __webpack_require__(14);
 
 	var Draw = __webpack_require__(12);
 
@@ -274,6 +270,7 @@
 		var canvas = document.getElementById("canvas");
 		var context = canvas.getContext("2d")
 		var docu = new Document(canvas);
+		var zpr  = docu.zpr;
 		var docu_group = null;
 
 		var Status = Object.freeze({
@@ -325,14 +322,10 @@
 				} else if (docu.status == Status.Editing){
 					var cast;
 					if(isEditingLever){
-
-						cast = docu.SelectControlPoint(curr);
-
+						cast = docu.SelectControlPoint(zpr.InvTransform(curr));
 					} else {
-
-						tempTransArray = docu.PrepareTrans(curr);
+						tempTransArray = docu.PrepareTrans(zpr.InvTransform(curr));
 					}
-
 					if (cast == -1 || tempTransArray.length == 0){
 						docu.Deselect();
 					}
@@ -340,9 +333,14 @@
 				Draw.Curves(context, docu);
 			}
 			
+			if (event.type == "mousemove"){
+				// console.log("executed");
+				// zpr.Save();
+			}
+
 			if (down && (event.type == "mousemove")) {
 				curr = MouseV(event);
-				docu.UpdateEdit(curr, orig, tempTransArray);
+				docu.UpdateEdit(zpr.InvTransform(curr), zpr.InvTransform(orig), tempTransArray);
 				Draw.Curves(context, docu);
 			}
 			
@@ -364,16 +362,15 @@
 			document.onkeydown = function(evt) {
 
 				if(evt.keyCode == 27 && docu.status == Status.Creating){
-					document.getElementById("status").innerHTML = "Editing";
 					docu.status = Status.Editing;
 					docu.Deselect();
+					Draw.Curves(context, docu);
 				}
 
 				if(evt.ctrlKey && evt.key == "c" && docu.status == Status.Editing){
-					document.getElementById("status").innerHTML = "Drawing new context, docu.curves, curve";
 					docu.status = Status.Creating;
 	                docu.Deselect();
-					console.log(status);
+					Draw.Curves(context, docu);
 				}
 
 	            if(evt.ctrlKey && evt.keyCode == 8){
@@ -451,7 +448,10 @@
 
 			canvas.onmousewheel = function(event){
 				event.preventDefault();
-				docu.zpr.Zoom(MouseV(event), event.deltaY*0.02);
+				
+				var zoomInc = event.deltaY*0.0001;
+				docu.zpr.Zoom(docu.zpr.InvTransform(MouseV(event)), zoomInc);
+				console.log(docu.zpr.pan);
 				Draw.Curves(context, docu);
 			}
 
@@ -502,8 +502,8 @@
 	if(false) {
 		// When the styles change, update the <style> tags
 		if(!content.locals) {
-			module.hot.accept("!!../node_modules/_css-loader@0.21.0@css-loader/index.js!./styles.css", function() {
-				var newContent = require("!!../node_modules/_css-loader@0.21.0@css-loader/index.js!./styles.css");
+			module.hot.accept("!!../node_modules/css-loader/index.js!./styles.css", function() {
+				var newContent = require("!!../node_modules/css-loader/index.js!./styles.css");
 				if(typeof newContent === 'string') newContent = [[module.id, newContent, '']];
 				update(newContent);
 			});
@@ -1083,10 +1083,9 @@
 /***/ (function(module, exports, __webpack_require__) {
 
 	
-	var CurveSideOutline = __webpack_require__(8);
-
-	var Vector = __webpack_require__(5);
-	var Lever =  __webpack_require__(6);
+	var Outline = __webpack_require__(8);
+	var Vector  = __webpack_require__(5);
+	var Lever   = __webpack_require__(6);
 
 	var CurveMath = __webpack_require__(9);
 
@@ -1098,8 +1097,8 @@
 
 		    this.orig = orig; 
 
-		    this.lo = new CurveSideOutline(1);
-		    this.ro = new CurveSideOutline(3);
+		    this.lo = new Outline(1);
+		    this.ro = new Outline(3);
 
 	    }
 
@@ -1161,16 +1160,16 @@
 /* 8 */
 /***/ (function(module, exports, __webpack_require__) {
 
+	var Vector = __webpack_require__(5);
+	var Lever =  __webpack_require__(6);
+	var CurveMath = __webpack_require__(9);
+
 	var CurveSide = Object.freeze({
 	    LEFT :  1,
 	    RIGHT : 3
 	});
 
-	var Vector = __webpack_require__(5);
-	var Lever =  __webpack_require__(6);
-	var CurveMath = __webpack_require__(9);
-
-	class CurveSideOutline{
+	class Outline{
 
 		constructor(side){
 			this.points = [];
@@ -1208,7 +1207,7 @@
 	    }
 	}
 
-	module.exports = CurveSideOutline;
+	module.exports = Outline;
 
 /***/ }),
 /* 9 */
@@ -1355,13 +1354,14 @@
 /***/ (function(module, exports, __webpack_require__) {
 
 	
-	var Vector = __webpack_require__(5);
-	var Lever =  __webpack_require__(6);
-	var Curve = __webpack_require__(7);
-	var Cast =  __webpack_require__(11);
-	var Draw = __webpack_require__(12);
-	var ZPR = __webpack_require__(14);
-	var CurveSideOutline = __webpack_require__(8);
+	var Vector =  __webpack_require__(5);
+	var Lever =   __webpack_require__(6);
+	var Curve =   __webpack_require__(7);
+	var Outline = __webpack_require__(8);
+
+	var Cast =   __webpack_require__(11);
+	var Draw =   __webpack_require__(12);
+	var ZPR =    __webpack_require__(13);
 
 
 	class Param{
@@ -1828,7 +1828,7 @@
 /* 12 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	var ZPR = __webpack_require__(14);
+	var ZPR = __webpack_require__(13);
 
 	class Draw{
 
@@ -1887,6 +1887,17 @@
 	        ctx.lineWidth = 1;
 	        ctx.clearRect(0,0, ctx.canvas.width, ctx.canvas.height);
 
+	        ctx.font = "16px TheMixMono";
+
+	        var status;
+	        switch(docu.status){
+	            case 0: ctx.fillText('Editing', 10, 25); break; 
+	            case 1: ctx.fillText('Creating', 10, 25); break; 
+	            case 2: ctx.fillText('MovingCurve', 10, 25); break; 
+	            case 3: ctx.fillText('MovingLever', 10, 25); break; 
+	            case 4: ctx.fillText('EditingLever', 10, 25); break;
+	        }
+
 	        var zpr_curves = docu.curves.map(function(curve){
 	            
 	            return { levers: curve.levers.map(function(lever){
@@ -1901,7 +1912,6 @@
 
 	        });
 
-	        ctx.font = "16px TheMixMono";
 	        if(currCurveIndex != null){
 	            var levers = zpr_curves[currCurveIndex].levers;
 
@@ -2006,52 +2016,6 @@
 /* 13 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	
-	var Vector = __webpack_require__(5);
-	var Lever =  __webpack_require__(6);
-	var Curve = __webpack_require__(7);
-	var CurveSideOutline = __webpack_require__(8);
-
-	class LoadData {
-		static Curves(curves){
-			return curves.map(function(x){return this.Curve(x)}.bind(this));
-		}
-
-		static Curve(curve){
-			var curveRes = new Curve();
-			// console.log(curve);
-			curveRes.lo = this.Outline(curve.lo);
-			curveRes.ro = this.Outline(curve.ro);
-			curveRes.levers = curve.levers.map(function(x){return this.Lever(x)}.bind(this));
-			curveRes.orig = this.Point(curve.orig);
-			return curveRes;
-		}
-
-		static Lever(lever){
-			var leverRes = new Lever();
-			leverRes.leverMode = lever.leverMode;
-			leverRes.points = lever.points.map(function(x){return this.Point(x)}.bind(this));
-			return leverRes;
-		}
-
-		static Outline(outline){
-			var outlineRes = new CurveSideOutline();
-			outlineRes.side = outline.side;
-			outlineRes.points = outline.points.map(function(x){return this.Point(x)}.bind(this));
-			return outlineRes;
-		}
-
-		static Point(point){
-			return new Vector(point.x, point.y);
-		}
-	}
-
-	module.exports = LoadData;
-
-/***/ }),
-/* 14 */
-/***/ (function(module, exports, __webpack_require__) {
-
 	var Vector = __webpack_require__(5);
 
 	/**
@@ -2062,6 +2026,7 @@
 		constructor(){
 			this.zoom = 1;
 			this.pan = new Vector(0, 0);
+			this.hist = new Vector(0, 0);
 		}
 
 		/**
@@ -2086,12 +2051,62 @@
 		 * @return {[type]}                [description]
 		 */
 		Zoom(mouseScreenVec, zoomInc){
-			this.pan = this.pan.Sub(mouseScreenVec).Mult(1 - 1/(this.zoom + zoomInc))
-			this.zoom += zoomInc;
+			this.zoom *= (this.zoom >= 3 && zoomInc > 0) ? 1 : (this.zoom <= 0.3 && zoomInc < 0) ? 1 : 1 + zoomInc;
+			this.pan = mouseScreenVec.Mult(this.zoom);
+		}
+
+		Save(){
+			this.hist = this.pan.Copy();
 		}
 	}
 
 	module.exports = ZPR;
+
+/***/ }),
+/* 14 */
+/***/ (function(module, exports, __webpack_require__) {
+
+	
+	var Vector = __webpack_require__(5);
+	var Lever =  __webpack_require__(6);
+	var Curve =  __webpack_require__(7);
+	var Outline = __webpack_require__(8);
+
+	class LoadData {
+		static Curves(curves){
+			return curves.map(function(x){return this.Curve(x)}.bind(this));
+		}
+
+		static Curve(curve){
+			var curveRes = new Curve();
+			// console.log(curve);
+			curveRes.lo = this.Outline(curve.lo);
+			curveRes.ro = this.Outline(curve.ro);
+			curveRes.levers = curve.levers.map(function(x){return this.Lever(x)}.bind(this));
+			curveRes.orig = this.Point(curve.orig);
+			return curveRes;
+		}
+
+		static Lever(lever){
+			var leverRes = new Lever();
+			leverRes.leverMode = lever.leverMode;
+			leverRes.points = lever.points.map(function(x){return this.Point(x)}.bind(this));
+			return leverRes;
+		}
+
+		static Outline(outline){
+			var outlineRes = new Outline();
+			outlineRes.side = outline.side;
+			outlineRes.points = outline.points.map(function(x){return this.Point(x)}.bind(this));
+			return outlineRes;
+		}
+
+		static Point(point){
+			return new Vector(point.x, point.y);
+		}
+	}
+
+	module.exports = LoadData;
 
 /***/ })
 /******/ ]);

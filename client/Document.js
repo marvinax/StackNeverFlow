@@ -1,11 +1,12 @@
 
-var Vector = require('./Vector.js');
-var Lever =  require('./Lever.js');
-var Curve = require('./Curve.js');
-var Cast =  require('./Cast.js');
-var Draw = require('./Draw.js');
-var ZPR = require('./ZPR.js');
-var CurveSideOutline = require('./CurveSideOutline.js');
+var Vector =  require('./model/Vector.js');
+var Lever =   require('./model/Lever.js');
+var Curve =   require('./model/Curve.js');
+var Outline = require('./model/Outline.js');
+
+var Cast =   require('./control/Cast.js');
+var Draw =   require('./control/Draw.js');
+var ZPR =    require('./control/ZPR.js');
 
 
 class Param{

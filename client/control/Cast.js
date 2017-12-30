@@ -1,5 +1,5 @@
 
-var CurveMath = require('./CurveMath.js');
+var CurveMath = require('../math/CurveMath.js');
 
 class Cast{
     

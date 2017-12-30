@@ -1,4 +1,4 @@
-var Vector = require('./Vector.js');
+var Vector = require('../model/Vector.js');
 
 /**
  * Zoom, Pan and Rotate
@@ -8,6 +8,7 @@ class ZPR {
 	constructor(){
 		this.zoom = 1;
 		this.pan = new Vector(0, 0);
+		this.hist = new Vector(0, 0);
 	}
 
 	/**
@@ -32,8 +33,12 @@ class ZPR {
 	 * @return {[type]}                [description]
 	 */
 	Zoom(mouseScreenVec, zoomInc){
-		this.pan = this.pan.Sub(mouseScreenVec).Mult(1 - 1/(this.zoom + zoomInc))
-		this.zoom += zoomInc;
+		this.zoom *= (this.zoom >= 3 && zoomInc > 0) ? 1 : (this.zoom <= 0.3 && zoomInc < 0) ? 1 : 1 + zoomInc;
+		this.pan = mouseScreenVec.Mult(this.zoom);
+	}
+
+	Save(){
+		this.hist = this.pan.Copy();
 	}
 }
 

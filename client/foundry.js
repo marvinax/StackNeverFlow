@@ -2,15 +2,11 @@
 
 require('./styles.css')
 
-var Vector = require('./Vector.js');
-var Lever =  require('./Lever.js');
-
-var Curve = require('./Curve.js');
-
+var Vector   = require('./model/Vector.js');
 var Document = require('./Document.js');
 var LoadData = require('./Load.js');
 
-var Draw = require('./Draw.js');
+var Draw = require('./control/Draw.js');
 
 function ClearDOMChildren(elem){
 	while (elem.firstChild) {
@@ -228,6 +224,7 @@ function LoadName(context, docu){
 	var canvas = document.getElementById("canvas");
 	var context = canvas.getContext("2d")
 	var docu = new Document(canvas);
+	var zpr  = docu.zpr;
 	var docu_group = null;
 
 	var Status = Object.freeze({
@@ -279,14 +276,10 @@ function LoadName(context, docu){
 			} else if (docu.status == Status.Editing){
 				var cast;
 				if(isEditingLever){
-
-					cast = docu.SelectControlPoint(curr);
-
+					cast = docu.SelectControlPoint(zpr.InvTransform(curr));
 				} else {
-
-					tempTransArray = docu.PrepareTrans(curr);
+					tempTransArray = docu.PrepareTrans(zpr.InvTransform(curr));
 				}
-
 				if (cast == -1 || tempTransArray.length == 0){
 					docu.Deselect();
 				}
@@ -294,9 +287,14 @@ function LoadName(context, docu){
 			Draw.Curves(context, docu);
 		}
 		
+		if (event.type == "mousemove"){
+			// console.log("executed");
+			// zpr.Save();
+		}
+
 		if (down && (event.type == "mousemove")) {
 			curr = MouseV(event);
-			docu.UpdateEdit(curr, orig, tempTransArray);
+			docu.UpdateEdit(zpr.InvTransform(curr), zpr.InvTransform(orig), tempTransArray);
 			Draw.Curves(context, docu);
 		}
 		
@@ -318,16 +316,15 @@ function LoadName(context, docu){
 		document.onkeydown = function(evt) {
 
 			if(evt.keyCode == 27 && docu.status == Status.Creating){
-				document.getElementById("status").innerHTML = "Editing";
 				docu.status = Status.Editing;
 				docu.Deselect();
+				Draw.Curves(context, docu);
 			}
 
 			if(evt.ctrlKey && evt.key == "c" && docu.status == Status.Editing){
-				document.getElementById("status").innerHTML = "Drawing new context, docu.curves, curve";
 				docu.status = Status.Creating;
                 docu.Deselect();
-				console.log(status);
+				Draw.Curves(context, docu);
 			}
 
             if(evt.ctrlKey && evt.keyCode == 8){
@@ -405,7 +402,10 @@ function LoadName(context, docu){
 
 		canvas.onmousewheel = function(event){
 			event.preventDefault();
-			docu.zpr.Zoom(MouseV(event), event.deltaY*0.02);
+			
+			var zoomInc = event.deltaY*0.0001;
+			docu.zpr.Zoom(docu.zpr.InvTransform(MouseV(event)), zoomInc);
+			console.log(docu.zpr.pan);
 			Draw.Curves(context, docu);
 		}
 

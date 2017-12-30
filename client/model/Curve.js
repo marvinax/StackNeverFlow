@@ -1,10 +1,9 @@
 
-var CurveSideOutline = require('./CurveSideOutline.js');
+var Outline = require('./Outline.js');
+var Vector  = require('./Vector.js');
+var Lever   = require('./Lever.js');
 
-var Vector = require('./Vector.js');
-var Lever =  require('./Lever.js');
-
-var CurveMath = require('./CurveMath.js');
+var CurveMath = require('../math/CurveMath.js');
 
 class Curve {
 
@@ -14,8 +13,8 @@ class Curve {
 
 	    this.orig = orig; 
 
-	    this.lo = new CurveSideOutline(1);
-	    this.ro = new CurveSideOutline(3);
+	    this.lo = new Outline(1);
+	    this.ro = new Outline(3);
 
     }
 

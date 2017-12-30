@@ -1,13 +1,13 @@
+var Vector = require('./Vector.js');
+var Lever =  require('./Lever.js');
+var CurveMath = require('../math/CurveMath.js');
+
 var CurveSide = Object.freeze({
     LEFT :  1,
     RIGHT : 3
 });
 
-var Vector = require('./Vector.js');
-var Lever =  require('./Lever.js');
-var CurveMath = require('./CurveMath.js');
-
-class CurveSideOutline{
+class Outline{
 
 	constructor(side){
 		this.points = [];
@@ -45,4 +45,4 @@ class CurveSideOutline{
     }
 }
 
-module.exports = CurveSideOutline;
+module.exports = Outline;

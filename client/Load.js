@@ -1,8 +1,8 @@
 
-var Vector = require('./Vector.js');
-var Lever =  require('./Lever.js');
-var Curve = require('./Curve.js');
-var CurveSideOutline = require('./CurveSideOutline.js');
+var Vector = require('./model/Vector.js');
+var Lever =  require('./model/Lever.js');
+var Curve =  require('./model/Curve.js');
+var Outline = require('./model/Outline.js');
 
 class LoadData {
 	static Curves(curves){
@@ -27,7 +27,7 @@ class LoadData {
 	}
 
 	static Outline(outline){
-		var outlineRes = new CurveSideOutline();
+		var outlineRes = new Outline();
 		outlineRes.side = outline.side;
 		outlineRes.points = outline.points.map(function(x){return this.Point(x)}.bind(this));
 		return outlineRes;

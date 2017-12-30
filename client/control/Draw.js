@@ -57,6 +57,17 @@ class Draw{
         ctx.lineWidth = 1;
         ctx.clearRect(0,0, ctx.canvas.width, ctx.canvas.height);
 
+        ctx.font = "16px TheMixMono";
+
+        var status;
+        switch(docu.status){
+            case 0: ctx.fillText('Editing', 10, 25); break; 
+            case 1: ctx.fillText('Creating', 10, 25); break; 
+            case 2: ctx.fillText('MovingCurve', 10, 25); break; 
+            case 3: ctx.fillText('MovingLever', 10, 25); break; 
+            case 4: ctx.fillText('EditingLever', 10, 25); break;
+        }
+
         var zpr_curves = docu.curves.map(function(curve){
             
             return { levers: curve.levers.map(function(lever){
@@ -71,7 +82,6 @@ class Draw{
 
         });
 
-        ctx.font = "16px TheMixMono";
         if(currCurveIndex != null){
             var levers = zpr_curves[currCurveIndex].levers;
 

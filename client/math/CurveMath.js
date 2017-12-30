@@ -1,4 +1,4 @@
-var Vector = require("./Vector.js");
+var Vector = require("../model/Vector.js");
 
 class CurveMath{
 
