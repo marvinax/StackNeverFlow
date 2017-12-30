@@ -502,8 +502,8 @@
 	if(false) {
 		// When the styles change, update the <style> tags
 		if(!content.locals) {
-			module.hot.accept("!!../node_modules/css-loader/index.js!./styles.css", function() {
-				var newContent = require("!!../node_modules/css-loader/index.js!./styles.css");
+			module.hot.accept("!!../node_modules/_css-loader@0.21.0@css-loader/index.js!./styles.css", function() {
+				var newContent = require("!!../node_modules/_css-loader@0.21.0@css-loader/index.js!./styles.css");
 				if(typeof newContent === 'string') newContent = [[module.id, newContent, '']];
 				update(newContent);
 			});
@@ -521,7 +521,7 @@
 
 
 	// module
-	exports.push([module.id, "/* CSS */\nbody\n{\n\tfont-family: helvetica, sans-serif;\n\tfont-size: 85%;\n\tmargin: 10px 15px;\n\tcolor: #333;\n\tbackground-color: #ddd;\n}\n\nh1\n{\t\n\tfont-family: TheMixMono;\n\tfont-size: 2.6em;\n\tfont-weight: black;\n\tletter-spacing: -0.12em;\n\tmargin: 0 0 0.3em 0;\n}\n\nh2\n{\n\tfont-size: 1.4em;\n\tfont-weight: normal;\n\tmargin: 1.5em 0 0 0;\n}\n\n#img{\n\twidth:3em;\n}\n\ncanvas\n{\n\tclear:left;\n\tfloat:left;\n\tdisplay: inline;\n\twidth:  600px;\n\theight: 600px;\n\tmargin: 0 10px 10px 0;\n\tbackground-color: #fff;\n}\n\n#button_group{\n}\n\n#list{\n\tmargin: 10px;\n}\n\n#save_group{\n\tclear:left;\n}\n\n.char-link{\n\tmargin : 10px;\n}\n\n.code\n{\n\tdisplay: block;\n\twidth: 580px;\n\toutline: none;\n\tborder:none;\n    border-color: Transparent; \n    border-radius: 4px;\n    resize:none;\n\n\theight: 8em;\n\tfont-family: \"TheMixMono\", monospace;\n\tfont-size: 1em;\n\t/*padding: 2px 4px;*/\n\tmargin: 8px;\n\tcolor: #555;\n\tbackground-color: #eee;\n\tborder: 1px solid #999;\n\toverflow: auto;\n}\n\n#param-group{\n\tmargin : 10px;\n}\n\n#param-name{\n\tmargin-top: 3px;\n\twidth:74px;\n}\n\n.param-name-label{\n\t/*margin-right: 50px;*/\n\t/*float:left;*/\n\t/*margin-top: 50px;*/\n\tdisplay: inline-block;\n\twidth:80px;\n}", ""]);
+	exports.push([module.id, "/* CSS */\nbody\n{\n\tfont-family: helvetica, sans-serif;\n\tfont-size: 85%;\n\tmargin: 10px 15px;\n\tcolor: #333;\n\tbackground-color: #ddd;\n}\n\nh1\n{\t\n\tfont-family: TheMixMono;\n\tfont-size: 2.6em;\n\tfont-weight: black;\n\tletter-spacing: -0.12em;\n\tmargin: 0 0 0.3em 0;\n}\n\nh2\n{\n\tfont-size: 1.4em;\n\tfont-weight: normal;\n\tmargin: 1.5em 0 0 0;\n}\n\n#img{\n\twidth:3em;\n}\n\ncanvas\n{\n\tclear:left;\n\tfloat:left;\n\tdisplay: inline;\n\twidth:  600px;\n\theight: 600px;\n\tmargin: 0 10px 10px 0;\n\tbackground-color: #fff;\n}\n\n#button_group{\n}\n\n#list{\n\tmargin: 10px;\n}\n\n#save_group{\n\t/*clear:left;*/\n}\n\n.char-link{\n\tmargin : 10px;\n}\n\n.code\n{\n\tdisplay: block;\n\twidth: 580px;\n\toutline: none;\n\tborder:none;\n    border-color: Transparent; \n    border-radius: 4px;\n    resize:none;\n\n\theight: 8em;\n\tfont-family: \"TheMixMono\", monospace;\n\tfont-size: 1em;\n\t/*padding: 2px 4px;*/\n\tmargin: 8px;\n\tcolor: #555;\n\tbackground-color: #eee;\n\tborder: 1px solid #999;\n\toverflow: auto;\n}\n\n#param-group{\n\tmargin : 10px;\n}\n\n#param-name{\n\tmargin-top: 3px;\n\twidth:74px;\n}\n\n.param-name-label{\n\t/*margin-right: 50px;*/\n\t/*float:left;*/\n\t/*margin-top: 50px;*/\n\tdisplay: inline-block;\n\twidth:80px;\n}", ""]);
 
 	// exports
 
@@ -1829,6 +1829,7 @@
 /***/ (function(module, exports, __webpack_require__) {
 
 	var ZPR = __webpack_require__(13);
+	var Vector = __webpack_require__(5);
 
 	class Draw{
 
@@ -1889,6 +1890,21 @@
 
 	        ctx.font = "16px TheMixMono";
 
+	        ctx.strokeStyle = "#CCCCCC";
+	        ctx.beginPath();
+	        for(let i=0; i<50; i++){
+	            var y1 = zpr.Transform(new Vector(i*30-300, -300)),
+	                y2 = zpr.Transform(new Vector(i*30-300, 1500)),
+	                x1 = zpr.Transform(new Vector(-300, i*30-300)),
+	                x2 = zpr.Transform(new Vector(1500, i*30-300));
+	            ctx.moveTo(y1.x, y1.y);
+	            ctx.lineTo(y2.x, y2.y);
+	            ctx.moveTo(x1.x, x1.y);
+	            ctx.lineTo(x2.x, x2.y);
+	        }
+	        ctx.stroke();
+
+	        ctx.strokeStyle = "#000000";
 	        var status;
 	        switch(docu.status){
 	            case 0: ctx.fillText('Editing', 10, 25); break; 

@@ -53,6 +53,6 @@ app.use(logger());
 
 
 if (!module.parent) {
-  app.listen(5217);
-  console.log('listening on port 5217');
+  app.listen(1337);
+  console.log('listening on port 1337');
 }

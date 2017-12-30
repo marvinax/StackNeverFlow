@@ -1,4 +1,5 @@
 var ZPR = require('./ZPR.js');
+var Vector = require('../model/Vector.js');
 
 class Draw{
 
@@ -59,6 +60,21 @@ class Draw{
 
         ctx.font = "16px TheMixMono";
 
+        ctx.strokeStyle = "#CCCCCC";
+        ctx.beginPath();
+        for(let i=0; i<50; i++){
+            var y1 = zpr.Transform(new Vector(i*30-300, -300)),
+                y2 = zpr.Transform(new Vector(i*30-300, 1500)),
+                x1 = zpr.Transform(new Vector(-300, i*30-300)),
+                x2 = zpr.Transform(new Vector(1500, i*30-300));
+            ctx.moveTo(y1.x, y1.y);
+            ctx.lineTo(y2.x, y2.y);
+            ctx.moveTo(x1.x, x1.y);
+            ctx.lineTo(x2.x, x2.y);
+        }
+        ctx.stroke();
+
+        ctx.strokeStyle = "#000000";
         var status;
         switch(docu.status){
             case 0: ctx.fillText('Editing', 10, 25); break; 
