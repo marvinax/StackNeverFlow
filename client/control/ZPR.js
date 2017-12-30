@@ -8,7 +8,6 @@ class ZPR {
 	constructor(){
 		this.zoom = 1;
 		this.pan = new Vector(0, 0);
-		this.hist = new Vector(0, 0);
 	}
 
 	/**
@@ -33,8 +32,9 @@ class ZPR {
 	 * @return {[type]}                [description]
 	 */
 	Zoom(mouseScreenVec, zoomInc){
-		this.zoom *= (this.zoom >= 3 && zoomInc > 0) ? 1 : (this.zoom <= 0.3 && zoomInc < 0) ? 1 : 1 + zoomInc;
-		this.pan = mouseScreenVec.Mult(this.zoom);
+		var newZoom = (this.zoom >= 3 && zoomInc > 0) ? 1 : (this.zoom <= 0.6 && zoomInc < 0) ? 1 : 1 + zoomInc;
+		this.zoom *= newZoom;
+		this.pan = mouseScreenVec.Mult(newZoom);
 	}
 
 	Save(){

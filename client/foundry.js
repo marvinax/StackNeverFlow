@@ -403,7 +403,7 @@ function LoadName(context, docu){
 		canvas.onmousewheel = function(event){
 			event.preventDefault();
 			
-			var zoomInc = event.deltaY*0.0001;
+			var zoomInc = event.deltaY*0.00005;
 			docu.zpr.Zoom(docu.zpr.InvTransform(MouseV(event)), zoomInc);
 			console.log(docu.zpr.pan);
 			Draw.Curves(context, docu);

@@ -49,7 +49,7 @@
 	__webpack_require__(1)
 
 	var Vector   = __webpack_require__(5);
-	var Document = __webpack_require__(10);
+	var Document = __webpack_require__(6);
 	var LoadData = __webpack_require__(14);
 
 	var Draw = __webpack_require__(12);
@@ -449,7 +449,7 @@
 			canvas.onmousewheel = function(event){
 				event.preventDefault();
 				
-				var zoomInc = event.deltaY*0.0001;
+				var zoomInc = event.deltaY*0.00005;
 				docu.zpr.Zoom(docu.zpr.InvTransform(MouseV(event)), zoomInc);
 				console.log(docu.zpr.pan);
 				Draw.Curves(context, docu);
@@ -923,441 +923,11 @@
 /* 6 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	var Vector = __webpack_require__(5);
-
-	var LeverMode = Object.freeze({
-	    BROKEN		: 0,
-	    LINEAR 		: 2,
-	    PROPER 		: 3,
-	    SYMMETRIC	: 4
-	});
-
-	var StrokeMode = Object.freeze({
-	    FREE : 0,
-	    PERP : 1
-	})
-
-	var SelectMode = Object.freeze({
-		NONE 		 : 0,
-		LEVER_SELECT : 1
-	});
-
-	var LeverPoint = Object.freeze({
-		POINT 		 : 2,
-		CONTROL_1	 : 0,
-		CONTROL_2 	 : 4,
-		WIDTH_1 	 : 1,
-		WIDTH_2	 	 : 3
-	});
-
-	class Lever {
-
-		constructor(points){
-
-			if(typeof points == "Array") {
-				this.points = points;
-			}
-			if(typeof points == "object") {
-				this.points = [
-					points.Copy(),
-					points.Copy(),
-					points.Copy(),
-					points.Copy(),
-					points.Copy()
-				]
-			}
-			if(typeof points == "undefined") {
-				this.points = [
-					Vector.Zero,
-					Vector.Zero,
-					Vector.Zero,
-					Vector.Zero,
-					Vector.Zero
-				]
-			}
-
-			this.leverMode = LeverMode.SYMMETRIC;
-			this.selectMode = SelectMode.NONE;
-	        this.strokeMode = StrokeMode.FREE;
-		}
-
-	    Copy(){
-	        var newLever = new Lever();
-	        for (var i = newLever.points.length - 1; i >= 0; i--) {
-	            newLever.points[i] = this.points[i].Copy();
-	        }
-	        newLever.leverMode = this.leverMode;
-	        newLever.selectMode = this.selectMode;
-	        newLever.strokeMode = this.strokeMode;
-
-	        return newLever;
-	    }
-
-	    OppoOf(ith){
-	    	return 4 - ith;
-	    }
-
-	    Ratio(ith) {
-	    	var ithSide  = this.points[2].Dist(this.points[ith]),
-	    		oppoSide = this.points[2].Dist(this.points[this.OppoOf(ith)]);
-	        return ithSide / oppoSide;
-	    }
-
-	    OppoNorm(newPoint) {
-	        return (this.points[2].Sub(newPoint)).Normalize();
-	    }
-
-	    SetOppo(ith, oppoNorm, newDistance) {
-	        this.points[this.OppoOf(ith)] = this.points[2].Add(oppoNorm.Mult(newDistance));
-	    }
-
-	    SetControlPoint(ith, newPoint) {
-	    	var ratioOppo = this.Ratio(this.OppoOf(ith));
-	    	var oppoNorm  = this.OppoNorm(newPoint);
-
-	    	var dist;
-	    	switch(this.leverMode){
-
-	            /// for symmetric case, ratio is overwritten as 1
-	    		case LeverMode.SYMMETRIC:
-	    			ratioOppo = 1;
-
-	            /// recalculate to make proportional lever, the distance
-	            /// is calculated from the new distance between origin
-	            /// and currently selected control point.
-		        case LeverMode.PROPER:
-		            this.SetOppo(ith, oppoNorm, ratioOppo * this.points[2].Dist(newPoint));
-
-	            /// recalculate to make three points aligned on same
-	            /// line. use new direction and original distance of
-	            /// opposite control point.
-		        case LeverMode.LINEAR:
-		            this.SetOppo(ith, oppoNorm, this.points[2].Dist(this.points[this.OppoOf(ith)]));
-
-	            /// set new control point without affecting the oppo-
-	            /// site. The tangent will be broken.
-	     	   case LeverMode.BROKEN:
-		            this.points[ith].Set(newPoint);
-
-	    	}
-	    }
-
-	    // ExtractArray and TransFromArray should be appear in Dragging handler,
-	    // to implement the real time update during dragging. When dragging around,
-	    // the lever should be always translated from same array (or point group)
-	    // until mouseup.
-
-	    ExtractArray(){
-	    	return [this.points[0].Copy(),
-	    			this.points[1].Copy(),
-	    			this.points[2].Copy(),
-	    			this.points[3].Copy(),
-	    			this.points[4].Copy()];
-	    }
-
-	    TransFromArray(points, inc){
-	    	this.points[0] = inc.Add(points[0]);
-	    	this.points[1] = inc.Add(points[1]);
-	    	this.points[2] = inc.Add(points[2]);
-	    	this.points[3] = inc.Add(points[3]);
-	    	this.points[4] = inc.Add(points[4]);
-	    }
-
-	    Trans(inc){
-	    	var array = this.ExtractArray();
-	    	this.TransFromArray(array, inc);
-	    }
-
-	    TransCreate(inc){
-	        console.log(JSON.stringify(inc));
-	        var lever = this.Copy();
-	        lever.Trans(inc);
-	        return lever;
-	    }
-	}
-
-	module.exports = Lever;
-
-/***/ }),
-/* 7 */
-/***/ (function(module, exports, __webpack_require__) {
-
-	
-	var Outline = __webpack_require__(8);
-	var Vector  = __webpack_require__(5);
-	var Lever   = __webpack_require__(6);
-
-	var CurveMath = __webpack_require__(9);
-
-	class Curve {
-
-	    constructor(orig){
-
-		    this.levers = [];
-
-		    this.orig = orig; 
-
-		    this.lo = new Outline(1);
-		    this.ro = new Outline(3);
-
-	    }
-
-	    Add(mouseV){
-	        this.levers.push(new Lever(mouseV));
-	        this.GetOutlines();
-	        return this.levers.length - 1;
-	    }
-
-	    Delete(index){
-	        levers.splice(index, 1);
-	        this.GetOutlines();
-	    }
-	    
-	    Insert(curveCast) {
-	        this.levers.splice(Math.floor(curveCast+1), 0, new Lever(new Vector(0, 0)));
-	        CurveMath.SetInsertedLeverOnCurveGroup(this.levers, Math.floor(curveCast+1), curveCast - Math.floor(curveCast));
-	        console.log(this.levers.length);
-
-	        this.GetOutlines();
-	        
-	        return Math.floor(curveCast+1);
-	    }
-
-	    UpdateLever(ithLever, ithPoint, value){
-	        this.levers[ithLever].SetControlPoint(ithPoint, value);
-	        this.UpdateOutlines();
-	    }
-
-	    GetOutlines(){
-	        this.lo.GetPointFromLevers(this.levers);
-	        this.ro.GetPointFromLevers(this.levers);
-	    }
-
-	    UpdateOutlines(){
-	        this.lo.SetPointFromLevers(this.levers);
-	        this.ro.SetPointFromLevers(this.levers);
-	    }
-
-
-	    ExtractArray(){
-	    	var res = [];
-	        for(var lever of this.levers) res.push(lever.ExtractArray());
-	        return res;
-	    }
-
-	    TransFromArray(array, increment) {
-	    	// console.log(array);
-	        for (var i = 0; i < this.levers.length; i++) {
-	            this.levers[i].TransFromArray(array[i], increment);
-	        }
-	        this.UpdateOutlines();
-	    }
-	}
-
-	module.exports = Curve;
-
-/***/ }),
-/* 8 */
-/***/ (function(module, exports, __webpack_require__) {
-
-	var Vector = __webpack_require__(5);
-	var Lever =  __webpack_require__(6);
-	var CurveMath = __webpack_require__(9);
-
-	var CurveSide = Object.freeze({
-	    LEFT :  1,
-	    RIGHT : 3
-	});
-
-	class Outline{
-
-		constructor(side){
-			this.points = [];
-			this.side = side;
-		}
-
-	    /// this should be called immediately after a new curve is formed.
-	    GetPointFromLevers(levers){
-
-	        this.points = [];
-	        for (var i = 0; i < levers.length * 3 - 2; i ++){
-	            this.points.push(new Vector(0, 0));
-	        }
-	        this.SetPointFromLevers(levers);
-	    }
-
-		GetIdenticalCurve(p1, p2){
-	        return CurveMath.GetIdenticalCurve(p1.points[this.side], p2.points[this.side], p1, p2);
-	    }
-
-	    /// update with every redraw.
-	    SetPointFromLevers(levers){
-	        if(this.points != null){
-	            for(var i = 0; i < levers.length; i++){
-
-	                this.points[3*i].Set(levers[i].points[this.side]);
-
-	                if(i < levers.length - 1){
-	                    var aux = this.GetIdenticalCurve(levers[i], levers[i+1]);
-	                    this.points[3 * i + 1].Set(aux[0]);
-	                    this.points[3 * i + 2].Set(aux[1]);
-	                }
-	            }
-	        }
-	    }
-	}
-
-	module.exports = Outline;
-
-/***/ }),
-/* 9 */
-/***/ (function(module, exports, __webpack_require__) {
-
-	var Vector = __webpack_require__(5);
-
-	class CurveMath{
-
-	    static GetPointOnCurve(t, points){
-	        return   points[0].Mult((1-t)  *(1-t)*(1-t))
-	        	.Add(points[1].Mult(3*(1-t)*(1-t)*(t)  ))
-	        	.Add(points[2].Mult(3*(t)  *(t)  *(1-t)))
-	            .Add(points[3].Mult((t)    *(t)  *(t)  ));
-	    }
-	  
-	    static GetPointOnCurveBetweenLever(t, l0, l1) {
-	    	return this.GetPointOnCurve(t, [l0.points[2], l0.points[4], l1.points[0], l1.points[2]]);
-	    }
-
-	    static SetInsertedLever(
-	        p0p,
-	        p0cp2,
-	        p1cp1,
-	        p1p,
-	        p1cp2,
-	        p2cp1,
-	        p2p, t
-	    ){
-
-	        var P0 = p0p;
-	        var P1 = p0cp2;
-	        var P2 = p2cp1;
-	        var P3 = p2p;
-
-	        var P0_1       = P0.Mult(1-t).Add(P1.Mult(t));
-	        var P1_2       = P1.Mult(1-t).Add(P2.Mult(t));
-	        var P2_3       = P2.Mult(1-t).Add(P3.Mult(t));
-	        var P01_12     = P0_1.Mult(1-t).Add(P1_2.Mult(t));
-	        var P12_23     = P1_2.Mult(1-t).Add(P2_3.Mult(t));
-	        var P0112_1223 = P01_12.Mult(1-t).Add(P12_23.Mult(t));
-
-	        p0cp2.Set(P0_1);
-	        p1cp1.Set(P01_12);
-	        p1p.Set(P0112_1223);
-	        p1cp2.Set(P12_23);
-	        p2cp1.Set(P2_3);
-
-	        // return [p0p, p0cp2, p1cp1, p1p, p1cp2, p2cp1, p2p];
-
-	    }
-
-	    static SetInsertedLeverOnCurve(p0, p1, p2, t){
-	      
-	        var strokePointsLeft	= [];
-	        var strokePointsRight	= [];
-	        
-	        var res = this.GetIdenticalCurve(p0.points[1], p2.points[1], p0, p2);
-	        strokePointsLeft.push(p0.points[1]);
-	        strokePointsLeft.push(res[0].Copy());
-	        strokePointsLeft.push(res[1].Copy());
-	        strokePointsLeft.push(p2.points[1]);
-	      
-	        res = this.GetIdenticalCurve(p0.points[3], p2.points[3], p0, p2);
-	        strokePointsRight.push(p0.points[3]);
-	        strokePointsRight.push(res[0].Copy());
-	        strokePointsRight.push(res[1].Copy());
-			strokePointsRight.push(p2.points[3]);
-	        
-	        p1.points[1] = this.GetPointOnCurve(t, strokePointsLeft);
-	        p1.points[3] = this.GetPointOnCurve(t, strokePointsRight);
-
-	        this.SetInsertedLever(
-	            p0.points[2],
-	            p0.points[4],
-	            p1.points[0],
-	            p1.points[2],
-	            p1.points[4],
-	            p2.points[0],
-	            p2.points[2], t);
-	    }
-
-	    static SetInsertedLeverOnCurveGroup(levers, ithNode, t){
-	        this.SetInsertedLeverOnCurve(
-	            levers[ithNode == 0 ? 0 : ithNode - 1],
-	            levers[ithNode],
-	            levers[(ithNode == levers.length - 1 ? ithNode : ithNode + 1)],
-	            t);
-	        // console.log(JSON.stringify([levers[ithNode == 0 ? 0 : ithNode - 1], levers[ithNode], levers[(ithNode == levers.length - 1 ? ithNode : ithNode + 1)]], null, '\t'));
-	    }
-
-	    static GetClosestTFromGivenPoint(p0, p1, givenPoint, iter, slices) {
-
-	        var start = 0;
-	        var end   = 1;
-
-	        var curr_d = 0,
-	        	best_t = 0,
-	        	best_d = Infinity,
-	        	curr_P = new Vector(0, 0);
-
-	        for (var i = 0; i < iter; i++) {
-	            var tick = 0.1 * (end - start) / slices;
-
-	            for (var t = start; t <= end; t += tick) {
-	                
-	                curr_d = this.GetPointOnCurveBetweenLever(t, p0, p1).Dist(givenPoint);
-	                if (curr_d < best_d) {
-	                    best_d = curr_d;
-	                    best_t = t;
-	                }
-	            }
-
-	            start = Math.max(best_t - tick, 0);
-	            end   = Math.min(best_t + tick, 1);
-	        }
-
-	        return (start + end)/2;
-	    }
-
-	    static GetIdenticalCurve(p0, p1, b0, b1){
-	        var c0 = b0.points[2].Add(b1.points[0]).Sub(b0.points[4].Mult(2));
-	        var c1 = b1.points[2].Add(b0.points[4]).Sub(b1.points[0].Mult(2));
-
-	        var sign0 = Math.sign(p0.Sub(b0.points[2]).Dot(c0));
-	        var sign1 = Math.sign(p1.Sub(b1.points[2]).Dot(c1));
-
-	        var distc0 = c0.Mag();
-	        var distc1 = c1.Mag();
-
-	        var distA = b0.points[4].Sub(b0.points[2]).Mult(Math.max(0.001, 1 - 0.001* sign0 * distc0));
-	        var distD = b1.points[0].Sub(b1.points[2]).Mult(Math.max(0.001, 1 - 0.001* sign1 * distc1));
-	        var a0a1 = p0.Add(distA);
-	        var d0d1 = p1.Add(distD);
-
-	        return [a0a1, d0d1];
-	    }
-	}
-
-	module.exports = CurveMath;
-
-/***/ }),
-/* 10 */
-/***/ (function(module, exports, __webpack_require__) {
-
 	
 	var Vector =  __webpack_require__(5);
-	var Lever =   __webpack_require__(6);
-	var Curve =   __webpack_require__(7);
-	var Outline = __webpack_require__(8);
+	var Lever =   __webpack_require__(7);
+	var Curve =   __webpack_require__(8);
+	var Outline = __webpack_require__(9);
 
 	var Cast =   __webpack_require__(11);
 	var Draw =   __webpack_require__(12);
@@ -1750,11 +1320,441 @@
 	module.exports = Document;
 
 /***/ }),
+/* 7 */
+/***/ (function(module, exports, __webpack_require__) {
+
+	var Vector = __webpack_require__(5);
+
+	var LeverMode = Object.freeze({
+	    BROKEN		: 0,
+	    LINEAR 		: 2,
+	    PROPER 		: 3,
+	    SYMMETRIC	: 4
+	});
+
+	var StrokeMode = Object.freeze({
+	    FREE : 0,
+	    PERP : 1
+	})
+
+	var SelectMode = Object.freeze({
+		NONE 		 : 0,
+		LEVER_SELECT : 1
+	});
+
+	var LeverPoint = Object.freeze({
+		POINT 		 : 2,
+		CONTROL_1	 : 0,
+		CONTROL_2 	 : 4,
+		WIDTH_1 	 : 1,
+		WIDTH_2	 	 : 3
+	});
+
+	class Lever {
+
+		constructor(points){
+
+			if(typeof points == "Array") {
+				this.points = points;
+			}
+			if(typeof points == "object") {
+				this.points = [
+					points.Copy(),
+					points.Copy(),
+					points.Copy(),
+					points.Copy(),
+					points.Copy()
+				]
+			}
+			if(typeof points == "undefined") {
+				this.points = [
+					Vector.Zero,
+					Vector.Zero,
+					Vector.Zero,
+					Vector.Zero,
+					Vector.Zero
+				]
+			}
+
+			this.leverMode = LeverMode.SYMMETRIC;
+			this.selectMode = SelectMode.NONE;
+	        this.strokeMode = StrokeMode.FREE;
+		}
+
+	    Copy(){
+	        var newLever = new Lever();
+	        for (var i = newLever.points.length - 1; i >= 0; i--) {
+	            newLever.points[i] = this.points[i].Copy();
+	        }
+	        newLever.leverMode = this.leverMode;
+	        newLever.selectMode = this.selectMode;
+	        newLever.strokeMode = this.strokeMode;
+
+	        return newLever;
+	    }
+
+	    OppoOf(ith){
+	    	return 4 - ith;
+	    }
+
+	    Ratio(ith) {
+	    	var ithSide  = this.points[2].Dist(this.points[ith]),
+	    		oppoSide = this.points[2].Dist(this.points[this.OppoOf(ith)]);
+	        return ithSide / oppoSide;
+	    }
+
+	    OppoNorm(newPoint) {
+	        return (this.points[2].Sub(newPoint)).Normalize();
+	    }
+
+	    SetOppo(ith, oppoNorm, newDistance) {
+	        this.points[this.OppoOf(ith)] = this.points[2].Add(oppoNorm.Mult(newDistance));
+	    }
+
+	    SetControlPoint(ith, newPoint) {
+	    	var ratioOppo = this.Ratio(this.OppoOf(ith));
+	    	var oppoNorm  = this.OppoNorm(newPoint);
+
+	    	var dist;
+	    	switch(this.leverMode){
+
+	            /// for symmetric case, ratio is overwritten as 1
+	    		case LeverMode.SYMMETRIC:
+	    			ratioOppo = 1;
+
+	            /// recalculate to make proportional lever, the distance
+	            /// is calculated from the new distance between origin
+	            /// and currently selected control point.
+		        case LeverMode.PROPER:
+		            this.SetOppo(ith, oppoNorm, ratioOppo * this.points[2].Dist(newPoint));
+
+	            /// recalculate to make three points aligned on same
+	            /// line. use new direction and original distance of
+	            /// opposite control point.
+		        case LeverMode.LINEAR:
+		            this.SetOppo(ith, oppoNorm, this.points[2].Dist(this.points[this.OppoOf(ith)]));
+
+	            /// set new control point without affecting the oppo-
+	            /// site. The tangent will be broken.
+	     	   case LeverMode.BROKEN:
+		            this.points[ith].Set(newPoint);
+
+	    	}
+	    }
+
+	    // ExtractArray and TransFromArray should be appear in Dragging handler,
+	    // to implement the real time update during dragging. When dragging around,
+	    // the lever should be always translated from same array (or point group)
+	    // until mouseup.
+
+	    ExtractArray(){
+	    	return [this.points[0].Copy(),
+	    			this.points[1].Copy(),
+	    			this.points[2].Copy(),
+	    			this.points[3].Copy(),
+	    			this.points[4].Copy()];
+	    }
+
+	    TransFromArray(points, inc){
+	    	this.points[0] = inc.Add(points[0]);
+	    	this.points[1] = inc.Add(points[1]);
+	    	this.points[2] = inc.Add(points[2]);
+	    	this.points[3] = inc.Add(points[3]);
+	    	this.points[4] = inc.Add(points[4]);
+	    }
+
+	    Trans(inc){
+	    	var array = this.ExtractArray();
+	    	this.TransFromArray(array, inc);
+	    }
+
+	    TransCreate(inc){
+	        console.log(JSON.stringify(inc));
+	        var lever = this.Copy();
+	        lever.Trans(inc);
+	        return lever;
+	    }
+	}
+
+	module.exports = Lever;
+
+/***/ }),
+/* 8 */
+/***/ (function(module, exports, __webpack_require__) {
+
+	
+	var Outline = __webpack_require__(9);
+	var Vector  = __webpack_require__(5);
+	var Lever   = __webpack_require__(7);
+
+	var CurveMath = __webpack_require__(10);
+
+	class Curve {
+
+	    constructor(orig){
+
+		    this.levers = [];
+
+		    this.orig = orig; 
+
+		    this.lo = new Outline(1);
+		    this.ro = new Outline(3);
+
+	    }
+
+	    Add(mouseV){
+	        this.levers.push(new Lever(mouseV));
+	        this.GetOutlines();
+	        return this.levers.length - 1;
+	    }
+
+	    Delete(index){
+	        levers.splice(index, 1);
+	        this.GetOutlines();
+	    }
+	    
+	    Insert(curveCast) {
+	        this.levers.splice(Math.floor(curveCast+1), 0, new Lever(new Vector(0, 0)));
+	        CurveMath.SetInsertedLeverOnCurveGroup(this.levers, Math.floor(curveCast+1), curveCast - Math.floor(curveCast));
+	        console.log(this.levers.length);
+
+	        this.GetOutlines();
+	        
+	        return Math.floor(curveCast+1);
+	    }
+
+	    UpdateLever(ithLever, ithPoint, value){
+	        this.levers[ithLever].SetControlPoint(ithPoint, value);
+	        this.UpdateOutlines();
+	    }
+
+	    GetOutlines(){
+	        this.lo.GetPointFromLevers(this.levers);
+	        this.ro.GetPointFromLevers(this.levers);
+	    }
+
+	    UpdateOutlines(){
+	        this.lo.SetPointFromLevers(this.levers);
+	        this.ro.SetPointFromLevers(this.levers);
+	    }
+
+
+	    ExtractArray(){
+	    	var res = [];
+	        for(var lever of this.levers) res.push(lever.ExtractArray());
+	        return res;
+	    }
+
+	    TransFromArray(array, increment) {
+	    	// console.log(array);
+	        for (var i = 0; i < this.levers.length; i++) {
+	            this.levers[i].TransFromArray(array[i], increment);
+	        }
+	        this.UpdateOutlines();
+	    }
+	}
+
+	module.exports = Curve;
+
+/***/ }),
+/* 9 */
+/***/ (function(module, exports, __webpack_require__) {
+
+	var Vector = __webpack_require__(5);
+	var Lever =  __webpack_require__(7);
+	var CurveMath = __webpack_require__(10);
+
+	var CurveSide = Object.freeze({
+	    LEFT :  1,
+	    RIGHT : 3
+	});
+
+	class Outline{
+
+		constructor(side){
+			this.points = [];
+			this.side = side;
+		}
+
+	    /// this should be called immediately after a new curve is formed.
+	    GetPointFromLevers(levers){
+
+	        this.points = [];
+	        for (var i = 0; i < levers.length * 3 - 2; i ++){
+	            this.points.push(new Vector(0, 0));
+	        }
+	        this.SetPointFromLevers(levers);
+	    }
+
+		GetIdenticalCurve(p1, p2){
+	        return CurveMath.GetIdenticalCurve(p1.points[this.side], p2.points[this.side], p1, p2);
+	    }
+
+	    /// update with every redraw.
+	    SetPointFromLevers(levers){
+	        if(this.points != null){
+	            for(var i = 0; i < levers.length; i++){
+
+	                this.points[3*i].Set(levers[i].points[this.side]);
+
+	                if(i < levers.length - 1){
+	                    var aux = this.GetIdenticalCurve(levers[i], levers[i+1]);
+	                    this.points[3 * i + 1].Set(aux[0]);
+	                    this.points[3 * i + 2].Set(aux[1]);
+	                }
+	            }
+	        }
+	    }
+	}
+
+	module.exports = Outline;
+
+/***/ }),
+/* 10 */
+/***/ (function(module, exports, __webpack_require__) {
+
+	var Vector = __webpack_require__(5);
+
+	class CurveMath{
+
+	    static GetPointOnCurve(t, points){
+	        return   points[0].Mult((1-t)  *(1-t)*(1-t))
+	        	.Add(points[1].Mult(3*(1-t)*(1-t)*(t)  ))
+	        	.Add(points[2].Mult(3*(t)  *(t)  *(1-t)))
+	            .Add(points[3].Mult((t)    *(t)  *(t)  ));
+	    }
+	  
+	    static GetPointOnCurveBetweenLever(t, l0, l1) {
+	    	return this.GetPointOnCurve(t, [l0.points[2], l0.points[4], l1.points[0], l1.points[2]]);
+	    }
+
+	    static SetInsertedLever(
+	        p0p,
+	        p0cp2,
+	        p1cp1,
+	        p1p,
+	        p1cp2,
+	        p2cp1,
+	        p2p, t
+	    ){
+
+	        var P0 = p0p;
+	        var P1 = p0cp2;
+	        var P2 = p2cp1;
+	        var P3 = p2p;
+
+	        var P0_1       = P0.Mult(1-t).Add(P1.Mult(t));
+	        var P1_2       = P1.Mult(1-t).Add(P2.Mult(t));
+	        var P2_3       = P2.Mult(1-t).Add(P3.Mult(t));
+	        var P01_12     = P0_1.Mult(1-t).Add(P1_2.Mult(t));
+	        var P12_23     = P1_2.Mult(1-t).Add(P2_3.Mult(t));
+	        var P0112_1223 = P01_12.Mult(1-t).Add(P12_23.Mult(t));
+
+	        p0cp2.Set(P0_1);
+	        p1cp1.Set(P01_12);
+	        p1p.Set(P0112_1223);
+	        p1cp2.Set(P12_23);
+	        p2cp1.Set(P2_3);
+
+	        // return [p0p, p0cp2, p1cp1, p1p, p1cp2, p2cp1, p2p];
+
+	    }
+
+	    static SetInsertedLeverOnCurve(p0, p1, p2, t){
+	      
+	        var strokePointsLeft	= [];
+	        var strokePointsRight	= [];
+	        
+	        var res = this.GetIdenticalCurve(p0.points[1], p2.points[1], p0, p2);
+	        strokePointsLeft.push(p0.points[1]);
+	        strokePointsLeft.push(res[0].Copy());
+	        strokePointsLeft.push(res[1].Copy());
+	        strokePointsLeft.push(p2.points[1]);
+	      
+	        res = this.GetIdenticalCurve(p0.points[3], p2.points[3], p0, p2);
+	        strokePointsRight.push(p0.points[3]);
+	        strokePointsRight.push(res[0].Copy());
+	        strokePointsRight.push(res[1].Copy());
+			strokePointsRight.push(p2.points[3]);
+	        
+	        p1.points[1] = this.GetPointOnCurve(t, strokePointsLeft);
+	        p1.points[3] = this.GetPointOnCurve(t, strokePointsRight);
+
+	        this.SetInsertedLever(
+	            p0.points[2],
+	            p0.points[4],
+	            p1.points[0],
+	            p1.points[2],
+	            p1.points[4],
+	            p2.points[0],
+	            p2.points[2], t);
+	    }
+
+	    static SetInsertedLeverOnCurveGroup(levers, ithNode, t){
+	        this.SetInsertedLeverOnCurve(
+	            levers[ithNode == 0 ? 0 : ithNode - 1],
+	            levers[ithNode],
+	            levers[(ithNode == levers.length - 1 ? ithNode : ithNode + 1)],
+	            t);
+	        // console.log(JSON.stringify([levers[ithNode == 0 ? 0 : ithNode - 1], levers[ithNode], levers[(ithNode == levers.length - 1 ? ithNode : ithNode + 1)]], null, '\t'));
+	    }
+
+	    static GetClosestTFromGivenPoint(p0, p1, givenPoint, iter, slices) {
+
+	        var start = 0;
+	        var end   = 1;
+
+	        var curr_d = 0,
+	        	best_t = 0,
+	        	best_d = Infinity,
+	        	curr_P = new Vector(0, 0);
+
+	        for (var i = 0; i < iter; i++) {
+	            var tick = 0.1 * (end - start) / slices;
+
+	            for (var t = start; t <= end; t += tick) {
+	                
+	                curr_d = this.GetPointOnCurveBetweenLever(t, p0, p1).Dist(givenPoint);
+	                if (curr_d < best_d) {
+	                    best_d = curr_d;
+	                    best_t = t;
+	                }
+	            }
+
+	            start = Math.max(best_t - tick, 0);
+	            end   = Math.min(best_t + tick, 1);
+	        }
+
+	        return (start + end)/2;
+	    }
+
+	    static GetIdenticalCurve(p0, p1, b0, b1){
+	        var c0 = b0.points[2].Add(b1.points[0]).Sub(b0.points[4].Mult(2));
+	        var c1 = b1.points[2].Add(b0.points[4]).Sub(b1.points[0].Mult(2));
+
+	        var sign0 = Math.sign(p0.Sub(b0.points[2]).Dot(c0));
+	        var sign1 = Math.sign(p1.Sub(b1.points[2]).Dot(c1));
+
+	        var distc0 = c0.Mag();
+	        var distc1 = c1.Mag();
+
+	        var distA = b0.points[4].Sub(b0.points[2]).Mult(Math.max(0.001, 1 - 0.001* sign0 * distc0));
+	        var distD = b1.points[0].Sub(b1.points[2]).Mult(Math.max(0.001, 1 - 0.001* sign1 * distc1));
+	        var a0a1 = p0.Add(distA);
+	        var d0d1 = p1.Add(distD);
+
+	        return [a0a1, d0d1];
+	    }
+	}
+
+	module.exports = CurveMath;
+
+/***/ }),
 /* 11 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	
-	var CurveMath = __webpack_require__(9);
+	var CurveMath = __webpack_require__(10);
 
 	class Cast{
 	    
@@ -1898,6 +1898,8 @@
 	            case 4: ctx.fillText('EditingLever', 10, 25); break;
 	        }
 
+	        ctx.fillText(docu.zpr.zoom, 10, 45);
+
 	        var zpr_curves = docu.curves.map(function(curve){
 	            
 	            return { levers: curve.levers.map(function(lever){
@@ -2026,7 +2028,6 @@
 		constructor(){
 			this.zoom = 1;
 			this.pan = new Vector(0, 0);
-			this.hist = new Vector(0, 0);
 		}
 
 		/**
@@ -2051,8 +2052,9 @@
 		 * @return {[type]}                [description]
 		 */
 		Zoom(mouseScreenVec, zoomInc){
-			this.zoom *= (this.zoom >= 3 && zoomInc > 0) ? 1 : (this.zoom <= 0.3 && zoomInc < 0) ? 1 : 1 + zoomInc;
-			this.pan = mouseScreenVec.Mult(this.zoom);
+			var newZoom = (this.zoom >= 3 && zoomInc > 0) ? 1 : (this.zoom <= 0.6 && zoomInc < 0) ? 1 : 1 + zoomInc;
+			this.zoom *= newZoom;
+			this.pan = mouseScreenVec.Mult(newZoom);
 		}
 
 		Save(){
@@ -2068,9 +2070,9 @@
 
 	
 	var Vector = __webpack_require__(5);
-	var Lever =  __webpack_require__(6);
-	var Curve =  __webpack_require__(7);
-	var Outline = __webpack_require__(8);
+	var Lever =  __webpack_require__(7);
+	var Curve =  __webpack_require__(8);
+	var Outline = __webpack_require__(9);
 
 	class LoadData {
 		static Curves(curves){

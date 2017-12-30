@@ -68,6 +68,8 @@ class Draw{
             case 4: ctx.fillText('EditingLever', 10, 25); break;
         }
 
+        ctx.fillText(docu.zpr.zoom, 10, 45);
+
         var zpr_curves = docu.curves.map(function(curve){
             
             return { levers: curve.levers.map(function(lever){
