@@ -403,6 +403,12 @@ function LoadName(context, docu){
 
 		canvas.onmousedown = canvas.onmousemove = canvas.onmouseup = Drag;
 
+		canvas.onmousewheel = function(event){
+			event.preventDefault();
+			docu.zpr.Zoom(MouseV(event), event.deltaY*0.02);
+			Draw.Curves(context, docu);
+		}
+
 		var saveButton = document.getElementById("save"),
 			loadButton = document.getElementById("load"),
 			nameInput  = document.getElementById("name");

@@ -449,6 +449,12 @@
 
 			canvas.onmousedown = canvas.onmousemove = canvas.onmouseup = Drag;
 
+			canvas.onmousewheel = function(event){
+				event.preventDefault();
+				docu.zpr.Zoom(MouseV(event), event.deltaY*0.02);
+				Draw.Curves(context, docu);
+			}
+
 			var saveButton = document.getElementById("save"),
 				loadButton = document.getElementById("load"),
 				nameInput  = document.getElementById("name");
@@ -496,8 +502,8 @@
 	if(false) {
 		// When the styles change, update the <style> tags
 		if(!content.locals) {
-			module.hot.accept("!!../node_modules/css-loader/index.js!./styles.css", function() {
-				var newContent = require("!!../node_modules/css-loader/index.js!./styles.css");
+			module.hot.accept("!!../node_modules/_css-loader@0.21.0@css-loader/index.js!./styles.css", function() {
+				var newContent = require("!!../node_modules/_css-loader@0.21.0@css-loader/index.js!./styles.css");
 				if(typeof newContent === 'string') newContent = [[module.id, newContent, '']];
 				update(newContent);
 			});
@@ -1354,6 +1360,7 @@
 	var Curve = __webpack_require__(7);
 	var Cast =  __webpack_require__(11);
 	var Draw = __webpack_require__(12);
+	var ZPR = __webpack_require__(14);
 	var CurveSideOutline = __webpack_require__(8);
 
 
@@ -1391,7 +1398,7 @@
 			this.currLeverIndex = null,
 			this.currPoint = null;
 
-
+			this.zpr = new ZPR();
 		}
 
 		CurrCurve(){
@@ -1819,7 +1826,9 @@
 
 /***/ }),
 /* 12 */
-/***/ (function(module, exports) {
+/***/ (function(module, exports, __webpack_require__) {
+
+	var ZPR = __webpack_require__(14);
 
 	class Draw{
 
@@ -1872,19 +1881,35 @@
 
 	        var curves = docu.curves,
 	            currCurveIndex = docu.currCurveIndex,
-	            currLeverIndex = docu.currLeverIndex;
+	            currLeverIndex = docu.currLeverIndex ,
+	            zpr = docu.zpr;
 
 	        ctx.lineWidth = 1;
 	        ctx.clearRect(0,0, ctx.canvas.width, ctx.canvas.height);
 
+	        var zpr_curves = docu.curves.map(function(curve){
+	            
+	            return { levers: curve.levers.map(function(lever){
+	                        return {
+	                            points: lever.points.map(function(point){ return zpr.Transform(point);}),
+	                            leverMode : lever.leverMode
+	                        }
+	                    }),
+	                lo_points : curve.lo.points.map(function(point){return zpr.Transform(point)}),
+	                ro_points : curve.ro.points.map(function(point){return zpr.Transform(point)})
+	            }
+
+	        });
+
 	        ctx.font = "16px TheMixMono";
-	        if(currCurveIndex != null){         
-	            var levers = curves[currCurveIndex].levers;
+	        if(currCurveIndex != null){
+	            var levers = zpr_curves[currCurveIndex].levers;
 
 	            for (var i = 0; i < levers.length; i++) {
 
-	                if(i == currLeverIndex){                
+	                if(i == currLeverIndex){
 	                    for(var j = 0; j < 5; j++){
+
 	                        ctx.beginPath();
 	                        ctx.arc(levers[i].points[j].x, levers[i].points[j].y, 4, 0, 2 * Math.PI);
 	                        ctx.stroke();
@@ -1914,57 +1939,57 @@
 	                } else {
 	                    ctx.beginPath();
 	                    ctx.arc(levers[i].points[2].x, levers[i].points[2].y, 4, 0, 2 * Math.PI);
-	                    ctx.stroke();                    
+	                    ctx.stroke();
 	                }
 	            }
 	        }
 
 	        ctx.font = "20px TheMixMono";
-	        for (var ith = curves.length - 1; ith >= 0; ith--) {
+	        for (var ith = zpr_curves.length - 1; ith >= 0; ith--) {
 	            ctx.lineWidth = 1;
-	            if(curves[ith].levers.length > 1){
+	            if(zpr_curves[ith].levers.length > 1){
 
 
 	                ctx.beginPath();
-	                ctx.moveTo(curves[ith].lo.points[0].x, curves[ith].lo.points[0].y);
-	                for (var i = 1; i < curves[ith].levers.length; i++) {
+	                ctx.moveTo(zpr_curves[ith].lo_points[0].x, zpr_curves[ith].lo_points[0].y);
+	                for (var i = 1; i < zpr_curves[ith].levers.length; i++) {
 	                    ctx.bezierCurveTo(
-	                        curves[ith].lo.points[3*i-2].x, curves[ith].lo.points[3*i-2].y,
-	                        curves[ith].lo.points[3*i-1].x, curves[ith].lo.points[3*i-1].y,
-	                        curves[ith].lo.points[3*i+0].x, curves[ith].lo.points[3*i-0].y
+	                        zpr_curves[ith].lo_points[3*i-2].x, zpr_curves[ith].lo_points[3*i-2].y,
+	                        zpr_curves[ith].lo_points[3*i-1].x, zpr_curves[ith].lo_points[3*i-1].y,
+	                        zpr_curves[ith].lo_points[3*i+0].x, zpr_curves[ith].lo_points[3*i-0].y
 	                    )
 	                }
 	                ctx.stroke();
 	                ctx.beginPath();
-	                ctx.moveTo(curves[ith].ro.points[0].x, curves[ith].ro.points[0].y);
-	                for (var i = 1; i < curves[ith].levers.length; i++) {
+	                ctx.moveTo(zpr_curves[ith].ro_points[0].x, zpr_curves[ith].ro_points[0].y);
+	                for (var i = 1; i < zpr_curves[ith].levers.length; i++) {
 	                    ctx.bezierCurveTo(
-	                        curves[ith].ro.points[3*i-2].x, curves[ith].ro.points[3*i-2].y,
-	                        curves[ith].ro.points[3*i-1].x, curves[ith].ro.points[3*i-1].y,
-	                        curves[ith].ro.points[3*i+0].x, curves[ith].ro.points[3*i-0].y
+	                        zpr_curves[ith].ro_points[3*i-2].x, zpr_curves[ith].ro_points[3*i-2].y,
+	                        zpr_curves[ith].ro_points[3*i-1].x, zpr_curves[ith].ro_points[3*i-1].y,
+	                        zpr_curves[ith].ro_points[3*i+0].x, zpr_curves[ith].ro_points[3*i-0].y
 	                    )
 	                }
 	                ctx.stroke();
 
 	                ctx.lineWidth = 2;
 
-	                var first = curves[ith].levers[0].points[2],
-	                    sec   = curves[ith].levers[0].points[1],
+	                var first = zpr_curves[ith].levers[0].points[2],
+	                    sec   = zpr_curves[ith].levers[0].points[1],
 	                    diam  = sec.Sub(first).Normalize().Mult(20);
 	                ctx.fillText("C"+ith, first.x + diam.y - 10, first.y -diam.x - 10);
 
-	                for (var i = 0; i < curves[ith].levers.length; i++) {
-	                    var point = curves[ith].levers[i].points[2];
+	                for (var i = 0; i < zpr_curves[ith].levers.length; i++) {
+	                    var point = zpr_curves[ith].levers[i].points[2];
 	                    ctx.fillText(i, point.x+10, point.y-10);
 	                }
-	                
+
 	                ctx.beginPath();
-	                ctx.moveTo(curves[ith].levers[0].points[2].x, curves[ith].levers[0].points[2].y);
-	                for (var i = 0; i < curves[ith].levers.length - 1; i++) {
+	                ctx.moveTo(zpr_curves[ith].levers[0].points[2].x, zpr_curves[ith].levers[0].points[2].y);
+	                for (var i = 0; i < zpr_curves[ith].levers.length - 1; i++) {
 	                    ctx.bezierCurveTo(
-	                        curves[ith].levers[i].points[4].x,   curves[ith].levers[i].points[4].y,
-	                        curves[ith].levers[i+1].points[0].x, curves[ith].levers[i+1].points[0].y,
-	                        curves[ith].levers[i+1].points[2].x, curves[ith].levers[i+1].points[2].y
+	                        zpr_curves[ith].levers[i].points[4].x,   zpr_curves[ith].levers[i].points[4].y,
+	                        zpr_curves[ith].levers[i+1].points[0].x, zpr_curves[ith].levers[i+1].points[0].y,
+	                        zpr_curves[ith].levers[i+1].points[2].x, zpr_curves[ith].levers[i+1].points[2].y
 	                    )
 	                }
 	                ctx.stroke();
@@ -2022,6 +2047,51 @@
 	}
 
 	module.exports = LoadData;
+
+/***/ }),
+/* 14 */
+/***/ (function(module, exports, __webpack_require__) {
+
+	var Vector = __webpack_require__(5);
+
+	/**
+	 * Zoom, Pan and Rotate
+	 */
+	class ZPR {
+		
+		constructor(){
+			this.zoom = 1;
+			this.pan = new Vector(0, 0);
+		}
+
+		/**
+		 * for transforming model to screen point
+		 * @param {[type]} vec [description]
+		 */
+		Transform(vec){
+			return vec.Sub(this.pan).Mult(this.zoom).Add(this.pan);
+		}
+
+		/**
+		 * for transforming screen point to model
+		 * @param {[type]} vec [description]
+		 */
+		InvTransform(vec){
+			return vec.Sub(this.pan).Mult(1/this.zoom).Add(this.pan);
+		}
+
+		/**
+		 * for doing zpr operation with mouse event
+		 * @param  {[type]} mouseScreenVec [description]
+		 * @return {[type]}                [description]
+		 */
+		Zoom(mouseScreenVec, zoomInc){
+			this.pan = this.pan.Sub(mouseScreenVec).Mult(1 - 1/(this.zoom + zoomInc))
+			this.zoom += zoomInc;
+		}
+	}
+
+	module.exports = ZPR;
 
 /***/ })
 /******/ ]);

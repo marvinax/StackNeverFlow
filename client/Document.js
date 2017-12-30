@@ -4,6 +4,7 @@ var Lever =  require('./Lever.js');
 var Curve = require('./Curve.js');
 var Cast =  require('./Cast.js');
 var Draw = require('./Draw.js');
+var ZPR = require('./ZPR.js');
 var CurveSideOutline = require('./CurveSideOutline.js');
 
 
@@ -41,7 +42,7 @@ class Document{
 		this.currLeverIndex = null,
 		this.currPoint = null;
 
-
+		this.zpr = new ZPR();
 	}
 
 	CurrCurve(){
