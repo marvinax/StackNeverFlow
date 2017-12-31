@@ -52,7 +52,7 @@ class Neutron {
 			var elem = document.getElementById(paramElem.id);
 			elem.parentNode.removeChild(elem);
 			console.log(this.docu.params);
-			// delete this.params[param.name];
+			delete this.docu.params[param.name];
 		}.bind(this);
 
 		paramElem.appendChild(name);
