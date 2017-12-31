@@ -7,6 +7,7 @@ var Document = require('./Document.js');
 var LoadData = require('./Load.js');
 
 var Draw = require('./control/Draw.js');
+var Neutron = require('./Neutron.js');
 
 function ClearDOMChildren(elem){
 	while (elem.firstChild) {
@@ -14,126 +15,6 @@ function ClearDOMChildren(elem){
 	}
 }
 
-function AddParamUIOfExistingParam(context, docu, param){
-	var paramUI = document.getElementById("param-group");
-
-	var paramElem = document.createElement("div");
-	paramElem.id = "param-"+param.name;
-
-	var name = document.createElement("block");
-	name.className = "param-name-label";
-	name.innerHTML = param.name;
-
-	var valueInput = document.createElement("input");
-	valueInput.value = param.value;
-	valueInput.setAttribute("type", "number");
-
-	var valueSlider = document.createElement("input");
-	valueSlider.setAttribute("type", "range");
-	valueSlider.value = param.value;
-	valueSlider.min = param.min;
-	valueSlider.max = param.max;
-	valueSlider.step = 0.01;
-
-	valueInput.onchange = valueInput.oninput = function(){
-		param.value = valueSlider.value = valueInput.value;
-
-        docu.Eval(docu.update);
-        docu.UpdateDraw(context);
-	}
-
-	valueSlider.onchange = valueSlider.oninput = function(){
-		param.value = valueInput.value = valueSlider.value;
-
-        docu.Eval(docu.update);
-        docu.UpdateDraw(context);
-
-	}
-
-	paramElem.appendChild(name);
- 	paramElem.appendChild(valueInput);
- 	paramElem.appendChild(valueSlider);
-
-	paramUI.appendChild(paramElem);
-}
-
-function AddParamUI(docu){
-	var paramUI = document.getElementById("param-group");
-
-	var paramElem = document.createElement("div");
-
-	var nameInput = document.createElement("input");
-	nameInput.id = "param-name";
-
-	var defaultValueInput = document.createElement("input");
-	defaultValueInput.id = "param-default-value";
-	defaultValueInput.setAttribute("type", "number");
-
-	var minInput = document.createElement("input");
-	minInput.id = "param-min-value";
-	minInput.setAttribute("type", "number");
-
-	var maxInput = document.createElement("input");
-	maxInput.id = "param-max-value";
-	maxInput.setAttribute("type", "number");
-
-	var saveButton = document.createElement("button");
-	saveButton.id = "param-save-button";
-	saveButton.innerHTML = "save param";
-	
-	var context = document.getElementById("canvas").getContext("2d");
-
-	saveButton.onclick = function(){
-		var nameInput = document.getElementById("param-name"),
-			defaultValueInput = document.getElementById("param-default-value"),
-			minInput = document.getElementById("param-min-value"),
-			maxInput = document.getElementById("param-max-value");
-
-		var param = {
-			name :nameInput.value,
-			value : defaultValueInput.value,
-			min : minInput.value,
-			max : maxInput.value
-		};
-		docu.params.push(param);
-
-		var paramUI = document.getElementById("param-group");
-
-		ClearDOMChildren(paramUI);
-		for(let param of docu.params) {
-			console.log(param);
-			AddParamUIOfExistingParam(context, docu, param);
-		}
-
-		AddParamUI(docu);
-	}
-
-	paramElem.appendChild(nameInput);
-	paramElem.appendChild(defaultValueInput);
-	paramElem.appendChild(minInput);
-	paramElem.appendChild(maxInput);
-	paramElem.appendChild(saveButton);
-
-	paramUI.appendChild(paramElem);
-}
-
-function SetUI(param, id){
-	var paramElem = document.getElementById(id);
-	var children = paramElem.childNodes;
-	children[0].value = param.name;
-	children[1].value = param.value;
-	children[2].value = param.min;
-	children[3].value = param.max;
-}
-
-function GetParam(param, id){
-	var paramElem = document.getElementById(id);
-	var children = paramElem.childNodes;
-	children[0].value = param.name;
-	children[1].value = param.value;
-	children[2].value = param.min;
-	children[3].value = param.max;
-}
 
 function Save(context, docu, docu_id){
 	var xhr = new XMLHttpRequest();
@@ -150,7 +31,7 @@ function Save(context, docu, docu_id){
 }
 
 
-function Load(context, docu, docu_id){
+function Load(context, docu, neutron, docu_id){
 
 	var xhr = new XMLHttpRequest();
 	xhr.open('GET', 'load/'+docu_id);
@@ -163,12 +44,7 @@ function Load(context, docu, docu_id){
 	        docu.init   = res.init;
 	        docu.update = res.update;
 
-	        ClearDOMChildren(document.getElementById("param-group"));
-    		for(let param of docu.params) {
-				console.log(param);
-				AddParamUIOfExistingParam(context, docu, param);
-			}
-	        AddParamUI(docu);
+	        neutron.ReloadExistingParams();
 
 	        document.getElementById("init-code").value = docu.init;
 	        document.getElementById("update-code").value = docu.update;
@@ -186,7 +62,7 @@ function Load(context, docu, docu_id){
 	xhr.send();
 }
 
-function LoadName(context, docu){
+function LoadName(context, docu, neutron){
 	var xhr = new XMLHttpRequest();
 	xhr.open('GET', 'load_name/');
 	xhr.onload = function() {
@@ -202,7 +78,7 @@ function LoadName(context, docu){
 	    		a.innerHTML = r.split("_").pop();
 	    		a.class = "char-link";
 	    		a.onclick = function(){
-	    			Load(context, docu, r);
+	    			Load(context, docu, neutron, r);
 	    			document.getElementById("prefix").value = r.split("_")[0];
 	    			document.getElementById("name").value = r.split("_")[1];
 	    		}
@@ -225,7 +101,8 @@ function LoadName(context, docu){
 	var context = canvas.getContext("2d")
 	var docu = new Document(canvas);
 	var zpr  = docu.zpr;
-	var docu_group = null;
+	
+	var neutron = new Neutron(context, docu);
 
 	var Status = Object.freeze({
 		Editing : 0,
@@ -235,8 +112,7 @@ function LoadName(context, docu){
 		EditingLever : 4
 	});
 
-	var status = Status.Editing,
-		isTranslatingLever = false,
+	var isTranslatingLever = false,
 		isEditingLever = false;
 
 	function MouseV(event) {
@@ -311,7 +187,7 @@ function LoadName(context, docu){
 
 	window.onload = function() {
 		
-		LoadName(context, docu);
+		LoadName(context, docu, neutron);
 
 		document.onkeydown = function(evt) {
 
@@ -421,7 +297,7 @@ function LoadName(context, docu){
 
 		loadButton.onclick = function(){
 			var prefix = document.getElementById("prefix").value;
-			Load(context, docu, prefix + "_" + nameInput.value);
+			Load(context, docu, neutron, prefix + "_" + nameInput.value);
 		}
 
 		document.getElementById("init-eval").onclick = function(){

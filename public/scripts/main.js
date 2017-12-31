@@ -53,6 +53,7 @@
 	var LoadData = __webpack_require__(14);
 
 	var Draw = __webpack_require__(12);
+	var Neutron = __webpack_require__(15);
 
 	function ClearDOMChildren(elem){
 		while (elem.firstChild) {
@@ -60,126 +61,6 @@
 		}
 	}
 
-	function AddParamUIOfExistingParam(context, docu, param){
-		var paramUI = document.getElementById("param-group");
-
-		var paramElem = document.createElement("div");
-		paramElem.id = "param-"+param.name;
-
-		var name = document.createElement("block");
-		name.className = "param-name-label";
-		name.innerHTML = param.name;
-
-		var valueInput = document.createElement("input");
-		valueInput.value = param.value;
-		valueInput.setAttribute("type", "number");
-
-		var valueSlider = document.createElement("input");
-		valueSlider.setAttribute("type", "range");
-		valueSlider.value = param.value;
-		valueSlider.min = param.min;
-		valueSlider.max = param.max;
-		valueSlider.step = 0.01;
-
-		valueInput.onchange = valueInput.oninput = function(){
-			param.value = valueSlider.value = valueInput.value;
-
-	        docu.Eval(docu.update);
-	        docu.UpdateDraw(context);
-		}
-
-		valueSlider.onchange = valueSlider.oninput = function(){
-			param.value = valueInput.value = valueSlider.value;
-
-	        docu.Eval(docu.update);
-	        docu.UpdateDraw(context);
-
-		}
-
-		paramElem.appendChild(name);
-	 	paramElem.appendChild(valueInput);
-	 	paramElem.appendChild(valueSlider);
-
-		paramUI.appendChild(paramElem);
-	}
-
-	function AddParamUI(docu){
-		var paramUI = document.getElementById("param-group");
-
-		var paramElem = document.createElement("div");
-
-		var nameInput = document.createElement("input");
-		nameInput.id = "param-name";
-
-		var defaultValueInput = document.createElement("input");
-		defaultValueInput.id = "param-default-value";
-		defaultValueInput.setAttribute("type", "number");
-
-		var minInput = document.createElement("input");
-		minInput.id = "param-min-value";
-		minInput.setAttribute("type", "number");
-
-		var maxInput = document.createElement("input");
-		maxInput.id = "param-max-value";
-		maxInput.setAttribute("type", "number");
-
-		var saveButton = document.createElement("button");
-		saveButton.id = "param-save-button";
-		saveButton.innerHTML = "save param";
-		
-		var context = document.getElementById("canvas").getContext("2d");
-
-		saveButton.onclick = function(){
-			var nameInput = document.getElementById("param-name"),
-				defaultValueInput = document.getElementById("param-default-value"),
-				minInput = document.getElementById("param-min-value"),
-				maxInput = document.getElementById("param-max-value");
-
-			var param = {
-				name :nameInput.value,
-				value : defaultValueInput.value,
-				min : minInput.value,
-				max : maxInput.value
-			};
-			docu.params.push(param);
-
-			var paramUI = document.getElementById("param-group");
-
-			ClearDOMChildren(paramUI);
-			for(let param of docu.params) {
-				console.log(param);
-				AddParamUIOfExistingParam(context, docu, param);
-			}
-
-			AddParamUI(docu);
-		}
-
-		paramElem.appendChild(nameInput);
-		paramElem.appendChild(defaultValueInput);
-		paramElem.appendChild(minInput);
-		paramElem.appendChild(maxInput);
-		paramElem.appendChild(saveButton);
-
-		paramUI.appendChild(paramElem);
-	}
-
-	function SetUI(param, id){
-		var paramElem = document.getElementById(id);
-		var children = paramElem.childNodes;
-		children[0].value = param.name;
-		children[1].value = param.value;
-		children[2].value = param.min;
-		children[3].value = param.max;
-	}
-
-	function GetParam(param, id){
-		var paramElem = document.getElementById(id);
-		var children = paramElem.childNodes;
-		children[0].value = param.name;
-		children[1].value = param.value;
-		children[2].value = param.min;
-		children[3].value = param.max;
-	}
 
 	function Save(context, docu, docu_id){
 		var xhr = new XMLHttpRequest();
@@ -196,7 +77,7 @@
 	}
 
 
-	function Load(context, docu, docu_id){
+	function Load(context, docu, neutron, docu_id){
 
 		var xhr = new XMLHttpRequest();
 		xhr.open('GET', 'load/'+docu_id);
@@ -209,12 +90,7 @@
 		        docu.init   = res.init;
 		        docu.update = res.update;
 
-		        ClearDOMChildren(document.getElementById("param-group"));
-	    		for(let param of docu.params) {
-					console.log(param);
-					AddParamUIOfExistingParam(context, docu, param);
-				}
-		        AddParamUI(docu);
+		        neutron.ReloadExistingParams();
 
 		        document.getElementById("init-code").value = docu.init;
 		        document.getElementById("update-code").value = docu.update;
@@ -232,7 +108,7 @@
 		xhr.send();
 	}
 
-	function LoadName(context, docu){
+	function LoadName(context, docu, neutron){
 		var xhr = new XMLHttpRequest();
 		xhr.open('GET', 'load_name/');
 		xhr.onload = function() {
@@ -248,7 +124,7 @@
 		    		a.innerHTML = r.split("_").pop();
 		    		a.class = "char-link";
 		    		a.onclick = function(){
-		    			Load(context, docu, r);
+		    			Load(context, docu, neutron, r);
 		    			document.getElementById("prefix").value = r.split("_")[0];
 		    			document.getElementById("name").value = r.split("_")[1];
 		    		}
@@ -271,7 +147,8 @@
 		var context = canvas.getContext("2d")
 		var docu = new Document(canvas);
 		var zpr  = docu.zpr;
-		var docu_group = null;
+		
+		var neutron = new Neutron(context, docu);
 
 		var Status = Object.freeze({
 			Editing : 0,
@@ -281,8 +158,7 @@
 			EditingLever : 4
 		});
 
-		var status = Status.Editing,
-			isTranslatingLever = false,
+		var isTranslatingLever = false,
 			isEditingLever = false;
 
 		function MouseV(event) {
@@ -357,7 +233,7 @@
 
 		window.onload = function() {
 			
-			LoadName(context, docu);
+			LoadName(context, docu, neutron);
 
 			document.onkeydown = function(evt) {
 
@@ -467,7 +343,7 @@
 
 			loadButton.onclick = function(){
 				var prefix = document.getElementById("prefix").value;
-				Load(context, docu, prefix + "_" + nameInput.value);
+				Load(context, docu, neutron, prefix + "_" + nameInput.value);
 			}
 
 			document.getElementById("init-eval").onclick = function(){
@@ -502,8 +378,8 @@
 	if(false) {
 		// When the styles change, update the <style> tags
 		if(!content.locals) {
-			module.hot.accept("!!../node_modules/_css-loader@0.21.0@css-loader/index.js!./styles.css", function() {
-				var newContent = require("!!../node_modules/_css-loader@0.21.0@css-loader/index.js!./styles.css");
+			module.hot.accept("!!../node_modules/css-loader/index.js!./styles.css", function() {
+				var newContent = require("!!../node_modules/css-loader/index.js!./styles.css");
 				if(typeof newContent === 'string') newContent = [[module.id, newContent, '']];
 				update(newContent);
 			});
@@ -521,7 +397,7 @@
 
 
 	// module
-	exports.push([module.id, "/* CSS */\nbody\n{\n\tfont-family: helvetica, sans-serif;\n\tfont-size: 85%;\n\tmargin: 10px 15px;\n\tcolor: #333;\n\tbackground-color: #ddd;\n}\n\nh1\n{\t\n\tfont-family: TheMixMono;\n\tfont-size: 2.6em;\n\tfont-weight: black;\n\tletter-spacing: -0.12em;\n\tmargin: 0 0 0.3em 0;\n}\n\nh2\n{\n\tfont-size: 1.4em;\n\tfont-weight: normal;\n\tmargin: 1.5em 0 0 0;\n}\n\n#img{\n\twidth:3em;\n}\n\ncanvas\n{\n\tclear:left;\n\tfloat:left;\n\tdisplay: inline;\n\twidth:  600px;\n\theight: 600px;\n\tmargin: 0 10px 10px 0;\n\tbackground-color: #fff;\n}\n\n#button_group{\n}\n\n#list{\n\tmargin: 10px;\n}\n\n#save_group{\n\t/*clear:left;*/\n}\n\n.char-link{\n\tmargin : 10px;\n}\n\n.code\n{\n\tdisplay: block;\n\twidth: 580px;\n\toutline: none;\n\tborder:none;\n    border-color: Transparent; \n    border-radius: 4px;\n    resize:none;\n\n\theight: 8em;\n\tfont-family: \"TheMixMono\", monospace;\n\tfont-size: 1em;\n\t/*padding: 2px 4px;*/\n\tmargin: 8px;\n\tcolor: #555;\n\tbackground-color: #eee;\n\tborder: 1px solid #999;\n\toverflow: auto;\n}\n\n#param-group{\n\tmargin : 10px;\n}\n\n#param-name{\n\tmargin-top: 3px;\n\twidth:74px;\n}\n\n.param-name-label{\n\t/*margin-right: 50px;*/\n\t/*float:left;*/\n\t/*margin-top: 50px;*/\n\tdisplay: inline-block;\n\twidth:80px;\n}", ""]);
+	exports.push([module.id, "/* CSS */\nbody\n{\n\tfont-family: helvetica, sans-serif;\n\tfont-size: 85%;\n\tmargin: 10px 15px;\n\tcolor: #333;\n\tbackground-color: #ddd;\n}\n\nh1\n{\t\n\tfont-family: TheMixMono;\n\tfont-size: 2.6em;\n\tfont-weight: black;\n\tletter-spacing: -0.12em;\n\tmargin: 0 0 0.3em 0;\n}\n\nh2\n{\n\tfont-size: 1.4em;\n\tfont-weight: normal;\n\tmargin: 1.5em 0 0 0;\n}\n\n#img{\n\twidth:3em;\n}\n\ncanvas\n{\n\tclear:left;\n\tfloat:left;\n\tdisplay: inline;\n\twidth:  600px;\n\theight: 600px;\n\tmargin: 0 10px 10px 0;\n\tbackground-color: #fff;\n}\n\n#button_group{\n}\n\n#list{\n\tmargin: 10px;\n}\n\n#save_group{\n\t/*clear:left;*/\n}\n\n.char-link{\n\tmargin : 10px;\n}\n\n.code\n{\n\tdisplay: block;\n\twidth: 580px;\n\toutline: none;\n\tborder:none;\n    border-color: Transparent; \n    border-radius: 4px;\n    resize:none;\n\n\theight: 4em;\n\tfont-family: \"TheMixMono\", monospace;\n\tfont-size: 1em;\n\t/*padding: 2px 4px;*/\n\tmargin: 8px;\n\tcolor: #555;\n\tbackground-color: #eee;\n\tborder: 1px solid #999;\n\toverflow: auto;\n}\n\n#param-group{\n\tmargin : 10px;\n}\n\n#param-name{\n\tmargin-top: 3px;\n\twidth:74px;\n}\n\n.param-name-label{\n\t/*margin-right: 50px;*/\n\t/*float:left;*/\n\t/*margin-top: 50px;*/\n\tdisplay: inline-block;\n\twidth:80px;\n}", ""]);
 
 	// exports
 
@@ -956,7 +832,7 @@
 			this.canvas = canvas;
 			this.curves = [];
 
-			this.params = [];
+			this.params = {};
 			this.init = "";
 			this.update = "";
 
@@ -1257,17 +1133,12 @@
 
 			var param = function(){
 				var name = pop();
-				var byName = this.params.filter(function(param){return param.name == name});
-				if(byName == []){
-					var usingIndex = this.params[parseInt(name)];
-					if(usingIndex != undefined){
-						push(parseFloat(usingIndex.value));
-					} else {
-						console.log("param not found");
-						exec_err_flag = true;
-					}
+				var byName = this.params[name]
+				if(byName != undefined){
+					push(parseFloat(byName.value));
 				} else {
-					push(parseFloat(byName[0].value));
+					console.log("param name "+name+" not found");
+					exec_err_flag = true;
 				}
 			}.bind(this);
 
@@ -2125,6 +1996,161 @@
 	}
 
 	module.exports = LoadData;
+
+/***/ }),
+/* 15 */
+/***/ (function(module, exports) {
+
+	class Neutron {
+		constructor(context, docu){
+			this.context = context;
+			this.docu = docu;
+			this.param_ui = document.getElementById("param-group");
+		}
+
+		ClearParams(){
+			while (this.param_ui.firstChild) {
+			    this.param_ui.removeChild(this.param_ui.firstChild);
+			}
+		}
+
+		AddExistingParam(param){
+
+			var paramElem = document.createElement("div");
+			paramElem.id = "param-"+param.name;
+
+			var name = document.createElement("block");
+			name.className = "param-name-label";
+			name.innerHTML = param.name;
+
+			var valueInput = document.createElement("input");
+			valueInput.value = param.value;
+			valueInput.setAttribute("type", "number");
+
+			var valueSlider = document.createElement("input");
+			valueSlider.setAttribute("type", "range");
+			valueSlider.value = param.value;
+			valueSlider.min = param.min;
+			valueSlider.max = param.max;
+			valueSlider.step = 0.01;
+
+			valueInput.onchange = valueInput.oninput = function(){
+				param.value = valueSlider.value = valueInput.value;
+
+		        this.docu.Eval(this.docu.update);
+		        this.docu.UpdateDraw(context);
+			}.bind(this);
+
+			valueSlider.onchange = valueSlider.oninput = function(){
+				param.value = valueInput.value = valueSlider.value;
+
+		        this.docu.Eval(this.docu.update);
+		        this.docu.UpdateDraw(this.context);
+			}.bind(this);
+
+			var deleteButton = document.createElement('button');
+			deleteButton.innerHTML = "delete";
+
+			deleteButton.onclick = function(){
+				var elem = document.getElementById(paramElem.id);
+				elem.parentNode.removeChild(elem);
+				console.log(this.docu.params);
+				// delete this.params[param.name];
+			}.bind(this);
+
+			paramElem.appendChild(name);
+		 	paramElem.appendChild(valueInput);
+		 	paramElem.appendChild(valueSlider);
+		 	paramElem.appendChild(deleteButton);
+
+			this.param_ui.appendChild(paramElem);
+		}
+
+		ReloadExistingParams(){
+			this.ClearParams();
+			for(let param in this.docu.params) {
+				console.log(this.docu.params[param]);
+				this.AddExistingParam(this.docu.params[param]);
+			}
+			this.AddParamUI();
+		}
+
+		AddParamUI(){
+
+			var paramElem = document.createElement("div");
+
+			var nameInput = document.createElement("input");
+			nameInput.id = "param-name";
+			nameInput.setAttribute("placeholder", "name");
+
+			var defaultValueInput = document.createElement("input");
+			defaultValueInput.id = "param-default-value";
+			defaultValueInput.setAttribute("type", "number");
+			defaultValueInput.setAttribute("placeholder", "default");
+
+			var minInput = document.createElement("input");
+			minInput.id = "param-min-value";
+			minInput.setAttribute("type", "number");
+			minInput.setAttribute("placeholder", "min");
+
+			var maxInput = document.createElement("input");
+			maxInput.id = "param-max-value";
+			maxInput.setAttribute("type", "number");
+			maxInput.setAttribute("placeholder", "max");
+
+			var saveButton = document.createElement("button");
+			saveButton.id = "param-save-button";
+			saveButton.innerHTML = "save param";
+			
+			var context = document.getElementById("canvas").getContext("2d");
+
+			saveButton.onclick = function(){
+				var nameInput = document.getElementById("param-name"),
+					defaultValueInput = document.getElementById("param-default-value"),
+					minInput = document.getElementById("param-min-value"),
+					maxInput = document.getElementById("param-max-value");
+
+				var param = {
+					name :nameInput.value,
+					value : defaultValueInput.value,
+					min : minInput.value,
+					max : maxInput.value
+				};
+				this.docu.params[param.name] = param;
+
+				this.ReloadExistingParams();
+			}.bind(this);
+
+			paramElem.appendChild(nameInput);
+			paramElem.appendChild(defaultValueInput);
+			paramElem.appendChild(minInput);
+			paramElem.appendChild(maxInput);
+			paramElem.appendChild(saveButton);
+
+			this.param_ui.appendChild(paramElem);
+		}
+
+		SetUI(param, id){
+			var paramElem = document.getElementById(id);
+			var children = paramElem.childNodes;
+			children[0].value = param.name;
+			children[1].value = param.value;
+			children[2].value = param.min;
+			children[3].value = param.max;
+		}
+
+		GetParam(param, id){
+			var paramElem = document.getElementById(id);
+			var children = paramElem.childNodes;
+			children[0].value = param.name;
+			children[1].value = param.value;
+			children[2].value = param.min;
+			children[3].value = param.max;
+		}
+
+	}
+
+	module.exports = Neutron;
 
 /***/ })
 /******/ ]);

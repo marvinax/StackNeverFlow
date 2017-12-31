@@ -31,7 +31,7 @@ class Document{
 		this.canvas = canvas;
 		this.curves = [];
 
-		this.params = [];
+		this.params = {};
 		this.init = "";
 		this.update = "";
 
@@ -332,17 +332,12 @@ class Document{
 
 		var param = function(){
 			var name = pop();
-			var byName = this.params.filter(function(param){return param.name == name});
-			if(byName == []){
-				var usingIndex = this.params[parseInt(name)];
-				if(usingIndex != undefined){
-					push(parseFloat(usingIndex.value));
-				} else {
-					console.log("param not found");
-					exec_err_flag = true;
-				}
+			var byName = this.params[name]
+			if(byName != undefined){
+				push(parseFloat(byName.value));
 			} else {
-				push(parseFloat(byName[0].value));
+				console.log("param name "+name+" not found");
+				exec_err_flag = true;
 			}
 		}.bind(this);
 
