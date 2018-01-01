@@ -281,7 +281,6 @@ function LoadName(context, docu, neutron){
 			
 			var zoomInc = event.deltaY*0.00005;
 			docu.zpr.Zoom(docu.zpr.InvTransform(MouseV(event)), zoomInc);
-			console.log(docu.zpr.pan);
 			Draw.Curves(context, docu);
 		}
 
@@ -301,7 +300,7 @@ function LoadName(context, docu, neutron){
 		}
 
 		document.getElementById("init-eval").onclick = function(){
-			docu.Eval(document.getElementById("init-code").value);
+			docu.Eval(document.getElementById("code").value);
 			docu.UpdateDraw(context);
 		};
 

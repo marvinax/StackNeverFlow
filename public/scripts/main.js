@@ -327,7 +327,6 @@
 				
 				var zoomInc = event.deltaY*0.00005;
 				docu.zpr.Zoom(docu.zpr.InvTransform(MouseV(event)), zoomInc);
-				console.log(docu.zpr.pan);
 				Draw.Curves(context, docu);
 			}
 
@@ -347,7 +346,7 @@
 			}
 
 			document.getElementById("init-eval").onclick = function(){
-				docu.Eval(document.getElementById("init-code").value);
+				docu.Eval(document.getElementById("code").value);
 				docu.UpdateDraw(context);
 			};
 
@@ -378,8 +377,8 @@
 	if(false) {
 		// When the styles change, update the <style> tags
 		if(!content.locals) {
-			module.hot.accept("!!../node_modules/css-loader/index.js!./styles.css", function() {
-				var newContent = require("!!../node_modules/css-loader/index.js!./styles.css");
+			module.hot.accept("!!../node_modules/_css-loader@0.21.0@css-loader/index.js!./styles.css", function() {
+				var newContent = require("!!../node_modules/_css-loader@0.21.0@css-loader/index.js!./styles.css");
 				if(typeof newContent === 'string') newContent = [[module.id, newContent, '']];
 				update(newContent);
 			});
@@ -1051,7 +1050,6 @@
 					var third = pop();
 					if(third == "c" || third == "curve"){
 						var fourth = parseInt(pop());
-						console.log(fourth);
 						var fifth = pop();
 						console.log(JSON.stringify(fifth));
 						this.curves[fourth].levers[second] = fifth;
@@ -1061,7 +1059,6 @@
 					var third = pop();
 					if(third == "l" || third == "curve"){
 						var fourth = parseInt(pop());
-						console.log(fourth);
 						var fifth = pop();
 						if(fifth == "c" || fifth == "curve"){
 							var sixth = parseInt(pop());
@@ -1071,11 +1068,37 @@
 				}
 			}.bind(this);
 
+			var float = function(){
+				var p = pop();
+				push(parseFloat(p));
+			}
+
 			var plus = function(){
 				var p1 = pop();
 				var p2 = pop();
 
-				push(p1.Add(p2));
+				if(typeof p1 == "number" && typeof p2 == "number")
+					push(p1 + p2);
+				else if(typeof p1.x == "number" && typeof p2.x == "number")
+					push(p1.Add(p2));
+				else{
+					console.log("plus type error");
+					exec_err_flag = true;
+				}
+			}
+
+			var subt = function(){
+				var p1 = pop();
+				var p2 = pop();
+
+				if(typeof p1 == "number" && typeof p2 == "number")
+					push(p1 - p2);
+				else if(typeof p1.x == "number" && typeof p2.x == "number")
+					push(p1.Sub(p2));
+				else{
+					console.log("sub type error: " + typeof p1 + " " + typeof p2 );
+					exec_err_flag = true;
+				}
 			}
 
 			var mult = function(){
@@ -1083,25 +1106,65 @@
 				var n  = pop();
 				if(typeof p == "number" && typeof n == "number")
 					push(n * p);
-				else if(typeof p == "object" && typeof p.x == "number" && typeof n == "number")
+				else if(typeof p.x == "number" && typeof n == "number")
 					push(p.Mult(n));
 				else{
-					console.log("mult type error");
+					console.log("mult type error: " + p + " " +n);
 					exec_err_flag = true;
 				}
+			}
+
+			var dist = function(){
+				var p1 = pop();
+				var p2 = pop();
+				push(p1.Dist(p2));
 			}
 
 			var trans = function(){
 				var elem = pop(),
 					increm = pop();
+				console.log(elem);
 				push(elem.TransCreate(increm));
 			}
 
-			var drag = function(){
-				var elem = pop(),
-					newPoint = pop(),
-					ith = parseInt(pop());
-				elem.SetControlPoint(ith, newPoint);
+			var sin = function(){
+				var elem = pop();
+				push(Math.sin(elem / 180 * Math.PI));
+			}
+
+			var cos = function(){
+				var elem = pop();
+				push(Math.cos(elem / 180 * Math.PI));
+			}
+
+			var tan = function(){
+				var elem = pop();
+				push(Math.tan(elem / 180*Math.PI));
+			}
+
+			var mag = function(){
+				var elem = pop();
+				push(elem.Dist());
+			}
+
+			var norm = function(){
+				var elem = pop();
+				push(elem.Mult(1/elem.Mag()));
+			}
+
+			var rotate = function(){
+				var angle = pop(),
+					rad   = angle / 180.0 * Math.PI;
+				var about = pop();
+				var dest  = pop();
+
+				var newVec = dest.Sub(about);
+				console.log(dest);
+				newVec.x = Math.cos(rad) * newVec.x - Math.sin(rad) * newVec.y;
+				newVec.y = Math.sin(rad) * newVec.x + Math.cos(rad) * newVec.y;
+
+
+				push(newVec.Add(about));
 			}
 
 			var curve = function(){
@@ -1153,23 +1216,31 @@
 						push(curr);
 					} else {
 						switch(curr){
-							case "hold"	 : hold();	 break;
-							case "unhold": unhold();   break;
-							case "set"   : set();	  break;
-							case "vec"   : vec();	  break;
-							case "get"   : get();	   break;
-							case "put"   : put();	  break;
-							case "c":
-							case "curve" : curve();	break;
-							case "l":
-							case "lever" : lever();	break;
-							case "p":
-							case "point" : point();	break;
-							case "plus"  : plus();	 break;
-							case "mult"  : mult();	 break;
-							case "trans" : trans();	break;
-							case "drag"  : drag();	 break;
-							case "param" : param();	break;
+							case "sin"	 : sin();       break;
+							case "cos"   : cos();       break;
+							case "tan"   : tan();       break;
+							case "float" : float();		break;
+							case "mag"	 : mag();   	break;
+							case "dist"  : dist();      break;
+							case "rotate":
+							case "rot"   : rotate();	break;
+							case "hold"	 : hold();		break;
+							case "unhold": unhold();	break;
+							case "set"   : set();		break;
+							case "vec"   : vec();		break;
+							case "get"   : get();		break;
+							case "put"   : put();		break;
+							case "c":	
+							case "curve" : curve();		break;
+							case "l":	
+							case "lever" : lever();		break;
+							case "p":	
+							case "point" : point();		break;
+							case "plus"  : plus();		break;
+							case "sub"   : subt();		break;
+							case "mult"  : mult();		break;
+							case "trans" : trans();		break;
+							case "param" : param();		break;
 							default	  : push(curr);
 						}
 					}
@@ -2038,7 +2109,7 @@
 				param.value = valueSlider.value = valueInput.value;
 
 		        this.docu.Eval(this.docu.update);
-		        this.docu.UpdateDraw(context);
+		        this.docu.UpdateDraw(this.context);
 			}.bind(this);
 
 			valueSlider.onchange = valueSlider.oninput = function(){

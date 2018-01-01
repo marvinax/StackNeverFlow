@@ -35,7 +35,7 @@ class Neutron {
 			param.value = valueSlider.value = valueInput.value;
 
 	        this.docu.Eval(this.docu.update);
-	        this.docu.UpdateDraw(context);
+	        this.docu.UpdateDraw(this.context);
 		}.bind(this);
 
 		valueSlider.onchange = valueSlider.oninput = function(){
