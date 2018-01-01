@@ -251,7 +251,6 @@ class Document{
 				if(third == "c" || third == "curve"){
 					var fourth = parseInt(pop());
 					var fifth = pop();
-					console.log(JSON.stringify(fifth));
 					this.curves[fourth].levers[second] = fifth;
 				}
 			} else if (first == "p") {
@@ -296,7 +295,7 @@ class Document{
 			else if(typeof p1.x == "number" && typeof p2.x == "number")
 				push(p1.Sub(p2));
 			else{
-				console.log("sub type error: " + typeof p1 + " " + typeof p2 );
+				console.log("sub type error: " + typeof p1 + " " + p2 + " " + typeof p2 );
 				exec_err_flag = true;
 			}
 		}
@@ -309,7 +308,7 @@ class Document{
 			else if(typeof p.x == "number" && typeof n == "number")
 				push(p.Mult(n));
 			else{
-				console.log("mult type error: " + p + " " +n);
+				console.log("mult type error: " + typeof p + " " + typeof n);
 				exec_err_flag = true;
 			}
 		}
@@ -323,7 +322,6 @@ class Document{
 		var trans = function(){
 			var elem = pop(),
 				increm = pop();
-			console.log(elem);
 			push(elem.TransCreate(increm));
 		}
 
@@ -359,7 +357,6 @@ class Document{
 			var dest  = pop();
 
 			var newVec = dest.Sub(about);
-			console.log(dest);
 			newVec.x = Math.cos(rad) * newVec.x - Math.sin(rad) * newVec.y;
 			newVec.y = Math.sin(rad) * newVec.x + Math.cos(rad) * newVec.y;
 
@@ -441,7 +438,14 @@ class Document{
 						case "mult"  : mult();		break;
 						case "trans" : trans();		break;
 						case "param" : param();		break;
-						default	  : push(curr);
+						default	:
+							if(this.params[curr] != undefined) {
+								push(parseFloat(this.params[curr].value));
+							} else if(this.consts[curr] != undefined){
+								push(this.consts[curr]);
+							} else {
+								push(curr);
+							}
 					}
 				}
 				if(stack.length == 0) break;
@@ -456,6 +460,8 @@ class Document{
 				break;
 			}
 		}
+		console.log(this.consts.new_head_stroke);
+		// this.dstack = [];
 	}
 }
 

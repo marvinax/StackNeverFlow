@@ -144,7 +144,6 @@ class Lever {
     }
 
     TransCreate(inc){
-        console.log(JSON.stringify(inc));
         var lever = this.Copy();
         lever.Trans(inc);
         return lever;
