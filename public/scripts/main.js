@@ -968,13 +968,12 @@
 
 		InitEval(){
 			this.dstack = [];
-			this.consts = {};
-			this.vars  = {};
+			this.vars = {};
+			this.funs = {};
 		}
 
 		ClearEval(){
 			delete this.dstack;
-			delete this.consts;
 			delete this.vars;
 		}
 
@@ -992,11 +991,11 @@
 
 			var hold = function(){
 				exec_hold_flag = true;
-			}
+			};
 
 			var unhold = function(){
 				exec_hold_flag = false;
-			}
+			};
 
 			var pop = function(){
 				return this.dstack.pop();
@@ -1028,18 +1027,13 @@
 			var put = function(){
 				var key = pop();
 				var val = pop();
-				this.consts[key] = val.Copy();
-				console.log(key);
-				console.log(key.toString() + " " + JSON.stringify(this.consts[key]));
+				this.vars[key] = val.Copy();
+				console.log(key.toString() + " " + JSON.stringify(this.vars[key]));
 			}.bind(this);
 
-			var put_var = function(){
-				var key = pop();
-				var val = pop();
-				this.vars[key] = val.Copy();
-				console.log(key);
-				console.log(key.toString() + " " + JSON.stringify(this.consts[key]));
-			}.bind(this);
+			var put_fun = function(){
+
+			};
 
 			var get = function(){
 				var key = pop();
@@ -1055,40 +1049,36 @@
 				var x = pop();
 				var y = pop();
 				push(new Vector(parseFloat(x), parseFloat(y)));
-			}
+			};
 
-			var set = function(){
-				var first = pop();
-				var second;
-				if(first == "c" || first == "curve"){
-					second = parseInt(pop());
-					this.curves[second] = pop();
-				} else if (first == "l" || first == "lever") {
-					second = parseInt(pop());
-					var third = pop();
-					if(third == "c" || third == "curve"){
-						var fourth = parseInt(pop());
-						var fifth = pop();
-						this.curves[fourth].levers[second] = fifth;
-					}
-				} else if (first == "p") {
-					second = parseInt(pop());
-					var third = pop();
-					if(third == "l" || third == "curve"){
-						var fourth = parseInt(pop());
-						var fifth = pop();
-						if(fifth == "c" || fifth == "curve"){
-							var sixth = parseInt(pop());
-							this.curves[sixth].levers[fourth].SetControlPoint(second, pop());
-						}
-					}
-				}
-			}.bind(this);
+			var set_curve = function(){
+				var index = pop();
+				var value = pop();
+				this.curve[parseInt(index)] = value;
+				puhs(value);
+			};
+
+			var set_lever = function(){
+				var index = pop();
+				var value = pop();
+				var curve = pop();
+				curve.levers[parseInt(index)] = value;
+				push(curve);
+			};
+
+			var set_point = function(){
+				var index = pop();
+				var value = pop();
+				var lever = pop();
+				lever.SetControlPoint(parseInt(index), value);
+				console.log("set_point" + JSON.stringify(lever));
+				push(lever);
+			};
 
 			var float = function(){
 				var p = pop();
 				push(parseFloat(p));
-			}
+			};
 
 			var plus = function(){
 				var p1 = pop();
@@ -1102,7 +1092,7 @@
 					console.log("plus type error");
 					exec_err_flag = true;
 				}
-			}
+			};
 
 			var subt = function(){
 				var p1 = pop();
@@ -1116,7 +1106,7 @@
 					console.log("sub type error: " + typeof p1 + " " + p2 + " " + typeof p2 );
 					exec_err_flag = true;
 				}
-			}
+			};
 
 			var mult = function(){
 				var p = pop();
@@ -1129,45 +1119,45 @@
 					console.log("mult type error: " + typeof p + " " + typeof n);
 					exec_err_flag = true;
 				}
-			}
+			};
 
 			var dist = function(){
 				var p1 = pop();
 				var p2 = pop();
 				push(p1.Dist(p2));
-			}
+			};
 
 			var trans = function(){
 				var elem = pop(),
 					increm = pop();
 					console.log(increm);
 				push(elem.TransCreate(increm));
-			}
+			};
 
 			var sin = function(){
 				var elem = pop();
 				push(Math.sin(elem / 180 * Math.PI));
-			}
+			};
 
 			var cos = function(){
 				var elem = pop();
 				push(Math.cos(elem / 180 * Math.PI));
-			}
+			};
 
 			var tan = function(){
 				var elem = pop();
 				push(Math.tan(elem / 180*Math.PI));
-			}
+			};
 
 			var mag = function(){
 				var elem = pop();
 				push(elem.Dist());
-			}
+			};
 
 			var norm = function(){
 				var elem = pop();
 				push(elem.Mult(1/elem.Mag()));
-			}
+			};
 
 			var rotate = function(){
 				var angle = pop(),
@@ -1181,14 +1171,14 @@
 
 
 				push(newVec.Add(about));
-			}
+			};
 
-			var curve = function(){
+			var get_curve = function(){
 				var ith = parseInt(pop());
 				push(this.curves[ith]);
 			}.bind(this);
 
-			var lever = function(){
+			var get_lever = function(){
 				var ith = parseInt(pop());
 				var elem = pop();
 				if(elem.levers != undefined)
@@ -1197,9 +1187,9 @@
 					console.log("lever needs a curve ref ahead");
 					exec_err_flag = true;
 				}
-			}
+			};
 
-			var point = function(){
+			var get_point = function(){
 				var ith = parseInt(pop());
 				var elem = pop();
 				if(elem.points != undefined)
@@ -1208,17 +1198,18 @@
 					console.log("point needs a lever ref ahead");
 					exec_err_flag = true;
 				}
-			}
+			};
 
-			var param = function(){
-				var name = pop();
-				var byName = this.params[name]
-				if(byName != undefined){
-					push(parseFloat(byName.value));
+			var get = function(){
+				var key = pop();
+				if(this.params[key] != undefined){
+					push(parseFloat(this.params[key].value));
+				} else if(this.vars[key] != undefined){
+					push(this.vars[key]);
 				} else {
-					console.log("param name "+name+" not found");
-					exec_err_flag = true;
-				}
+					console.log("key "+ key +"neither found in params nor vars");
+					exec_err_flag = true;				
+				}			
 			}.bind(this);
 
 			var curr;
@@ -1228,49 +1219,37 @@
 				stack = text[i].split(" ");
 				while(true){
 					curr = stack.pop();
-					if(exec_hold_flag && curr != "unhold"){
+					if(exec_hold_flag && curr != "unhold" && curr != "<" ){
 						push(curr);
 					} else {
 						switch(curr){
 							case "sin"	 : sin();       break;
 							case "cos"   : cos();       break;
 							case "tan"   : tan();       break;
+
 							case "float" : float();		break;
 							case "mag"	 : mag();   	break;
 							case "dist"  : dist();      break;
-							case "rotate":
 							case "rot"   : rotate();	break;
-							case "hold"	 : hold();		break;
-							case "unhold": unhold();	break;
-							case "set"   : set();		break;
 							case "vec"   : vec();		break;
-							case "get"   : get();		break;
-							case "put"   : put();		break;
-							case "var"   : put_var();   break;  
-							case "c":	
-							case "curve" : curve();		break;
-							case "l":	
-							case "lever" : lever();		break;
-							case "p":	
-							case "point" : point();		break;
 							case "plus"  : plus();		break;
 							case "sub"   : subt();		break;
 							case "mult"  : mult();		break;
+
+							case "@curve": get_curve();	break;
+							case "@lever": get_lever();	break;
+							case "@point": get_point();	break;
+
+							case "&curve": set_curve(); break;
+							case "&lever": set_lever(); break;
+							case "&point": set_point(); break;
 							case "trans" : trans();		break;
-							case "param" : param();		break;
+
+							case "@"     : get();       break;
+							case "&"     : put();       break;
+							case "."     : pop();       break;
 							default	:
-								if(curr[0] == "@") {
-									push(parseFloat(this.params[curr.slice(1)].value));
-								} else if(curr[0] == "."){
-									if(this.consts[curr.slice(1)] != undefined){
-										push(this.consts[curr.slice(1)]);
-									}
-									if(this.vars[curr.slice(1)] != undefined){
-										push(this.vars[curr.slice(1)]);
-									}
-								} else {
-									if(curr != "") push(curr);
-								}
+								if(curr != "") push(curr);
 						}
 					}
 					if(stack.length == 0) break;
@@ -1286,7 +1265,6 @@
 					break;
 				}
 			}
-			this.vars={};
 		}
 		
 	}
