@@ -809,6 +809,9 @@
 	var Draw =   __webpack_require__(12);
 	var ZPR =    __webpack_require__(13);
 
+	Array.prototype.last = function(){
+		return this[this.length - 1];
+	}
 
 	class Param{
 	 	constructor(name, value, min, max){
@@ -968,13 +971,18 @@
 
 		InitEval(){
 			this.dstack = [];
+			this.rstack = [];
+			this.lstack = [];
 			this.vars = {};
 			this.funs = {};
 		}
 
 		ClearEval(){
 			delete this.dstack;
+			delete this.rstack;
+			delete this.lstack;
 			delete this.vars;
+			delete this.funs;
 		}
 
 		UpdateDraw(context){
@@ -986,15 +994,15 @@
 
 		Eval(expr){
 			var text = expr.split('\n'),
-				exec_hold_flag = false,
+				literal_flag = false,
 				exec_err_flag = false;
 
-			var hold = function(){
-				exec_hold_flag = true;
+			var lit = function(){
+				literal_flag = true;
 			};
 
-			var unhold = function(){
-				exec_hold_flag = false;
+			var unlit = function(){
+				literal_flag = false;
 			};
 
 			var pop = function(){
@@ -1004,6 +1012,22 @@
 			var push = function(elem){
 				this.dstack.push(elem);
 				// console.log(JSON.stringify(dstack));
+			}.bind(this);
+
+			var dup = function(){
+				var val = pop();
+				push(val);
+				push(val);
+			}
+
+			var rot = function(){
+				var val = parseInt(pop());
+				if(val <= this.dstack.length)
+					this.dstack.push(this.dstack.splice(-val,1)[0]);
+				else {
+					console.log('rotating length larger than dstack ');
+					exec_err_flag = true;				
+				}
 			}.bind(this);
 
 			var refer = function(){
@@ -1031,18 +1055,10 @@
 				console.log(key.toString() + " " + JSON.stringify(this.vars[key]));
 			}.bind(this);
 
-			var put_fun = function(){
-
-			};
-
-			var get = function(){
+			var fun = function(){
 				var key = pop();
-				var res = this.consts[key];
-				if(res == undefined){
-					console.log('key "'+ key +'" not found');
-					exec_err_flag = true;
-				} else
-					push(res);
+				this.funs[key] = this.lstack.reverse();
+				this.lstack = [];
 			}.bind(this);
 
 			var vec = function(){
@@ -1071,7 +1087,6 @@
 				var value = pop();
 				var lever = pop();
 				lever.SetControlPoint(parseInt(index), value);
-				console.log("set_point" + JSON.stringify(lever));
 				push(lever);
 			};
 
@@ -1206,21 +1221,23 @@
 					push(parseFloat(this.params[key].value));
 				} else if(this.vars[key] != undefined){
 					push(this.vars[key]);
+				} else if(this.funs[key] != undefined){
+					this.rstack.push(this.funs[key].slice());
+					exec(true);
 				} else {
 					console.log("key "+ key +"neither found in params nor vars");
 					exec_err_flag = true;				
 				}			
 			}.bind(this);
 
-			var curr;
-			var stack;
-
-			for (var i = 0; i < text.length; i++) {
-				stack = text[i].split(" ");
+			var exec = function(mark){
 				while(true){
-					curr = stack.pop();
-					if(exec_hold_flag && curr != "unhold" && curr != "<" ){
-						push(curr);
+					curr = this.rstack.last().pop();
+					// if(mark){
+					// 	console.log(this.dstack.map(function(x){return JSON.stringify(x)}));
+					// }
+					if(literal_flag && curr != "{" ){
+						this.lstack.push(curr);
 					} else {
 						switch(curr){
 							case "sin"	 : sin();       break;
@@ -1230,7 +1247,7 @@
 							case "float" : float();		break;
 							case "mag"	 : mag();   	break;
 							case "dist"  : dist();      break;
-							case "rot"   : rotate();	break;
+							case "rotate": rotate();	break;
 							case "vec"   : vec();		break;
 							case "plus"  : plus();		break;
 							case "sub"   : subt();		break;
@@ -1245,26 +1262,44 @@
 							case "&point": set_point(); break;
 							case "trans" : trans();		break;
 
+							case "dup"   : dup();       break;
+							case "rot"   : rot();       break;
+
 							case "@"     : get();       break;
 							case "&"     : put();       break;
 							case "."     : pop();       break;
+							case "#"     : fun();       break;
+							case "}"     : lit();       break;
+							case "{"     : unlit();     break;
 							default	:
 								if(curr != "") push(curr);
 						}
 					}
-					if(stack.length == 0) break;
+					// if(mark){
+					// 	console.log(this.dstack.map(function(x){return JSON.stringify(x)}));
+					// }
+					if(this.rstack.last().length == 0) {this.rstack.pop(); break;}
 					if(exec_err_flag) {
 						console.log("at "+curr);
 						break;
 					}
 					// console.log(JSON.stringify(this.consts));
 				}
+			}.bind(this);
+
+			var curr;
+
+			for (var i = 0; i < text.length; i++) {
+				this.rstack.push(text[i].split(" "));
+				exec();
 				if(exec_err_flag){
 					console.log("error raised, further Eval stopped");
 					console.log(text[i]);
 					break;
 				}
 			}
+			this.dstack = []
+			// console.log(this.dstack);
 		}
 		
 	}
