@@ -168,6 +168,13 @@ class Document{
 	InitEval(){
 		this.dstack = [];
 		this.consts = {};
+		this.vars  = {};
+	}
+
+	ClearEval(){
+		delete this.dstack;
+		delete this.consts;
+		delete this.vars;
 	}
 
 	UpdateDraw(context){
@@ -221,6 +228,16 @@ class Document{
 			var key = pop();
 			var val = pop();
 			this.consts[key] = val.Copy();
+			console.log(key);
+			console.log(key.toString() + " " + JSON.stringify(this.consts[key]));
+		}.bind(this);
+
+		var put_var = function(){
+			var key = pop();
+			var val = pop();
+			this.vars[key] = val.Copy();
+			console.log(key);
+			console.log(key.toString() + " " + JSON.stringify(this.consts[key]));
 		}.bind(this);
 
 		var get = function(){
@@ -322,6 +339,7 @@ class Document{
 		var trans = function(){
 			var elem = pop(),
 				increm = pop();
+				console.log(increm);
 			push(elem.TransCreate(increm));
 		}
 
@@ -427,6 +445,7 @@ class Document{
 						case "vec"   : vec();		break;
 						case "get"   : get();		break;
 						case "put"   : put();		break;
+						case "var"   : put_var();   break;  
 						case "c":	
 						case "curve" : curve();		break;
 						case "l":	
@@ -439,12 +458,17 @@ class Document{
 						case "trans" : trans();		break;
 						case "param" : param();		break;
 						default	:
-							if(this.params[curr] != undefined) {
-								push(parseFloat(this.params[curr].value));
-							} else if(this.consts[curr] != undefined){
-								push(this.consts[curr]);
+							if(curr[0] == "@") {
+								push(parseFloat(this.params[curr.slice(1)].value));
+							} else if(curr[0] == "."){
+								if(this.consts[curr.slice(1)] != undefined){
+									push(this.consts[curr.slice(1)]);
+								}
+								if(this.vars[curr.slice(1)] != undefined){
+									push(this.vars[curr.slice(1)]);
+								}
 							} else {
-								push(curr);
+								if(curr != "") push(curr);
 							}
 					}
 				}
@@ -457,12 +481,13 @@ class Document{
 			}
 			if(exec_err_flag){
 				console.log("error raised, further Eval stopped");
+				console.log(text[i]);
 				break;
 			}
 		}
-		console.log(this.consts.new_head_stroke);
-		// this.dstack = [];
+		this.vars={};
 	}
+	
 }
 
 module.exports = Document;

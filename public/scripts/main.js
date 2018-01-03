@@ -50,10 +50,10 @@
 
 	var Vector   = __webpack_require__(5);
 	var Document = __webpack_require__(6);
-	var LoadData = __webpack_require__(14);
+	var LoadData = __webpack_require__(7);
 
 	var Draw = __webpack_require__(12);
-	var Neutron = __webpack_require__(15);
+	var Neutron = __webpack_require__(14);
 
 	function ClearDOMChildren(elem){
 		while (elem.firstChild) {
@@ -73,6 +73,7 @@
 		        LoadName(context, docu);
 		    }
 		};
+		docu.ClearEval();
 		xhr.send(JSON.stringify({id: docu_id, data:docu}));
 	}
 
@@ -377,8 +378,8 @@
 	if(false) {
 		// When the styles change, update the <style> tags
 		if(!content.locals) {
-			module.hot.accept("!!../node_modules/_css-loader@0.21.0@css-loader/index.js!./styles.css", function() {
-				var newContent = require("!!../node_modules/_css-loader@0.21.0@css-loader/index.js!./styles.css");
+			module.hot.accept("!!../node_modules/css-loader/index.js!./styles.css", function() {
+				var newContent = require("!!../node_modules/css-loader/index.js!./styles.css");
 				if(typeof newContent === 'string') newContent = [[module.id, newContent, '']];
 				update(newContent);
 			});
@@ -396,7 +397,7 @@
 
 
 	// module
-	exports.push([module.id, "/* CSS */\nbody\n{\n\tfont-family: helvetica, sans-serif;\n\tfont-size: 85%;\n\tmargin: 10px 15px;\n\tcolor: #333;\n\tbackground-color: #ddd;\n}\n\nh1\n{\t\n\tfont-family: TheMixMono;\n\tfont-size: 2.6em;\n\tfont-weight: black;\n\tletter-spacing: -0.12em;\n\tmargin: 0 0 0.3em 0;\n}\n\nh2\n{\n\tfont-size: 1.4em;\n\tfont-weight: normal;\n\tmargin: 1.5em 0 0 0;\n}\n\n#img{\n\twidth:3em;\n}\n\ncanvas\n{\n\tclear:left;\n\tfloat:left;\n\tdisplay: inline;\n\twidth:  600px;\n\theight: 600px;\n\tmargin: 0 10px 10px 0;\n\tbackground-color: #fff;\n}\n\n#button_group{\n}\n\n#list{\n\tmargin: 10px;\n}\n\n#save_group{\n\t/*clear:left;*/\n}\n\n.char-link{\n\tmargin : 10px;\n}\n\n.code\n{\n\tdisplay: block;\n\twidth: 580px;\n\toutline: none;\n\tborder:none;\n    border-color: Transparent; \n    border-radius: 4px;\n    resize:none;\n\n\theight: 4em;\n\tfont-family: \"TheMixMono\", monospace;\n\tfont-size: 1em;\n\t/*padding: 2px 4px;*/\n\tmargin: 8px;\n\tcolor: #555;\n\tbackground-color: #eee;\n\tborder: 1px solid #999;\n\toverflow: auto;\n}\n\n#param-group{\n\tmargin : 10px;\n}\n\n#param-name{\n\tmargin-top: 3px;\n\twidth:74px;\n}\n\n.param-name-label{\n\t/*margin-right: 50px;*/\n\t/*float:left;*/\n\t/*margin-top: 50px;*/\n\tdisplay: inline-block;\n\twidth:80px;\n}", ""]);
+	exports.push([module.id, "/* CSS */\nbody\n{\n\tfont-family: helvetica, sans-serif;\n\tfont-size: 85%;\n\tmargin: 10px 15px;\n\tcolor: #333;\n\tbackground-color: #ddd;\n}\n\nh1\n{\t\n\tfont-family: TheMixMono;\n\tfont-size: 2.6em;\n\tfont-weight: black;\n\tletter-spacing: -0.12em;\n\tmargin: 0 0 0.3em 0;\n}\n\nh2\n{\n\tfont-size: 1.4em;\n\tfont-weight: normal;\n\tmargin: 1.5em 0 0 0;\n}\n\n#img{\n\twidth:3em;\n}\n\ncanvas\n{\n\tclear:left;\n\tfloat:left;\n\tdisplay: inline;\n\twidth:  600px;\n\theight: 600px;\n\tmargin: 0 10px 10px 0;\n\tbackground-color: #fff;\n}\n\n#button_group{\n}\n\n#list{\n\tmargin: 10px;\n}\n\n#save_group{\n\t/*clear:left;*/\n}\n\n.char-link{\n\tmargin : 10px;\n}\n\n.code\n{\n\tdisplay: block;\n\twidth: 580px;\n\toutline: none;\n\tborder:none;\n    border-color: Transparent; \n    border-radius: 4px;\n\n\theight: 4em;\n\tfont-family: \"TheMixMono\", monospace;\n\tfont-size: 0.9em;\n\t/*padding: 2px 4px;*/\n\tmargin: 8px;\n\tcolor: #555;\n\tbackground-color: #eee;\n\tborder: 1px solid #999;\n\toverflow: auto;\n}\n\n#param-group{\n\tmargin : 10px;\n}\n\n#param-name{\n\tmargin-top: 3px;\n\twidth:74px;\n}\n\n.param-name-label{\n\t/*margin-right: 50px;*/\n\t/*float:left;*/\n\t/*margin-top: 50px;*/\n\tdisplay: inline-block;\n\twidth:80px;\n}", ""]);
 
 	// exports
 
@@ -800,11 +801,11 @@
 
 	
 	var Vector =  __webpack_require__(5);
-	var Lever =   __webpack_require__(7);
-	var Curve =   __webpack_require__(8);
-	var Outline = __webpack_require__(9);
+	var Lever =   __webpack_require__(8);
+	var Curve =   __webpack_require__(9);
+	var Outline = __webpack_require__(10);
 
-	var Cast =   __webpack_require__(11);
+	var Cast =   __webpack_require__(15);
 	var Draw =   __webpack_require__(12);
 	var ZPR =    __webpack_require__(13);
 
@@ -968,6 +969,13 @@
 		InitEval(){
 			this.dstack = [];
 			this.consts = {};
+			this.vars  = {};
+		}
+
+		ClearEval(){
+			delete this.dstack;
+			delete this.consts;
+			delete this.vars;
 		}
 
 		UpdateDraw(context){
@@ -1021,6 +1029,16 @@
 				var key = pop();
 				var val = pop();
 				this.consts[key] = val.Copy();
+				console.log(key);
+				console.log(key.toString() + " " + JSON.stringify(this.consts[key]));
+			}.bind(this);
+
+			var put_var = function(){
+				var key = pop();
+				var val = pop();
+				this.vars[key] = val.Copy();
+				console.log(key);
+				console.log(key.toString() + " " + JSON.stringify(this.consts[key]));
 			}.bind(this);
 
 			var get = function(){
@@ -1122,6 +1140,7 @@
 			var trans = function(){
 				var elem = pop(),
 					increm = pop();
+					console.log(increm);
 				push(elem.TransCreate(increm));
 			}
 
@@ -1227,6 +1246,7 @@
 							case "vec"   : vec();		break;
 							case "get"   : get();		break;
 							case "put"   : put();		break;
+							case "var"   : put_var();   break;  
 							case "c":	
 							case "curve" : curve();		break;
 							case "l":	
@@ -1239,12 +1259,17 @@
 							case "trans" : trans();		break;
 							case "param" : param();		break;
 							default	:
-								if(this.params[curr] != undefined) {
-									push(parseFloat(this.params[curr].value));
-								} else if(this.consts[curr] != undefined){
-									push(this.consts[curr]);
+								if(curr[0] == "@") {
+									push(parseFloat(this.params[curr.slice(1)].value));
+								} else if(curr[0] == "."){
+									if(this.consts[curr.slice(1)] != undefined){
+										push(this.consts[curr.slice(1)]);
+									}
+									if(this.vars[curr.slice(1)] != undefined){
+										push(this.vars[curr.slice(1)]);
+									}
 								} else {
-									push(curr);
+									if(curr != "") push(curr);
 								}
 						}
 					}
@@ -1257,18 +1282,65 @@
 				}
 				if(exec_err_flag){
 					console.log("error raised, further Eval stopped");
+					console.log(text[i]);
 					break;
 				}
 			}
-			console.log(this.consts.new_head_stroke);
-			// this.dstack = [];
+			this.vars={};
 		}
+		
 	}
 
 	module.exports = Document;
 
 /***/ }),
 /* 7 */
+/***/ (function(module, exports, __webpack_require__) {
+
+	
+	var Vector = __webpack_require__(5);
+	var Lever =  __webpack_require__(8);
+	var Curve =  __webpack_require__(9);
+	var Outline = __webpack_require__(10);
+
+	class LoadData {
+		static Curves(curves){
+			return curves.map(function(x){return this.Curve(x)}.bind(this));
+		}
+
+		static Curve(curve){
+			var curveRes = new Curve();
+			// console.log(curve);
+			curveRes.lo = this.Outline(curve.lo);
+			curveRes.ro = this.Outline(curve.ro);
+			curveRes.levers = curve.levers.map(function(x){return this.Lever(x)}.bind(this));
+			curveRes.orig = this.Point(curve.orig);
+			return curveRes;
+		}
+
+		static Lever(lever){
+			var leverRes = new Lever();
+			leverRes.leverMode = lever.leverMode;
+			leverRes.points = lever.points.map(function(x){return this.Point(x)}.bind(this));
+			return leverRes;
+		}
+
+		static Outline(outline){
+			var outlineRes = new Outline();
+			outlineRes.side = outline.side;
+			outlineRes.points = outline.points.map(function(x){return this.Point(x)}.bind(this));
+			return outlineRes;
+		}
+
+		static Point(point){
+			return new Vector(point.x, point.y);
+		}
+	}
+
+	module.exports = LoadData;
+
+/***/ }),
+/* 8 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	var Vector = __webpack_require__(5);
@@ -1426,15 +1498,15 @@
 	module.exports = Lever;
 
 /***/ }),
-/* 8 */
+/* 9 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	
-	var Outline = __webpack_require__(9);
+	var Outline = __webpack_require__(10);
 	var Vector  = __webpack_require__(5);
-	var Lever   = __webpack_require__(7);
+	var Lever   = __webpack_require__(8);
 
-	var CurveMath = __webpack_require__(10);
+	var CurveMath = __webpack_require__(11);
 
 	class Curve {
 
@@ -1504,12 +1576,12 @@
 	module.exports = Curve;
 
 /***/ }),
-/* 9 */
+/* 10 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	var Vector = __webpack_require__(5);
-	var Lever =  __webpack_require__(7);
-	var CurveMath = __webpack_require__(10);
+	var Lever =  __webpack_require__(8);
+	var CurveMath = __webpack_require__(11);
 
 	var CurveSide = Object.freeze({
 	    LEFT :  1,
@@ -1557,7 +1629,7 @@
 	module.exports = Outline;
 
 /***/ }),
-/* 10 */
+/* 11 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	var Vector = __webpack_require__(5);
@@ -1695,81 +1767,6 @@
 	}
 
 	module.exports = CurveMath;
-
-/***/ }),
-/* 11 */
-/***/ (function(module, exports, __webpack_require__) {
-
-	
-	var CurveMath = __webpack_require__(10);
-
-	class Cast{
-	    
-	    static CurveRect(curve, mouseV){
-	        return curve.bounding[0].x < mouseV.x && curve.bounding[1].x > mouseV.x &&
-	               curve.bounding[0].y < mouseV.y && curve.bounding[1].y > mouseV.y;
-	    }
-	    
-	    static CurveBody(curve, mouseV) {
-	        
-	    	var CAST_DIST = 9;
-
-	        var t, p, dist;
-	        console.log(JSON.stringify(curve));
-	        for (var i = 0; i < curve.levers.length - 1; i++) {
-
-	            t = CurveMath.GetClosestTFromGivenPoint(curve.levers[i], curve.levers[i+1], mouseV, 6, 4);
-	            p = CurveMath.GetPointOnCurveBetweenLever(t, curve.levers[i], curve.levers[i+1]);
-	            dist = p.Dist(mouseV);
-	            if (dist < CAST_DIST)
-	                return i + t;
-	        }
-	        return -1;
-	    } 
-
-	    static Curve(curve, mouseV){
-	    	// console.log(curve.bounding);
-	        // if(this.CurveRect(curve, mouseV)){
-	            return this.CurveBody(curve, mouseV);
-	        // }
-	        // else
-	        //     return -1;
-	    }
-
-	    static CurveIthLever(curve, mouseV) {
-
-	    	var CAST_DIST = 9;
-
-	        var i = 0,
-	        	found = false;
-
-	        for (; i < curve.levers.length; i ++) {
-	        	found = PVector.dist(curve.levers[i].points[2], mouseV) < CAST_DIST;
-	        	if(found) break;	
-	        } 
-
-	        if(!found) i = -1;
-
-	        return i;
-	    }
-
-	    static Lever(lever, mouseV){
-
-			var CAST_DIST = 9;    
-	        var castSequence = [0, 4, 1, 3, 2];
-	        
-	        var res = -1;
-	        for(var ith = 0; ith < 5; ith++)
-	            if(lever.points[castSequence[ith]].Dist(mouseV) < CAST_DIST){
-	            	console.log(ith + " " + castSequence[ith]);
-	                res = castSequence[ith];
-	                break;
-	            }
-	        return res;
-	    }
-	}
-
-	module.exports = Cast;
 
 /***/ }),
 /* 12 */
@@ -2029,52 +2026,6 @@
 
 /***/ }),
 /* 14 */
-/***/ (function(module, exports, __webpack_require__) {
-
-	
-	var Vector = __webpack_require__(5);
-	var Lever =  __webpack_require__(7);
-	var Curve =  __webpack_require__(8);
-	var Outline = __webpack_require__(9);
-
-	class LoadData {
-		static Curves(curves){
-			return curves.map(function(x){return this.Curve(x)}.bind(this));
-		}
-
-		static Curve(curve){
-			var curveRes = new Curve();
-			// console.log(curve);
-			curveRes.lo = this.Outline(curve.lo);
-			curveRes.ro = this.Outline(curve.ro);
-			curveRes.levers = curve.levers.map(function(x){return this.Lever(x)}.bind(this));
-			curveRes.orig = this.Point(curve.orig);
-			return curveRes;
-		}
-
-		static Lever(lever){
-			var leverRes = new Lever();
-			leverRes.leverMode = lever.leverMode;
-			leverRes.points = lever.points.map(function(x){return this.Point(x)}.bind(this));
-			return leverRes;
-		}
-
-		static Outline(outline){
-			var outlineRes = new Outline();
-			outlineRes.side = outline.side;
-			outlineRes.points = outline.points.map(function(x){return this.Point(x)}.bind(this));
-			return outlineRes;
-		}
-
-		static Point(point){
-			return new Vector(point.x, point.y);
-		}
-	}
-
-	module.exports = LoadData;
-
-/***/ }),
-/* 15 */
 /***/ (function(module, exports) {
 
 	class Neutron {
@@ -2227,6 +2178,81 @@
 	}
 
 	module.exports = Neutron;
+
+/***/ }),
+/* 15 */
+/***/ (function(module, exports, __webpack_require__) {
+
+	
+	var CurveMath = __webpack_require__(11);
+
+	class Cast{
+	    
+	    static CurveRect(curve, mouseV){
+	        return curve.bounding[0].x < mouseV.x && curve.bounding[1].x > mouseV.x &&
+	               curve.bounding[0].y < mouseV.y && curve.bounding[1].y > mouseV.y;
+	    }
+	    
+	    static CurveBody(curve, mouseV) {
+	        
+	    	var CAST_DIST = 9;
+
+	        var t, p, dist;
+	        console.log(JSON.stringify(curve));
+	        for (var i = 0; i < curve.levers.length - 1; i++) {
+
+	            t = CurveMath.GetClosestTFromGivenPoint(curve.levers[i], curve.levers[i+1], mouseV, 6, 4);
+	            p = CurveMath.GetPointOnCurveBetweenLever(t, curve.levers[i], curve.levers[i+1]);
+	            dist = p.Dist(mouseV);
+	            if (dist < CAST_DIST)
+	                return i + t;
+	        }
+	        return -1;
+	    } 
+
+	    static Curve(curve, mouseV){
+	    	// console.log(curve.bounding);
+	        // if(this.CurveRect(curve, mouseV)){
+	            return this.CurveBody(curve, mouseV);
+	        // }
+	        // else
+	        //     return -1;
+	    }
+
+	    static CurveIthLever(curve, mouseV) {
+
+	    	var CAST_DIST = 9;
+
+	        var i = 0,
+	        	found = false;
+
+	        for (; i < curve.levers.length; i ++) {
+	        	found = PVector.dist(curve.levers[i].points[2], mouseV) < CAST_DIST;
+	        	if(found) break;	
+	        } 
+
+	        if(!found) i = -1;
+
+	        return i;
+	    }
+
+	    static Lever(lever, mouseV){
+
+			var CAST_DIST = 9;    
+	        var castSequence = [0, 4, 1, 3, 2];
+	        
+	        var res = -1;
+	        for(var ith = 0; ith < 5; ith++)
+	            if(lever.points[castSequence[ith]].Dist(mouseV) < CAST_DIST){
+	            	console.log(ith + " " + castSequence[ith]);
+	                res = castSequence[ith];
+	                break;
+	            }
+	        return res;
+	    }
+	}
+
+	module.exports = Cast;
 
 /***/ })
 /******/ ]);

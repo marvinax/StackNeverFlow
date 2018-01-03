@@ -62,11 +62,10 @@ canvas
 	border:none;
     border-color: Transparent; 
     border-radius: 4px;
-    resize:none;
 
 	height: 4em;
 	font-family: "TheMixMono", monospace;
-	font-size: 1em;
+	font-size: 0.9em;
 	/*padding: 2px 4px;*/
 	margin: 8px;
 	color: #555;

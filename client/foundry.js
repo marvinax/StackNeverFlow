@@ -27,6 +27,7 @@ function Save(context, docu, docu_id){
 	        LoadName(context, docu);
 	    }
 	};
+	docu.ClearEval();
 	xhr.send(JSON.stringify({id: docu_id, data:docu}));
 }
 
