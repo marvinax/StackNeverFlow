@@ -221,8 +221,11 @@ class Document{
 
 		var rot = function(){
 			var val = parseInt(pop());
-			if(val <= this.dstack.length)
+			if(val <= this.dstack.length){
 				this.dstack.push(this.dstack.splice(-val,1)[0]);
+				console.log("rot "+JSON.stringify(this.dstack))
+			}
+
 			else {
 				console.log('rotating length larger than dstack ');
 				exec_err_flag = true;				

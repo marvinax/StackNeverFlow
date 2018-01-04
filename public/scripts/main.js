@@ -50,10 +50,10 @@
 
 	var Vector   = __webpack_require__(5);
 	var Document = __webpack_require__(6);
-	var LoadData = __webpack_require__(7);
+	var LoadData = __webpack_require__(14);
 
 	var Draw = __webpack_require__(12);
-	var Neutron = __webpack_require__(14);
+	var Neutron = __webpack_require__(15);
 
 	function ClearDOMChildren(elem){
 		while (elem.firstChild) {
@@ -801,11 +801,11 @@
 
 	
 	var Vector =  __webpack_require__(5);
-	var Lever =   __webpack_require__(8);
-	var Curve =   __webpack_require__(9);
-	var Outline = __webpack_require__(10);
+	var Lever =   __webpack_require__(7);
+	var Curve =   __webpack_require__(8);
+	var Outline = __webpack_require__(9);
 
-	var Cast =   __webpack_require__(15);
+	var Cast =   __webpack_require__(11);
 	var Draw =   __webpack_require__(12);
 	var ZPR =    __webpack_require__(13);
 
@@ -1022,8 +1022,11 @@
 
 			var rot = function(){
 				var val = parseInt(pop());
-				if(val <= this.dstack.length)
+				if(val <= this.dstack.length){
 					this.dstack.push(this.dstack.splice(-val,1)[0]);
+					console.log("rot "+JSON.stringify(this.dstack))
+				}
+
 				else {
 					console.log('rotating length larger than dstack ');
 					exec_err_flag = true;				
@@ -1310,52 +1313,6 @@
 /* 7 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	
-	var Vector = __webpack_require__(5);
-	var Lever =  __webpack_require__(8);
-	var Curve =  __webpack_require__(9);
-	var Outline = __webpack_require__(10);
-
-	class LoadData {
-		static Curves(curves){
-			return curves.map(function(x){return this.Curve(x)}.bind(this));
-		}
-
-		static Curve(curve){
-			var curveRes = new Curve();
-			// console.log(curve);
-			curveRes.lo = this.Outline(curve.lo);
-			curveRes.ro = this.Outline(curve.ro);
-			curveRes.levers = curve.levers.map(function(x){return this.Lever(x)}.bind(this));
-			curveRes.orig = this.Point(curve.orig);
-			return curveRes;
-		}
-
-		static Lever(lever){
-			var leverRes = new Lever();
-			leverRes.leverMode = lever.leverMode;
-			leverRes.points = lever.points.map(function(x){return this.Point(x)}.bind(this));
-			return leverRes;
-		}
-
-		static Outline(outline){
-			var outlineRes = new Outline();
-			outlineRes.side = outline.side;
-			outlineRes.points = outline.points.map(function(x){return this.Point(x)}.bind(this));
-			return outlineRes;
-		}
-
-		static Point(point){
-			return new Vector(point.x, point.y);
-		}
-	}
-
-	module.exports = LoadData;
-
-/***/ }),
-/* 8 */
-/***/ (function(module, exports, __webpack_require__) {
-
 	var Vector = __webpack_require__(5);
 
 	var LeverMode = Object.freeze({
@@ -1511,15 +1468,15 @@
 	module.exports = Lever;
 
 /***/ }),
-/* 9 */
+/* 8 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	
-	var Outline = __webpack_require__(10);
+	var Outline = __webpack_require__(9);
 	var Vector  = __webpack_require__(5);
-	var Lever   = __webpack_require__(8);
+	var Lever   = __webpack_require__(7);
 
-	var CurveMath = __webpack_require__(11);
+	var CurveMath = __webpack_require__(10);
 
 	class Curve {
 
@@ -1589,12 +1546,12 @@
 	module.exports = Curve;
 
 /***/ }),
-/* 10 */
+/* 9 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	var Vector = __webpack_require__(5);
-	var Lever =  __webpack_require__(8);
-	var CurveMath = __webpack_require__(11);
+	var Lever =  __webpack_require__(7);
+	var CurveMath = __webpack_require__(10);
 
 	var CurveSide = Object.freeze({
 	    LEFT :  1,
@@ -1642,7 +1599,7 @@
 	module.exports = Outline;
 
 /***/ }),
-/* 11 */
+/* 10 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	var Vector = __webpack_require__(5);
@@ -1780,6 +1737,81 @@
 	}
 
 	module.exports = CurveMath;
+
+/***/ }),
+/* 11 */
+/***/ (function(module, exports, __webpack_require__) {
+
+	
+	var CurveMath = __webpack_require__(10);
+
+	class Cast{
+	    
+	    static CurveRect(curve, mouseV){
+	        return curve.bounding[0].x < mouseV.x && curve.bounding[1].x > mouseV.x &&
+	               curve.bounding[0].y < mouseV.y && curve.bounding[1].y > mouseV.y;
+	    }
+	    
+	    static CurveBody(curve, mouseV) {
+	        
+	    	var CAST_DIST = 9;
+
+	        var t, p, dist;
+	        console.log(JSON.stringify(curve));
+	        for (var i = 0; i < curve.levers.length - 1; i++) {
+
+	            t = CurveMath.GetClosestTFromGivenPoint(curve.levers[i], curve.levers[i+1], mouseV, 6, 4);
+	            p = CurveMath.GetPointOnCurveBetweenLever(t, curve.levers[i], curve.levers[i+1]);
+	            dist = p.Dist(mouseV);
+	            if (dist < CAST_DIST)
+	                return i + t;
+	        }
+	        return -1;
+	    } 
+
+	    static Curve(curve, mouseV){
+	    	// console.log(curve.bounding);
+	        // if(this.CurveRect(curve, mouseV)){
+	            return this.CurveBody(curve, mouseV);
+	        // }
+	        // else
+	        //     return -1;
+	    }
+
+	    static CurveIthLever(curve, mouseV) {
+
+	    	var CAST_DIST = 9;
+
+	        var i = 0,
+	        	found = false;
+
+	        for (; i < curve.levers.length; i ++) {
+	        	found = PVector.dist(curve.levers[i].points[2], mouseV) < CAST_DIST;
+	        	if(found) break;	
+	        } 
+
+	        if(!found) i = -1;
+
+	        return i;
+	    }
+
+	    static Lever(lever, mouseV){
+
+			var CAST_DIST = 9;    
+	        var castSequence = [0, 4, 1, 3, 2];
+	        
+	        var res = -1;
+	        for(var ith = 0; ith < 5; ith++)
+	            if(lever.points[castSequence[ith]].Dist(mouseV) < CAST_DIST){
+	            	console.log(ith + " " + castSequence[ith]);
+	                res = castSequence[ith];
+	                break;
+	            }
+	        return res;
+	    }
+	}
+
+	module.exports = Cast;
 
 /***/ }),
 /* 12 */
@@ -2039,6 +2071,52 @@
 
 /***/ }),
 /* 14 */
+/***/ (function(module, exports, __webpack_require__) {
+
+	
+	var Vector = __webpack_require__(5);
+	var Lever =  __webpack_require__(7);
+	var Curve =  __webpack_require__(8);
+	var Outline = __webpack_require__(9);
+
+	class LoadData {
+		static Curves(curves){
+			return curves.map(function(x){return this.Curve(x)}.bind(this));
+		}
+
+		static Curve(curve){
+			var curveRes = new Curve();
+			// console.log(curve);
+			curveRes.lo = this.Outline(curve.lo);
+			curveRes.ro = this.Outline(curve.ro);
+			curveRes.levers = curve.levers.map(function(x){return this.Lever(x)}.bind(this));
+			curveRes.orig = this.Point(curve.orig);
+			return curveRes;
+		}
+
+		static Lever(lever){
+			var leverRes = new Lever();
+			leverRes.leverMode = lever.leverMode;
+			leverRes.points = lever.points.map(function(x){return this.Point(x)}.bind(this));
+			return leverRes;
+		}
+
+		static Outline(outline){
+			var outlineRes = new Outline();
+			outlineRes.side = outline.side;
+			outlineRes.points = outline.points.map(function(x){return this.Point(x)}.bind(this));
+			return outlineRes;
+		}
+
+		static Point(point){
+			return new Vector(point.x, point.y);
+		}
+	}
+
+	module.exports = LoadData;
+
+/***/ }),
+/* 15 */
 /***/ (function(module, exports) {
 
 	class Neutron {
@@ -2191,81 +2269,6 @@
 	}
 
 	module.exports = Neutron;
-
-/***/ }),
-/* 15 */
-/***/ (function(module, exports, __webpack_require__) {
-
-	
-	var CurveMath = __webpack_require__(11);
-
-	class Cast{
-	    
-	    static CurveRect(curve, mouseV){
-	        return curve.bounding[0].x < mouseV.x && curve.bounding[1].x > mouseV.x &&
-	               curve.bounding[0].y < mouseV.y && curve.bounding[1].y > mouseV.y;
-	    }
-	    
-	    static CurveBody(curve, mouseV) {
-	        
-	    	var CAST_DIST = 9;
-
-	        var t, p, dist;
-	        console.log(JSON.stringify(curve));
-	        for (var i = 0; i < curve.levers.length - 1; i++) {
-
-	            t = CurveMath.GetClosestTFromGivenPoint(curve.levers[i], curve.levers[i+1], mouseV, 6, 4);
-	            p = CurveMath.GetPointOnCurveBetweenLever(t, curve.levers[i], curve.levers[i+1]);
-	            dist = p.Dist(mouseV);
-	            if (dist < CAST_DIST)
-	                return i + t;
-	        }
-	        return -1;
-	    } 
-
-	    static Curve(curve, mouseV){
-	    	// console.log(curve.bounding);
-	        // if(this.CurveRect(curve, mouseV)){
-	            return this.CurveBody(curve, mouseV);
-	        // }
-	        // else
-	        //     return -1;
-	    }
-
-	    static CurveIthLever(curve, mouseV) {
-
-	    	var CAST_DIST = 9;
-
-	        var i = 0,
-	        	found = false;
-
-	        for (; i < curve.levers.length; i ++) {
-	        	found = PVector.dist(curve.levers[i].points[2], mouseV) < CAST_DIST;
-	        	if(found) break;	
-	        } 
-
-	        if(!found) i = -1;
-
-	        return i;
-	    }
-
-	    static Lever(lever, mouseV){
-
-			var CAST_DIST = 9;    
-	        var castSequence = [0, 4, 1, 3, 2];
-	        
-	        var res = -1;
-	        for(var ith = 0; ith < 5; ith++)
-	            if(lever.points[castSequence[ith]].Dist(mouseV) < CAST_DIST){
-	            	console.log(ith + " " + castSequence[ith]);
-	                res = castSequence[ith];
-	                break;
-	            }
-	        return res;
-	    }
-	}
-
-	module.exports = Cast;
 
 /***/ })
 /******/ ]);
