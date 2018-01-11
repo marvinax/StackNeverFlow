@@ -253,6 +253,7 @@ class Document{
 		var put = function(){
 			var key = pop();
 			var val = pop();
+			console.log(val);
 			this.vars[key] = val.Copy();
 			console.log(key.toString() + " " + JSON.stringify(this.vars[key]));
 		}.bind(this);
@@ -383,12 +384,34 @@ class Document{
 			var dest  = pop();
 
 			var newVec = dest.Sub(about);
-			newVec.x = Math.cos(rad) * newVec.x - Math.sin(rad) * newVec.y;
-			newVec.y = Math.sin(rad) * newVec.x + Math.cos(rad) * newVec.y;
+			var x = newVec.x,
+				y = newVec.y;
+			newVec.x = Math.cos(rad) * x - Math.sin(rad) * y;
+			newVec.y = Math.sin(rad) * x + Math.cos(rad) * y;
 
 
 			push(newVec.Add(about));
 		};
+
+		var rot_lever = function(){
+			var angle = pop(),
+				rad   = angle / 180.0 * Math.PI;
+			var about = pop();
+			var dest  = pop();
+
+			var destCopy = dest.Copy();
+			var newVec;
+			for (var i = destCopy.points.length - 1; i >= 0; i--) {
+				newVec = destCopy.points[i].Sub(about);
+				var x = newVec.x,
+					y = newVec.y;
+				newVec.x = Math.cos(rad) * x - Math.sin(rad) * y;
+				newVec.y = Math.sin(rad) * x + Math.cos(rad) * y;
+				destCopy.points[i] = about.Add(newVec);
+			}
+
+			push(destCopy);
+		}
 
 		var get_curve = function(){
 			var ith = parseInt(pop());
@@ -450,6 +473,7 @@ class Document{
 						case "mag"	 : mag();   	break;
 						case "dist"  : dist();      break;
 						case "rotate": rotate();	break;
+						case "rotlev": rot_lever(); break;
 						case "vec"   : vec();		break;
 						case "plus"  : plus();		break;
 						case "sub"   : subt();		break;
