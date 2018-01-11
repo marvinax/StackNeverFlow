@@ -223,7 +223,7 @@ class Document{
 			var val = parseInt(pop());
 			if(val <= this.dstack.length){
 				this.dstack.push(this.dstack.splice(-val,1)[0]);
-				console.log("rot "+JSON.stringify(this.dstack))
+				console.log("rot "+	JSON.stringify(this.dstack))
 			}
 
 			else {
@@ -320,7 +320,7 @@ class Document{
 			else if(typeof p1.x == "number" && typeof p2.x == "number")
 				push(p1.Sub(p2));
 			else{
-				console.log("sub type error: " + typeof p1 + " " + p2 + " " + typeof p2 );
+				console.log("sub type error: " + JSON.stringify(p1) + " " + typeof p1 + " " + p2 + " " + typeof p2 );
 				exec_err_flag = true;
 			}
 		};
@@ -396,8 +396,8 @@ class Document{
 		}.bind(this);
 
 		var get_lever = function(){
-			var ith = parseInt(pop());
 			var elem = pop();
+			var ith = parseInt(pop());
 			if(elem.levers != undefined)
 				push(elem.levers[ith]);
 			else{
@@ -407,8 +407,8 @@ class Document{
 		};
 
 		var get_point = function(){
-			var ith = parseInt(pop());
 			var elem = pop();
+			var ith = parseInt(pop());
 			if(elem.points != undefined)
 				push(elem.points[ith]);
 			else{
