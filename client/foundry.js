@@ -134,6 +134,7 @@ function LoadName(context, docu, neutron){
 	var currGroupIndex = null,
 		currCurveIndex = null,
 		currLeverIndex = null,
+		currPointIndex = null,
 		currPoint = null;
 
 	var tempTransArray=[];
@@ -151,13 +152,12 @@ function LoadName(context, docu, neutron){
     			docu.AddPoint(orig);
 
 			} else if (docu.status == Status.Editing){
-				var cast;
 				if(isEditingLever){
-					cast = docu.SelectControlPoint(zpr.InvTransform(curr));
+					currPointIndex = docu.SelectControlPoint(zpr.InvTransform(curr));
 				} else {
 					tempTransArray = docu.PrepareTrans(zpr.InvTransform(curr));
 				}
-				if (cast == -1 || tempTransArray.length == 0){
+				if (currPointIndex == -1 || tempTransArray.length == 0){
 					docu.Deselect();
 				}
 			}
@@ -172,6 +172,7 @@ function LoadName(context, docu, neutron){
 		if (down && (event.type == "mousemove")) {
 			curr = MouseV(event);
 			docu.CaptureCenterTest(curr);
+			docu.CaptureControlTest(curr, currPointIndex);
 			docu.UpdateEdit(zpr.InvTransform(curr), zpr.InvTransform(orig), tempTransArray);
 			Draw.Curves(context, docu);
 		}

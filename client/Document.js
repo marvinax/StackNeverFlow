@@ -184,22 +184,41 @@ class Document{
 					if((this.currCurveIndex != ithc) || (this.currCurveIndex == ithc && this.currLeverIndex != ithl))
 						if(this.CurrLever().points[2].Dist(lever.points[2]) < 100){
 							if(mouseV.x - lever.points[2].x < 100){
-								this.captured = {by : lever.points[2], over : "x"};
+								this.captured = {by : lever.points[2], over : "x", type: "center"};
 							} else if(mouseV.y - lever.points[2].y < 100) {
-								this.captured = {by : lever.points[2], over : "y"};
+								this.captured = {by : lever.points[2], over : "y", type: "center"};
 							}
 						}
 				}
-				if(this.captured != null){
+				if(this.captured != null && this.captured.type == "center"){
 					console.log("here " +mouseV[this.captured.over] + " " + this.captured.by[this.captured.over]);
 					var otherDir = this.captured.over == "x" ? "y" : "x";
 					if(Math.abs(mouseV[otherDir] - this.captured.by[otherDir]) > 50){
-						console.log("ever here");
 						this.captured = null;
 					}
 				}
 			}
 		}
+	}
+
+	CaptureControlTest(mouseV, pIndex){
+		if(pIndex != 2 && pIndex != null)
+			for(const [ithc, curve] of this.curves.entries()){
+				for(const [ithl, lever] of curve.levers.entries()){
+					if(this.captured == null){
+						if((this.currCurveIndex != ithc) || (this.currCurveIndex == ithc && this.currLeverIndex != ithl)){
+							if(Math.abs(mouseV.Sub(this.CurrLever().points[2]).Angle() - lever.points[pIndex].Sub(lever.points[2]).Angle()) < 0.025){
+								this.captured = {by:lever.points[2], over: lever.points[pIndex].Sub(lever.points[2]), type: "control"};
+							}
+						}
+					}
+					if(this.captured != null && this.captured.type == "control"){
+						if(Math.abs(mouseV.Sub(this.CurrLever().points[2]).Angle() - lever.points[pIndex].Sub(lever.points[2]).Angle()) >= 0.025){
+							this.captured = null;
+						}
+					}
+				}
+			}		
 	}
 
 	ClearCapture(){

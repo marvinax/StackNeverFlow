@@ -71,6 +71,10 @@ class Vector{
 		}
 	}
 
+	Angle(){
+		return Math.atan(this.y/this.x);
+	}
+
 	get Zero(){
 		return new Vector(0, 0);
 	}

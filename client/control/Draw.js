@@ -90,14 +90,21 @@ class Draw{
         ctx.strokeStyle = "#AE0000";
         if(captured != null){
             ctx.beginPath();
-                if(captured.over == "x"){
+                if(captured.type == "center")
+                    if(captured.over == "x"){
+                        ctx.moveTo(captured.by.x, captured.by.y);
+                        ctx.lineTo(docu.CurrLever().points[2].x, captured.by.y);
+                    } else {
+                        ctx.moveTo(captured.by.x, captured.by.y);
+                        ctx.lineTo(captured.by.x, docu.CurrLever().points[2].y);                    
+                    }
+                if(captured.type == "control"){
+                    var longer = captured.over.Mult(10);
                     ctx.moveTo(captured.by.x, captured.by.y);
-                    ctx.lineTo(docu.CurrLever().points[2].x, captured.by.y);
-                } else {
-                    ctx.moveTo(captured.by.x, captured.by.y);
-                    ctx.lineTo(captured.by.x, docu.CurrLever().points[2].y);                    
+                    ctx.lineTo(captured.by.x + longer.x, captured.by.y + longer.y);
                 }
-                ctx.arc(captured.by.x, captured.by.y, 20, 0, 2 * Math.PI);
+
+                // ctx.arc(captured.by.x, captured.by.y, 20, 0, 2 * Math.PI);
             ctx.stroke();
         }
 

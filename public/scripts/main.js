@@ -180,6 +180,7 @@
 		var currGroupIndex = null,
 			currCurveIndex = null,
 			currLeverIndex = null,
+			currPointIndex = null,
 			currPoint = null;
 
 		var tempTransArray=[];
@@ -197,13 +198,12 @@
 	    			docu.AddPoint(orig);
 
 				} else if (docu.status == Status.Editing){
-					var cast;
 					if(isEditingLever){
-						cast = docu.SelectControlPoint(zpr.InvTransform(curr));
+						currPointIndex = docu.SelectControlPoint(zpr.InvTransform(curr));
 					} else {
 						tempTransArray = docu.PrepareTrans(zpr.InvTransform(curr));
 					}
-					if (cast == -1 || tempTransArray.length == 0){
+					if (currPointIndex == -1 || tempTransArray.length == 0){
 						docu.Deselect();
 					}
 				}
@@ -218,6 +218,7 @@
 			if (down && (event.type == "mousemove")) {
 				curr = MouseV(event);
 				docu.CaptureCenterTest(curr);
+				docu.CaptureControlTest(curr, currPointIndex);
 				docu.UpdateEdit(zpr.InvTransform(curr), zpr.InvTransform(orig), tempTransArray);
 				Draw.Curves(context, docu);
 			}
@@ -378,8 +379,8 @@
 	if(false) {
 		// When the styles change, update the <style> tags
 		if(!content.locals) {
-			module.hot.accept("!!../node_modules/css-loader/index.js!./styles.css", function() {
-				var newContent = require("!!../node_modules/css-loader/index.js!./styles.css");
+			module.hot.accept("!!../node_modules/_css-loader@0.21.0@css-loader/index.js!./styles.css", function() {
+				var newContent = require("!!../node_modules/_css-loader@0.21.0@css-loader/index.js!./styles.css");
 				if(typeof newContent === 'string') newContent = [[module.id, newContent, '']];
 				update(newContent);
 			});
@@ -787,6 +788,10 @@
 			}
 		}
 
+		Angle(){
+			return Math.atan(this.y/this.x);
+		}
+
 		get Zero(){
 			return new Vector(0, 0);
 		}
@@ -985,22 +990,41 @@
 						if((this.currCurveIndex != ithc) || (this.currCurveIndex == ithc && this.currLeverIndex != ithl))
 							if(this.CurrLever().points[2].Dist(lever.points[2]) < 100){
 								if(mouseV.x - lever.points[2].x < 100){
-									this.captured = {by : lever.points[2], over : "x"};
+									this.captured = {by : lever.points[2], over : "x", type: "center"};
 								} else if(mouseV.y - lever.points[2].y < 100) {
-									this.captured = {by : lever.points[2], over : "y"};
+									this.captured = {by : lever.points[2], over : "y", type: "center"};
 								}
 							}
 					}
-					if(this.captured != null){
+					if(this.captured != null && this.captured.type == "center"){
 						console.log("here " +mouseV[this.captured.over] + " " + this.captured.by[this.captured.over]);
 						var otherDir = this.captured.over == "x" ? "y" : "x";
 						if(Math.abs(mouseV[otherDir] - this.captured.by[otherDir]) > 50){
-							console.log("ever here");
 							this.captured = null;
 						}
 					}
 				}
 			}
+		}
+
+		CaptureControlTest(mouseV, pIndex){
+			if(pIndex != 2 && pIndex != null)
+				for(const [ithc, curve] of this.curves.entries()){
+					for(const [ithl, lever] of curve.levers.entries()){
+						if(this.captured == null){
+							if((this.currCurveIndex != ithc) || (this.currCurveIndex == ithc && this.currLeverIndex != ithl)){
+								if(Math.abs(mouseV.Sub(this.CurrLever().points[2]).Angle() - lever.points[pIndex].Sub(lever.points[2]).Angle()) < 0.025){
+									this.captured = {by:lever.points[2], over: lever.points[pIndex].Sub(lever.points[2]), type: "control"};
+								}
+							}
+						}
+						if(this.captured != null && this.captured.type == "control"){
+							if(Math.abs(mouseV.Sub(this.CurrLever().points[2]).Angle() - lever.points[pIndex].Sub(lever.points[2]).Angle()) >= 0.025){
+								this.captured = null;
+							}
+						}
+					}
+				}		
 		}
 
 		ClearCapture(){
@@ -1970,14 +1994,21 @@
 	        ctx.strokeStyle = "#AE0000";
 	        if(captured != null){
 	            ctx.beginPath();
-	                if(captured.over == "x"){
+	                if(captured.type == "center")
+	                    if(captured.over == "x"){
+	                        ctx.moveTo(captured.by.x, captured.by.y);
+	                        ctx.lineTo(docu.CurrLever().points[2].x, captured.by.y);
+	                    } else {
+	                        ctx.moveTo(captured.by.x, captured.by.y);
+	                        ctx.lineTo(captured.by.x, docu.CurrLever().points[2].y);                    
+	                    }
+	                if(captured.type == "control"){
+	                    var longer = captured.over.Mult(10);
 	                    ctx.moveTo(captured.by.x, captured.by.y);
-	                    ctx.lineTo(docu.CurrLever().points[2].x, captured.by.y);
-	                } else {
-	                    ctx.moveTo(captured.by.x, captured.by.y);
-	                    ctx.lineTo(captured.by.x, docu.CurrLever().points[2].y);                    
+	                    ctx.lineTo(captured.by.x + longer.x, captured.by.y + longer.y);
 	                }
-	                ctx.arc(captured.by.x, captured.by.y, 20, 0, 2 * Math.PI);
+
+	                // ctx.arc(captured.by.x, captured.by.y, 20, 0, 2 * Math.PI);
 	            ctx.stroke();
 	        }
 
