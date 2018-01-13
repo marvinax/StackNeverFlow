@@ -62,7 +62,7 @@
 	}
 
 
-	function Save(context, docu, docu_id){
+	function Save(context, docu, neutron, docu_id){
 		var xhr = new XMLHttpRequest();
 		xhr.open('PUT', 'save/');
 		xhr.setRequestHeader('Content-Type', 'application/json');
@@ -70,7 +70,7 @@
 		    if (xhr.status === 200) {
 		        var userInfo = JSON.parse(xhr.responseText);
 		        console.log(userInfo);
-		        LoadName(context, docu);
+		        LoadName(context, docu, neutron);
 		    }
 		};
 		docu.ClearEval();
@@ -91,6 +91,7 @@
 		        docu.init   = res.init;
 		        docu.update = res.update;
 
+		        console.log(neutron);
 		        neutron.ReloadExistingParams();
 
 		        document.getElementById("init-code").value = docu.init;
@@ -183,7 +184,6 @@
 
 		var tempTransArray=[];
 
-
 		function Drag(event) {
 			
 			event.stopPropagation();
@@ -217,6 +217,7 @@
 
 			if (down && (event.type == "mousemove")) {
 				curr = MouseV(event);
+				docu.CaptureCenterTest(curr);
 				docu.UpdateEdit(zpr.InvTransform(curr), zpr.InvTransform(orig), tempTransArray);
 				Draw.Curves(context, docu);
 			}
@@ -225,8 +226,7 @@
 				down = false;
 				orig = null;
 				docu.FinishEdit();
-				// docu.Eval(docu.init);
-				console.log(docu.consts);
+				docu.ClearCapture();
 				Draw.Curves(context, docu);
 			}
 
@@ -338,7 +338,7 @@
 			saveButton.onclick = function(){
 				var prefix = document.getElementById("prefix").value;
 				console.log(prefix);
-				Save(context, docu, prefix + "_" + nameInput.value);
+				Save(context, docu, neutron, prefix + "_" + nameInput.value);
 			}
 
 			loadButton.onclick = function(){
@@ -347,7 +347,7 @@
 			}
 
 			document.getElementById("init-eval").onclick = function(){
-				docu.Eval(document.getElementById("code").value);
+				docu.Eval(document.getElementById("init-code").value);
 				docu.UpdateDraw(context);
 			};
 
@@ -847,6 +847,8 @@
 			this.currLeverIndex = null,
 			this.currPoint = null;
 
+			this.captured = null;
+
 			this.zpr = new ZPR();
 		}
 
@@ -952,7 +954,14 @@
 					this.CurrCurve().TransFromArray(transArray, curr.Sub(orig));
 					break;
 				case Status.MovingLever:
-					this.CurrLever().TransFromArray(transArray, curr.Sub(orig));
+					if(this.captured != null){
+						var cap = curr.Copy(),
+							other = this.captured.over == "x" ? "y" : "x";
+						cap[other] = this.captured.by[other];
+						this.CurrLever().TransFromArray(transArray, cap.Sub(orig));
+					} else {
+						this.CurrLever().TransFromArray(transArray, curr.Sub(orig));
+					}
 		            this.CurrCurve().UpdateOutlines();
 		            break;
 				case Status.EditingLever:
@@ -967,6 +976,35 @@
 			if(this.status != Status.Editing && this.status != Status.Creating){
 				this.status = Status.Editing;
 			}
+		}
+
+		CaptureCenterTest(mouseV){
+			for(const [ithc, curve] of this.curves.entries()){
+				for(const [ithl, lever] of curve.levers.entries()){
+					if(this.captured == null){
+						if((this.currCurveIndex != ithc) || (this.currCurveIndex == ithc && this.currLeverIndex != ithl))
+							if(this.CurrLever().points[2].Dist(lever.points[2]) < 100){
+								if(mouseV.x - lever.points[2].x < 100){
+									this.captured = {by : lever.points[2], over : "x"};
+								} else if(mouseV.y - lever.points[2].y < 100) {
+									this.captured = {by : lever.points[2], over : "y"};
+								}
+							}
+					}
+					if(this.captured != null){
+						console.log("here " +mouseV[this.captured.over] + " " + this.captured.by[this.captured.over]);
+						var otherDir = this.captured.over == "x" ? "y" : "x";
+						if(Math.abs(mouseV[otherDir] - this.captured.by[otherDir]) > 50){
+							console.log("ever here");
+							this.captured = null;
+						}
+					}
+				}
+			}
+		}
+
+		ClearCapture(){
+			this.captured = null;		
 		}
 
 		InitEval(){
@@ -1781,7 +1819,6 @@
 	    	var CAST_DIST = 9;
 
 	        var t, p, dist;
-	        console.log(JSON.stringify(curve));
 	        for (var i = 0; i < curve.levers.length - 1; i++) {
 
 	            t = CurveMath.GetClosestTFromGivenPoint(curve.levers[i], curve.levers[i+1], mouseV, 6, 4);
@@ -1895,12 +1932,14 @@
 
 	        var curves = docu.curves,
 	            currCurveIndex = docu.currCurveIndex,
-	            currLeverIndex = docu.currLeverIndex ,
+	            currLeverIndex = docu.currLeverIndex,
+	            captured = docu.captured,
 	            zpr = docu.zpr;
 
 	        ctx.lineWidth = 1;
 	        ctx.clearRect(0,0, ctx.canvas.width, ctx.canvas.height);
 
+	        ctx.strokeStyle = "#000000";
 	        ctx.font = "16px TheMixMono";
 
 	        ctx.strokeStyle = "#CCCCCC";
@@ -1917,7 +1956,6 @@
 	        }
 	        ctx.stroke();
 
-	        ctx.strokeStyle = "#000000";
 	        var status;
 	        switch(docu.status){
 	            case 0: ctx.fillText('Editing', 10, 25); break; 
@@ -1929,6 +1967,21 @@
 
 	        ctx.fillText(docu.zpr.zoom.toFixed(3)+"x", 10, 45);
 
+	        ctx.strokeStyle = "#AE0000";
+	        if(captured != null){
+	            ctx.beginPath();
+	                if(captured.over == "x"){
+	                    ctx.moveTo(captured.by.x, captured.by.y);
+	                    ctx.lineTo(docu.CurrLever().points[2].x, captured.by.y);
+	                } else {
+	                    ctx.moveTo(captured.by.x, captured.by.y);
+	                    ctx.lineTo(captured.by.x, docu.CurrLever().points[2].y);                    
+	                }
+	                ctx.arc(captured.by.x, captured.by.y, 20, 0, 2 * Math.PI);
+	            ctx.stroke();
+	        }
+
+	        ctx.strokeStyle = "#000000";
 	        var zpr_curves = docu.curves.map(function(curve){
 	            
 	            return { levers: curve.levers.map(function(lever){

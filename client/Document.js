@@ -46,6 +46,8 @@ class Document{
 		this.currLeverIndex = null,
 		this.currPoint = null;
 
+		this.captured = null;
+
 		this.zpr = new ZPR();
 	}
 
@@ -151,7 +153,14 @@ class Document{
 				this.CurrCurve().TransFromArray(transArray, curr.Sub(orig));
 				break;
 			case Status.MovingLever:
-				this.CurrLever().TransFromArray(transArray, curr.Sub(orig));
+				if(this.captured != null){
+					var cap = curr.Copy(),
+						other = this.captured.over == "x" ? "y" : "x";
+					cap[other] = this.captured.by[other];
+					this.CurrLever().TransFromArray(transArray, cap.Sub(orig));
+				} else {
+					this.CurrLever().TransFromArray(transArray, curr.Sub(orig));
+				}
 	            this.CurrCurve().UpdateOutlines();
 	            break;
 			case Status.EditingLever:
@@ -166,6 +175,35 @@ class Document{
 		if(this.status != Status.Editing && this.status != Status.Creating){
 			this.status = Status.Editing;
 		}
+	}
+
+	CaptureCenterTest(mouseV){
+		for(const [ithc, curve] of this.curves.entries()){
+			for(const [ithl, lever] of curve.levers.entries()){
+				if(this.captured == null){
+					if((this.currCurveIndex != ithc) || (this.currCurveIndex == ithc && this.currLeverIndex != ithl))
+						if(this.CurrLever().points[2].Dist(lever.points[2]) < 100){
+							if(mouseV.x - lever.points[2].x < 100){
+								this.captured = {by : lever.points[2], over : "x"};
+							} else if(mouseV.y - lever.points[2].y < 100) {
+								this.captured = {by : lever.points[2], over : "y"};
+							}
+						}
+				}
+				if(this.captured != null){
+					console.log("here " +mouseV[this.captured.over] + " " + this.captured.by[this.captured.over]);
+					var otherDir = this.captured.over == "x" ? "y" : "x";
+					if(Math.abs(mouseV[otherDir] - this.captured.by[otherDir]) > 50){
+						console.log("ever here");
+						this.captured = null;
+					}
+				}
+			}
+		}
+	}
+
+	ClearCapture(){
+		this.captured = null;		
 	}
 
 	InitEval(){

@@ -52,12 +52,14 @@ class Draw{
 
         var curves = docu.curves,
             currCurveIndex = docu.currCurveIndex,
-            currLeverIndex = docu.currLeverIndex ,
+            currLeverIndex = docu.currLeverIndex,
+            captured = docu.captured,
             zpr = docu.zpr;
 
         ctx.lineWidth = 1;
         ctx.clearRect(0,0, ctx.canvas.width, ctx.canvas.height);
 
+        ctx.strokeStyle = "#000000";
         ctx.font = "16px TheMixMono";
 
         ctx.strokeStyle = "#CCCCCC";
@@ -74,7 +76,6 @@ class Draw{
         }
         ctx.stroke();
 
-        ctx.strokeStyle = "#000000";
         var status;
         switch(docu.status){
             case 0: ctx.fillText('Editing', 10, 25); break; 
@@ -86,6 +87,21 @@ class Draw{
 
         ctx.fillText(docu.zpr.zoom.toFixed(3)+"x", 10, 45);
 
+        ctx.strokeStyle = "#AE0000";
+        if(captured != null){
+            ctx.beginPath();
+                if(captured.over == "x"){
+                    ctx.moveTo(captured.by.x, captured.by.y);
+                    ctx.lineTo(docu.CurrLever().points[2].x, captured.by.y);
+                } else {
+                    ctx.moveTo(captured.by.x, captured.by.y);
+                    ctx.lineTo(captured.by.x, docu.CurrLever().points[2].y);                    
+                }
+                ctx.arc(captured.by.x, captured.by.y, 20, 0, 2 * Math.PI);
+            ctx.stroke();
+        }
+
+        ctx.strokeStyle = "#000000";
         var zpr_curves = docu.curves.map(function(curve){
             
             return { levers: curve.levers.map(function(lever){

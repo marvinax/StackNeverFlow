@@ -13,7 +13,6 @@ class Cast{
     	var CAST_DIST = 9;
 
         var t, p, dist;
-        console.log(JSON.stringify(curve));
         for (var i = 0; i < curve.levers.length - 1; i++) {
 
             t = CurveMath.GetClosestTFromGivenPoint(curve.levers[i], curve.levers[i+1], mouseV, 6, 4);
