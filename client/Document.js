@@ -164,8 +164,15 @@ class Document{
 	            this.CurrCurve().UpdateOutlines();
 	            break;
 			case Status.EditingLever:
-				console.log(this.currPoint);
-				this.CurrCurve().UpdateLever(this.currLeverIndex, this.currPoint, curr);
+				
+				if(this.captured != null){
+					var cent = this.CurrLever().points[2],
+						vec  = curr.Copy().Sub(cent),
+						over = this.captured.over;
+					this.CurrCurve().UpdateLever(this.currLeverIndex, this.currPoint, cent.Add(over.Mult(vec.Dot(over) / over.Dot(over))));
+				} else {
+					this.CurrCurve().UpdateLever(this.currLeverIndex, this.currPoint, curr);
+				}
 				break;
 
 		}
@@ -205,15 +212,25 @@ class Document{
 		if(pIndex != 2 && pIndex != null)
 			for(const [ithc, curve] of this.curves.entries()){
 				for(const [ithl, lever] of curve.levers.entries()){
+
+					var angle = mouseV.Sub(this.CurrLever().points[2]).Angle();
+
 					if(this.captured == null){
 						if((this.currCurveIndex != ithc) || (this.currCurveIndex == ithc && this.currLeverIndex != ithl)){
-							if(Math.abs(mouseV.Sub(this.CurrLever().points[2]).Angle() - lever.points[pIndex].Sub(lever.points[2]).Angle()) < 0.025){
+
+							for(let i = 0; i < 3; i++){
+								if(Math.abs(angle - Math.PI/2 * i) < 0.09){
+									this.captured = {by:this.CurrLever().points[2], over: new Vector(Math.cos(Math.PI/2 * i), Math.sin(Math.PI/2*i)), type: "control"}
+								}								
+							}
+
+							if(Math.abs(angle - lever.points[pIndex].Sub(lever.points[2]).Angle()) < 0.09){
 								this.captured = {by:lever.points[2], over: lever.points[pIndex].Sub(lever.points[2]), type: "control"};
 							}
 						}
 					}
 					if(this.captured != null && this.captured.type == "control"){
-						if(Math.abs(mouseV.Sub(this.CurrLever().points[2]).Angle() - lever.points[pIndex].Sub(lever.points[2]).Angle()) >= 0.025){
+						if(Math.abs(angle - lever.points[pIndex].Sub(lever.points[2]).Angle()) >= 0.09){
 							this.captured = null;
 						}
 					}

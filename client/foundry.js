@@ -171,8 +171,12 @@ function LoadName(context, docu, neutron){
 
 		if (down && (event.type == "mousemove")) {
 			curr = MouseV(event);
-			docu.CaptureCenterTest(curr);
-			docu.CaptureControlTest(curr, currPointIndex);
+			
+			if(docu.status == Status.MovingLever)
+				docu.CaptureCenterTest(curr);
+			else if(docu.status == Status.EditingLever)
+				docu.CaptureControlTest(curr, currPointIndex);
+			
 			docu.UpdateEdit(zpr.InvTransform(curr), zpr.InvTransform(orig), tempTransArray);
 			Draw.Curves(context, docu);
 		}

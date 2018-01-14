@@ -104,7 +104,7 @@ class Draw{
                     ctx.lineTo(captured.by.x + longer.x, captured.by.y + longer.y);
                 }
 
-                // ctx.arc(captured.by.x, captured.by.y, 20, 0, 2 * Math.PI);
+                ctx.arc(captured.by.x, captured.by.y, 10, 0, 2 * Math.PI);
             ctx.stroke();
         }
 

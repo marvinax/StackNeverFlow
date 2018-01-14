@@ -217,8 +217,12 @@
 
 			if (down && (event.type == "mousemove")) {
 				curr = MouseV(event);
-				docu.CaptureCenterTest(curr);
-				docu.CaptureControlTest(curr, currPointIndex);
+				
+				if(docu.status == Status.MovingLever)
+					docu.CaptureCenterTest(curr);
+				else if(docu.status == Status.EditingLever)
+					docu.CaptureControlTest(curr, currPointIndex);
+				
 				docu.UpdateEdit(zpr.InvTransform(curr), zpr.InvTransform(orig), tempTransArray);
 				Draw.Curves(context, docu);
 			}
@@ -970,8 +974,15 @@
 		            this.CurrCurve().UpdateOutlines();
 		            break;
 				case Status.EditingLever:
-					console.log(this.currPoint);
-					this.CurrCurve().UpdateLever(this.currLeverIndex, this.currPoint, curr);
+					
+					if(this.captured != null){
+						var cent = this.CurrLever().points[2],
+							vec  = curr.Copy().Sub(cent),
+							over = this.captured.over;
+						this.CurrCurve().UpdateLever(this.currLeverIndex, this.currPoint, cent.Add(over.Mult(vec.Dot(over) / over.Dot(over))));
+					} else {
+						this.CurrCurve().UpdateLever(this.currLeverIndex, this.currPoint, curr);
+					}
 					break;
 
 			}
@@ -1011,15 +1022,25 @@
 			if(pIndex != 2 && pIndex != null)
 				for(const [ithc, curve] of this.curves.entries()){
 					for(const [ithl, lever] of curve.levers.entries()){
+
+						var angle = mouseV.Sub(this.CurrLever().points[2]).Angle();
+
 						if(this.captured == null){
 							if((this.currCurveIndex != ithc) || (this.currCurveIndex == ithc && this.currLeverIndex != ithl)){
-								if(Math.abs(mouseV.Sub(this.CurrLever().points[2]).Angle() - lever.points[pIndex].Sub(lever.points[2]).Angle()) < 0.025){
+
+								for(let i = 0; i < 3; i++){
+									if(Math.abs(angle - Math.PI/2 * i) < 0.09){
+										this.captured = {by:this.CurrLever().points[2], over: new Vector(Math.cos(Math.PI/2 * i), Math.sin(Math.PI/2*i)), type: "control"}
+									}								
+								}
+
+								if(Math.abs(angle - lever.points[pIndex].Sub(lever.points[2]).Angle()) < 0.09){
 									this.captured = {by:lever.points[2], over: lever.points[pIndex].Sub(lever.points[2]), type: "control"};
 								}
 							}
 						}
 						if(this.captured != null && this.captured.type == "control"){
-							if(Math.abs(mouseV.Sub(this.CurrLever().points[2]).Angle() - lever.points[pIndex].Sub(lever.points[2]).Angle()) >= 0.025){
+							if(Math.abs(angle - lever.points[pIndex].Sub(lever.points[2]).Angle()) >= 0.09){
 								this.captured = null;
 							}
 						}
@@ -2008,7 +2029,7 @@
 	                    ctx.lineTo(captured.by.x + longer.x, captured.by.y + longer.y);
 	                }
 
-	                // ctx.arc(captured.by.x, captured.by.y, 20, 0, 2 * Math.PI);
+	                ctx.arc(captured.by.x, captured.by.y, 10, 0, 2 * Math.PI);
 	            ctx.stroke();
 	        }
 
