@@ -383,8 +383,8 @@
 	if(false) {
 		// When the styles change, update the <style> tags
 		if(!content.locals) {
-			module.hot.accept("!!../node_modules/_css-loader@0.21.0@css-loader/index.js!./styles.css", function() {
-				var newContent = require("!!../node_modules/_css-loader@0.21.0@css-loader/index.js!./styles.css");
+			module.hot.accept("!!../node_modules/css-loader/index.js!./styles.css", function() {
+				var newContent = require("!!../node_modules/css-loader/index.js!./styles.css");
 				if(typeof newContent === 'string') newContent = [[module.id, newContent, '']];
 				update(newContent);
 			});
@@ -1000,15 +1000,15 @@
 					if(this.captured == null){
 						if((this.currCurveIndex != ithc) || (this.currCurveIndex == ithc && this.currLeverIndex != ithl))
 							if(this.CurrLever().points[2].Dist(lever.points[2]) < 100){
-								if(mouseV.x - lever.points[2].x < 100){
+								if(Math.abs(mouseV.x - lever.points[2].x) < Math.abs(mouseV.y - lever.points[2].y)){
 									this.captured = {by : lever.points[2], over : "x", type: "center"};
-								} else if(mouseV.y - lever.points[2].y < 100) {
+								} else {
 									this.captured = {by : lever.points[2], over : "y", type: "center"};
 								}
 							}
 					}
 					if(this.captured != null && this.captured.type == "center"){
-						console.log("here " +mouseV[this.captured.over] + " " + this.captured.by[this.captured.over]);
+						console.log("here " +this.captured.over + " " +mouseV[this.captured.over] + " " + this.captured.by[this.captured.over]);
 						var otherDir = this.captured.over == "x" ? "y" : "x";
 						if(Math.abs(mouseV[otherDir] - this.captured.by[otherDir]) > 50){
 							this.captured = null;
