@@ -271,10 +271,7 @@
 	                }
 	                Draw.Curves(context, docu);
 	            }
-
-	            // if(evt.ctrlKey && evt.key=="d"){
-	            //     Draw.CurvesFill(context, docu);
-	            // }
+	                      
 
 				if(evt.keyCode == 18){
 					isEditingLever = true;
@@ -282,6 +279,7 @@
 
 				if(evt.key == "1" && evt.ctrlKey){
 					if(currCurveIndex != null && currLeverIndex != null){
+						console.log("yaya");
 						docu.curves[currCurveIndex].levers[currLeverIndex].leverMode = 4;
 						Draw.Curves(context, docu);
 					}
@@ -1040,6 +1038,7 @@
 							}
 						}
 						if(this.captured != null && this.captured.type == "control"){
+							console.log(this.captured);
 							if(Math.abs(angle - lever.points[pIndex].Sub(lever.points[2]).Angle()) >= 0.09){
 								this.captured = null;
 							}

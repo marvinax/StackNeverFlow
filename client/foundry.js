@@ -225,10 +225,7 @@ function LoadName(context, docu, neutron){
                 }
                 Draw.Curves(context, docu);
             }
-
-            // if(evt.ctrlKey && evt.key=="d"){
-            //     Draw.CurvesFill(context, docu);
-            // }
+                      
 
 			if(evt.keyCode == 18){
 				isEditingLever = true;
@@ -236,6 +233,7 @@ function LoadName(context, docu, neutron){
 
 			if(evt.key == "1" && evt.ctrlKey){
 				if(currCurveIndex != null && currLeverIndex != null){
+					console.log("yaya");
 					docu.curves[currCurveIndex].levers[currLeverIndex].leverMode = 4;
 					Draw.Curves(context, docu);
 				}

@@ -230,6 +230,7 @@ class Document{
 						}
 					}
 					if(this.captured != null && this.captured.type == "control"){
+						console.log(this.captured);
 						if(Math.abs(angle - lever.points[pIndex].Sub(lever.points[2]).Angle()) >= 0.09){
 							this.captured = null;
 						}
