@@ -449,6 +449,7 @@ class Document{
 
 		var norm = function(){
 			var elem = pop();
+			console.log(elem);
 			push(elem.Mult(1/elem.Mag()));
 		};
 

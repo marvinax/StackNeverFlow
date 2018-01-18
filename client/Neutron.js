@@ -14,6 +14,7 @@ class Neutron {
 	AddExistingParam(param){
 
 		var paramElem = document.createElement("div");
+		paramElem.className = "param-group";
 		paramElem.id = "param-"+param.name;
 
 		var name = document.createElement("block");

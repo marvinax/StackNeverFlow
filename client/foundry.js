@@ -85,7 +85,7 @@ function LoadName(context, docu, neutron){
 	    			document.getElementById("name").value = r.split("_")[1];
 	    		}
 	    		list.appendChild(a);
-	    		list.appendChild(document.createElement('br'));
+	    		list.appendChild(document.createTextNode(" "));
 	    	}
 
 	    }

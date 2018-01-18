@@ -131,7 +131,7 @@
 		    			document.getElementById("name").value = r.split("_")[1];
 		    		}
 		    		list.appendChild(a);
-		    		list.appendChild(document.createElement('br'));
+		    		list.appendChild(document.createTextNode(" "));
 		    	}
 
 		    }
@@ -1257,6 +1257,7 @@
 
 			var norm = function(){
 				var elem = pop();
+				console.log(elem);
 				push(elem.Mult(1/elem.Mag()));
 			};
 
@@ -1833,8 +1834,8 @@
 	        var distc0 = c0.Mag();
 	        var distc1 = c1.Mag();
 
-	        var distA = b0.points[4].Sub(b0.points[2]).Mult(Math.max(0.001, 1 - 0.001* sign0 * distc0));
-	        var distD = b1.points[0].Sub(b1.points[2]).Mult(Math.max(0.001, 1 - 0.001* sign1 * distc1));
+	        var distA = b0.points[4].Sub(b0.points[2]).Mult(Math.max(1, 1 + 0.5e-4* sign0 * distc0));
+	        var distD = b1.points[0].Sub(b1.points[2]).Mult(Math.max(1, 1 + 0.5e-4* sign1 * distc1));
 	        var a0a1 = p0.Add(distA);
 	        var d0d1 = p1.Add(distD);
 
@@ -2263,6 +2264,7 @@
 		AddExistingParam(param){
 
 			var paramElem = document.createElement("div");
+			paramElem.className = "param-group";
 			paramElem.id = "param-"+param.name;
 
 			var name = document.createElement("block");
