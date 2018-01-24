@@ -19,6 +19,10 @@ class Vector{
         return this.x*v.x + this.y*v.y;
     }
 
+    Cross(v){
+    	return this.x*v.y - this.y*v.x;
+    }
+
 	Mag(){
         return Math.hypot(this.x, this.y);
 	}
@@ -79,6 +83,17 @@ class Vector{
 		return new Vector(0, 0);
 	}
 
+	LeftPerp(){
+		return new Vector(-this.y, this.x);
+	}
+
+	RightPerp(){
+		return new Vector(this.y, -this.x);	
+	}
+
+	toString(){
+		return this.x.toFixed(3) + " " + this.y.toFixed(3);
+	}
 }
 
 module.exports = Vector;

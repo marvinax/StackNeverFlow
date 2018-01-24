@@ -25,7 +25,7 @@ class Outline{
     }
 
 	GetIdenticalCurve(p1, p2){
-        return CurveMath.GetIdenticalCurve(p1.points[this.side], p2.points[this.side], p1, p2);
+        return CurveMath.GetIdenticalCurve(p1, p2, this.side);
     }
 
     /// update with every redraw.

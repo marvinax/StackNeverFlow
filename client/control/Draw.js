@@ -128,11 +128,12 @@ class Draw{
 
             for (var i = 0; i < levers.length; i++) {
 
-                if(i == currLeverIndex){
+                // if(i == currLeverIndex){
                     for(var j = 0; j < 5; j++){
 
                         ctx.beginPath();
                         ctx.arc(levers[i].points[j].x, levers[i].points[j].y, 4, 0, 2 * Math.PI);
+                        ctx.fillText("p"+i+","+j, levers[i].points[j].x-10, levers[i].points[j].y-10);
                         ctx.stroke();
                     }
 
@@ -157,11 +158,11 @@ class Draw{
 
                     ctx.fillText(s, levers[i].points[4].x + 10, levers[i].points[4].y + 5);
 
-                } else {
-                    ctx.beginPath();
-                    ctx.arc(levers[i].points[2].x, levers[i].points[2].y, 4, 0, 2 * Math.PI);
-                    ctx.stroke();
-                }
+                // } else {
+                //     ctx.beginPath();
+                //     ctx.arc(levers[i].points[2].x, levers[i].points[2].y, 4, 0, 2 * Math.PI);
+                //     ctx.stroke();
+                // }
             }
         }
 
@@ -171,27 +172,37 @@ class Draw{
             if(zpr_curves[ith].levers.length > 1){
 
 
+                ctx.strokeStyle = "#434343";
                 ctx.beginPath();
                 ctx.moveTo(zpr_curves[ith].lo_points[0].x, zpr_curves[ith].lo_points[0].y);
                 for (var i = 1; i < zpr_curves[ith].levers.length; i++) {
-                    ctx.bezierCurveTo(
-                        zpr_curves[ith].lo_points[3*i-2].x, zpr_curves[ith].lo_points[3*i-2].y,
-                        zpr_curves[ith].lo_points[3*i-1].x, zpr_curves[ith].lo_points[3*i-1].y,
-                        zpr_curves[ith].lo_points[3*i+0].x, zpr_curves[ith].lo_points[3*i-0].y
-                    )
+                        ctx.bezierCurveTo(
+                            zpr_curves[ith].lo_points[3*i-2].x, zpr_curves[ith].lo_points[3*i-2].y,
+                            zpr_curves[ith].lo_points[3*i-1].x, zpr_curves[ith].lo_points[3*i-1].y,
+                            zpr_curves[ith].lo_points[3*i+0].x, zpr_curves[ith].lo_points[3*i-0].y
+                        )
+                        ctx.moveTo(zpr_curves[ith].lo_points[3*(i-1)].x, zpr_curves[ith].lo_points[3*(i-1)].y),
+                        ctx.lineTo(zpr_curves[ith].lo_points[3*i-2].x, zpr_curves[ith].lo_points[3*i-2].y);
+                        ctx.lineTo(zpr_curves[ith].lo_points[3*i-1].x, zpr_curves[ith].lo_points[3*i-1].y);
+                        ctx.lineTo(zpr_curves[ith].lo_points[3*i+0].x, zpr_curves[ith].lo_points[3*i-0].y);
                 }
                 ctx.stroke();
                 ctx.beginPath();
                 ctx.moveTo(zpr_curves[ith].ro_points[0].x, zpr_curves[ith].ro_points[0].y);
                 for (var i = 1; i < zpr_curves[ith].levers.length; i++) {
-                    ctx.bezierCurveTo(
-                        zpr_curves[ith].ro_points[3*i-2].x, zpr_curves[ith].ro_points[3*i-2].y,
-                        zpr_curves[ith].ro_points[3*i-1].x, zpr_curves[ith].ro_points[3*i-1].y,
-                        zpr_curves[ith].ro_points[3*i+0].x, zpr_curves[ith].ro_points[3*i-0].y
-                    )
+                        ctx.bezierCurveTo(
+                            zpr_curves[ith].ro_points[3*i-2].x, zpr_curves[ith].ro_points[3*i-2].y,
+                            zpr_curves[ith].ro_points[3*i-1].x, zpr_curves[ith].ro_points[3*i-1].y,
+                            zpr_curves[ith].ro_points[3*i+0].x, zpr_curves[ith].ro_points[3*i-0].y
+                        )
+                        ctx.moveTo(zpr_curves[ith].ro_points[3*(i-1)].x, zpr_curves[ith].ro_points[3*(i-1)].y),
+                        ctx.lineTo(zpr_curves[ith].ro_points[3*i-2].x, zpr_curves[ith].ro_points[3*i-2].y);
+                        ctx.lineTo(zpr_curves[ith].ro_points[3*i-1].x, zpr_curves[ith].ro_points[3*i-1].y);
+                        ctx.lineTo(zpr_curves[ith].ro_points[3*i+0].x, zpr_curves[ith].ro_points[3*i-0].y);
                 }
                 ctx.stroke();
 
+                ctx.strokeStyle = "#000000";
                 ctx.lineWidth = 2;
 
                 var first = zpr_curves[ith].levers[0].points[2],

@@ -738,6 +738,10 @@
 	        return this.x*v.x + this.y*v.y;
 	    }
 
+	    Cross(v){
+	    	return this.x*v.y - this.y*v.x;
+	    }
+
 		Mag(){
 	        return Math.hypot(this.x, this.y);
 		}
@@ -798,6 +802,17 @@
 			return new Vector(0, 0);
 		}
 
+		LeftPerp(){
+			return new Vector(-this.y, this.x);
+		}
+
+		RightPerp(){
+			return new Vector(this.y, -this.x);	
+		}
+
+		toString(){
+			return this.x.toFixed(3) + " " + this.y.toFixed(3);
+		}
 	}
 
 	module.exports = Vector;
@@ -1683,7 +1698,7 @@
 	    }
 
 		GetIdenticalCurve(p1, p2){
-	        return CurveMath.GetIdenticalCurve(p1.points[this.side], p2.points[this.side], p1, p2);
+	        return CurveMath.GetIdenticalCurve(p1, p2, this.side);
 	    }
 
 	    /// update with every redraw.
@@ -1761,13 +1776,13 @@
 	        var strokePointsLeft	= [];
 	        var strokePointsRight	= [];
 	        
-	        var res = this.GetIdenticalCurve(p0.points[1], p2.points[1], p0, p2);
+	        var res = this.GetIdenticalCurve(p0, p2, 1);
 	        strokePointsLeft.push(p0.points[1]);
 	        strokePointsLeft.push(res[0].Copy());
 	        strokePointsLeft.push(res[1].Copy());
 	        strokePointsLeft.push(p2.points[1]);
 	      
-	        res = this.GetIdenticalCurve(p0.points[3], p2.points[3], p0, p2);
+	        res = this.GetIdenticalCurve(p0, p2, 3);
 	        strokePointsRight.push(p0.points[3]);
 	        strokePointsRight.push(res[0].Copy());
 	        strokePointsRight.push(res[1].Copy());
@@ -1824,22 +1839,126 @@
 	        return (start + end)/2;
 	    }
 
-	    static GetIdenticalCurve(p0, p1, b0, b1){
-	        var c0 = b0.points[2].Add(b1.points[0]).Sub(b0.points[4].Mult(2));
-	        var c1 = b1.points[2].Add(b0.points[4]).Sub(b1.points[0].Mult(2));
+	    static Det(a, b, c, d){
+	        // | a  b |
+	        // |      | => ad - bc
+	        // | c  d |
+	        return a*d - b*c;
+	    }
 
-	        var sign0 = Math.sign(p0.Sub(b0.points[2]).Dot(c0));
-	        var sign1 = Math.sign(p1.Sub(b1.points[2]).Dot(c1));
+	    static DetPoint(p1, p2){
+	        // | p1.x  p1.y |
+	        // |            | => p1.x * p2.y - p2.x * p1.y
+	        // | p2.x, p2.y |
+	        return p1.x * p2.y - p2.x*p1.y;        
+	    }
 
-	        var distc0 = c0.Mag();
-	        var distc1 = c1.Mag();
+	    static LineLineIntersection(pa1, pa2, pb1, pb2){
+	        var det_pa = this.DetPoint(pa1, pa2),
+	            det_pb = this.DetPoint(pb1, pb2);
 
-	        var distA = b0.points[4].Sub(b0.points[2]).Mult(Math.max(1, 1 + 0.5e-4* sign0 * distc0));
-	        var distD = b1.points[0].Sub(b1.points[2]).Mult(Math.max(1, 1 + 0.5e-4* sign1 * distc1));
-	        var a0a1 = p0.Add(distA);
-	        var d0d1 = p1.Add(distD);
+	        var delta_pa = pa2.Sub(pa1),
+	            delta_pb = pb2.Sub(pb1);
 
-	        return [a0a1, d0d1];
+	        var det_papb = this.DetPoint(delta_pa, delta_pb);
+
+	        var newX = -this.Det(det_pa, delta_pa.x, det_pb, delta_pb.x)/det_papb,
+	            newY = -this.Det(det_pa, delta_pa.y, det_pb, delta_pb.y)/det_papb;
+
+	        var parallel = delta_pa.Normalize().Dot(delta_pb.Normalize());
+
+	        // console.log("p",parallel);
+
+	        // if(Math.abs(parallel.x) < 0.001){
+	        //     newX = -pa2.x;
+	        // }
+	        // if(Math.abs(parallel.y) < 0.001){
+	        //     newY = -pa2.y;
+	        // }
+
+	        return {v : new Vector(newX, newY), p:parallel};
+	    }
+
+	    static SegSegIntersection(pa1, pa2, pb1, pb2){
+	        
+	        var det_s = this.DetPoint(pb1.Sub(pb2), pb1.Sub(pa1)),
+	            det_t = this.DetPoint(pa1.Sub(pa2), pb1.Sub(pa1)),
+	            det   = this.DetPoint(pb1.Sub(pb2), pa2.Sub(pa1));
+
+	        var s = det_s/det,
+	            t = det_t/det;
+
+	        console.log((s).toFixed(3), " ", (t).toFixed(3));
+
+	        return {v : pa1.Add(pa2.Sub(pa1).Mult(s)), s:s, t:t};
+
+	    }
+
+	    static GetIdenticalCurve(l0, l1, side){
+
+	        var l0aux = l0.points[side].Sub(l0.points[2]).Add(l0.points[4]),
+	            l1aux = l1.points[side].Sub(l1.points[2]).Add(l1.points[0]);
+
+	        var cent_segment = l0.points[4].Sub(l1.points[0]);
+	        var norm;
+	            if(side == 1){
+	                norm = cent_segment.RightPerp();
+	            } else {
+	                norm = cent_segment.LeftPerp();
+	            }
+
+	        var offl0 = norm.Normalize().Mult(l0.points[side].Dist(l0.points[2])).Add(l0.points[4]),
+	            offl1 = norm.Normalize().Mult(l1.points[side].Dist(l1.points[2])).Add(l1.points[0]);
+
+	        // var ctx = document.getElementById("canvas").getContext("2d");
+	        //     ctx.beginPath();
+	        //     ctx.moveTo(l0.points[side].x, l0.points[side].y)
+	        //     ctx.lineTo(l0aux.x, l0aux.y);
+	        //     ctx.moveTo(offl0.x, offl0.y);
+	        //     ctx.lineTo(offl1.x, offl1.y);
+	        //     ctx.moveTo(l1aux.x, l1aux.y);
+	        //     ctx.lineTo(l1.points[side].x, l1.points[side].y)
+	        //     ctx.stroke();
+
+	        var l0c = this.LineLineIntersection(l0.points[side], l0aux, offl0, offl1),
+	            l1c = this.LineLineIntersection(offl0, offl1, l1aux, l1.points[side]),
+	            l01 = this.LineLineIntersection(l0.points[side], l0aux, l1aux, l1.points[side]),
+	            l01s = this.SegSegIntersection(l0.points[side], l0aux, l1aux, l1.points[side]),
+	            ld  = l1c.v.Sub(l0c.v);
+
+
+	            // if(l1c.p < -0.05){
+	            //     l0c.v = l01.v;
+	            // }
+	            // if(l0c.p < -0.05){
+	            //     l1c.v = l01.v;
+	            // }
+
+	            if(Math.abs(l1c.p) < 0.05){
+	                l0c.v = l0aux;
+	            }
+	            if(Math.abs(l0c.p) < 0.05){
+	                l1c.v = l1aux;
+	            }
+
+
+	            console.log("p ", l0c.p.toFixed(3), " ", l1c.p.toFixed(3));
+	            // console.log("s ",l01s.s, "t ",l01s.t);
+	            // if(Math.abs(l01s.s - 1) < 0.5){
+	            //     l0c.v = l0aux;
+	            // }
+	            // if(Math.abs(l01s.t - 1) < 0.5){
+	            //     l1c.v = l1aux;
+	            // }
+
+	            if( l01s.s < 1 && l01s.s > 0 && l01s.t < 1 && l01s.t > 0){
+	                l0c.v = l01s.v;
+	                l1c.v = l01s.v;
+	            }
+
+	        // console.log(offl0, offl1);
+
+	        return [l0c.v, l1c.v];
 	    }
 	}
 
@@ -2053,11 +2172,12 @@
 
 	            for (var i = 0; i < levers.length; i++) {
 
-	                if(i == currLeverIndex){
+	                // if(i == currLeverIndex){
 	                    for(var j = 0; j < 5; j++){
 
 	                        ctx.beginPath();
 	                        ctx.arc(levers[i].points[j].x, levers[i].points[j].y, 4, 0, 2 * Math.PI);
+	                        ctx.fillText("p"+i+","+j, levers[i].points[j].x-10, levers[i].points[j].y-10);
 	                        ctx.stroke();
 	                    }
 
@@ -2082,11 +2202,11 @@
 
 	                    ctx.fillText(s, levers[i].points[4].x + 10, levers[i].points[4].y + 5);
 
-	                } else {
-	                    ctx.beginPath();
-	                    ctx.arc(levers[i].points[2].x, levers[i].points[2].y, 4, 0, 2 * Math.PI);
-	                    ctx.stroke();
-	                }
+	                // } else {
+	                //     ctx.beginPath();
+	                //     ctx.arc(levers[i].points[2].x, levers[i].points[2].y, 4, 0, 2 * Math.PI);
+	                //     ctx.stroke();
+	                // }
 	            }
 	        }
 
@@ -2096,27 +2216,37 @@
 	            if(zpr_curves[ith].levers.length > 1){
 
 
+	                ctx.strokeStyle = "#434343";
 	                ctx.beginPath();
 	                ctx.moveTo(zpr_curves[ith].lo_points[0].x, zpr_curves[ith].lo_points[0].y);
 	                for (var i = 1; i < zpr_curves[ith].levers.length; i++) {
-	                    ctx.bezierCurveTo(
-	                        zpr_curves[ith].lo_points[3*i-2].x, zpr_curves[ith].lo_points[3*i-2].y,
-	                        zpr_curves[ith].lo_points[3*i-1].x, zpr_curves[ith].lo_points[3*i-1].y,
-	                        zpr_curves[ith].lo_points[3*i+0].x, zpr_curves[ith].lo_points[3*i-0].y
-	                    )
+	                        ctx.bezierCurveTo(
+	                            zpr_curves[ith].lo_points[3*i-2].x, zpr_curves[ith].lo_points[3*i-2].y,
+	                            zpr_curves[ith].lo_points[3*i-1].x, zpr_curves[ith].lo_points[3*i-1].y,
+	                            zpr_curves[ith].lo_points[3*i+0].x, zpr_curves[ith].lo_points[3*i-0].y
+	                        )
+	                        ctx.moveTo(zpr_curves[ith].lo_points[3*(i-1)].x, zpr_curves[ith].lo_points[3*(i-1)].y),
+	                        ctx.lineTo(zpr_curves[ith].lo_points[3*i-2].x, zpr_curves[ith].lo_points[3*i-2].y);
+	                        ctx.lineTo(zpr_curves[ith].lo_points[3*i-1].x, zpr_curves[ith].lo_points[3*i-1].y);
+	                        ctx.lineTo(zpr_curves[ith].lo_points[3*i+0].x, zpr_curves[ith].lo_points[3*i-0].y);
 	                }
 	                ctx.stroke();
 	                ctx.beginPath();
 	                ctx.moveTo(zpr_curves[ith].ro_points[0].x, zpr_curves[ith].ro_points[0].y);
 	                for (var i = 1; i < zpr_curves[ith].levers.length; i++) {
-	                    ctx.bezierCurveTo(
-	                        zpr_curves[ith].ro_points[3*i-2].x, zpr_curves[ith].ro_points[3*i-2].y,
-	                        zpr_curves[ith].ro_points[3*i-1].x, zpr_curves[ith].ro_points[3*i-1].y,
-	                        zpr_curves[ith].ro_points[3*i+0].x, zpr_curves[ith].ro_points[3*i-0].y
-	                    )
+	                        ctx.bezierCurveTo(
+	                            zpr_curves[ith].ro_points[3*i-2].x, zpr_curves[ith].ro_points[3*i-2].y,
+	                            zpr_curves[ith].ro_points[3*i-1].x, zpr_curves[ith].ro_points[3*i-1].y,
+	                            zpr_curves[ith].ro_points[3*i+0].x, zpr_curves[ith].ro_points[3*i-0].y
+	                        )
+	                        ctx.moveTo(zpr_curves[ith].ro_points[3*(i-1)].x, zpr_curves[ith].ro_points[3*(i-1)].y),
+	                        ctx.lineTo(zpr_curves[ith].ro_points[3*i-2].x, zpr_curves[ith].ro_points[3*i-2].y);
+	                        ctx.lineTo(zpr_curves[ith].ro_points[3*i-1].x, zpr_curves[ith].ro_points[3*i-1].y);
+	                        ctx.lineTo(zpr_curves[ith].ro_points[3*i+0].x, zpr_curves[ith].ro_points[3*i-0].y);
 	                }
 	                ctx.stroke();
 
+	                ctx.strokeStyle = "#000000";
 	                ctx.lineWidth = 2;
 
 	                var first = zpr_curves[ith].levers[0].points[2],
