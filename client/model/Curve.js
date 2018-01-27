@@ -13,8 +13,7 @@ class Curve {
 
 	    this.orig = orig; 
 
-	    this.lo = new Outline(1);
-	    this.ro = new Outline(3);
+	    this.outline = new Outline();
 
     }
 
@@ -41,17 +40,11 @@ class Curve {
 
     UpdateLever(ithLever, ithPoint, value){
         this.levers[ithLever].SetControlPoint(ithPoint, value);
-        this.UpdateOutlines();
+        this.outline.GetOutline(this.levers);
     }
 
     GetOutlines(){
-        this.lo.GetPointFromLevers(this.levers);
-        this.ro.GetPointFromLevers(this.levers);
-    }
-
-    UpdateOutlines(){
-        this.lo.SetPointFromLevers(this.levers);
-        this.ro.SetPointFromLevers(this.levers);
+        this.outline.GetOutline(this.levers);
     }
 
 
@@ -66,7 +59,7 @@ class Curve {
         for (var i = 0; i < this.levers.length; i++) {
             this.levers[i].TransFromArray(array[i], increment);
         }
-        this.UpdateOutlines();
+        this.GetOutlines();
     }
 }
 

@@ -46,24 +46,9 @@ class CurveMath{
     }
 
     static SetInsertedLeverOnCurve(p0, p1, p2, t){
-      
-        var strokePointsLeft	= [];
-        var strokePointsRight	= [];
-        
-        var res = this.GetIdenticalCurve(p0, p2, 1);
-        strokePointsLeft.push(p0.points[1]);
-        strokePointsLeft.push(res[0].Copy());
-        strokePointsLeft.push(res[1].Copy());
-        strokePointsLeft.push(p2.points[1]);
-      
-        res = this.GetIdenticalCurve(p0, p2, 3);
-        strokePointsRight.push(p0.points[3]);
-        strokePointsRight.push(res[0].Copy());
-        strokePointsRight.push(res[1].Copy());
-		strokePointsRight.push(p2.points[3]);
-        
-        p1.points[1] = this.GetPointOnCurve(t, strokePointsLeft);
-        p1.points[3] = this.GetPointOnCurve(t, strokePointsRight);
+              
+        // p1.points[1] = this.GetPointOnCurve(t, strokePointsLeft);
+        // p1.points[3] = this.GetPointOnCurve(t, strokePointsRight);
 
         this.SetInsertedLever(
             p0.points[2],
@@ -162,7 +147,7 @@ class CurveMath{
         var s = det_s/det,
             t = det_t/det;
 
-        console.log((s).toFixed(3), " ", (t).toFixed(3));
+        // console.log((s).toFixed(3), " ", (t).toFixed(3));
 
         return {v : pa1.Add(pa2.Sub(pa1).Mult(s)), s:s, t:t};
 

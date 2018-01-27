@@ -5,7 +5,7 @@ class Draw{
 
     static CurvesFill(ctx, curves, currCurveIndex){
 
-        ctx.clearRect(0,0, ctx.canvas.width, ctx.canvas.height);
+        // ctx.clearRect(0,0, ctx.canvas.width, ctx.canvas.height);
 
         for (var ithCurve = curves.length - 1; ithCurve >= 0; ithCurve--) {
             var curve = curves[ithCurve];
@@ -117,11 +117,13 @@ class Draw{
                             leverMode : lever.leverMode
                         }
                     }),
-                lo_points : curve.lo.points.map(function(point){return zpr.Transform(point)}),
-                ro_points : curve.ro.points.map(function(point){return zpr.Transform(point)})
+                o : curve.outline.outer.map(function(group){return group.map(function(point){return zpr.Transform(point)})}),
+                i : curve.outline.inner.map(function(group){return group.map(function(point){return zpr.Transform(point)})})
             }
 
         });
+
+        // console.log(zpr_curves);
 
         if(currCurveIndex != null){
             var levers = zpr_curves[currCurveIndex].levers;
@@ -174,32 +176,37 @@ class Draw{
 
                 ctx.strokeStyle = "#434343";
                 ctx.beginPath();
-                ctx.moveTo(zpr_curves[ith].lo_points[0].x, zpr_curves[ith].lo_points[0].y);
-                for (var i = 1; i < zpr_curves[ith].levers.length; i++) {
-                        ctx.bezierCurveTo(
-                            zpr_curves[ith].lo_points[3*i-2].x, zpr_curves[ith].lo_points[3*i-2].y,
-                            zpr_curves[ith].lo_points[3*i-1].x, zpr_curves[ith].lo_points[3*i-1].y,
-                            zpr_curves[ith].lo_points[3*i+0].x, zpr_curves[ith].lo_points[3*i-0].y
-                        )
-                        ctx.moveTo(zpr_curves[ith].lo_points[3*(i-1)].x, zpr_curves[ith].lo_points[3*(i-1)].y),
-                        ctx.lineTo(zpr_curves[ith].lo_points[3*i-2].x, zpr_curves[ith].lo_points[3*i-2].y);
-                        ctx.lineTo(zpr_curves[ith].lo_points[3*i-1].x, zpr_curves[ith].lo_points[3*i-1].y);
-                        ctx.lineTo(zpr_curves[ith].lo_points[3*i+0].x, zpr_curves[ith].lo_points[3*i-0].y);
+                for (let i = 0; i < zpr_curves[ith].o.length; i++) {
+                    console.log(zpr_curves[ith].o[i][0]);
+                    ctx.moveTo(zpr_curves[ith].o[i][0].x,zpr_curves[ith].o[i][0].y)
+                    ctx.bezierCurveTo(
+                        zpr_curves[ith].o[i][1].x,zpr_curves[ith].o[i][1].y,
+                        zpr_curves[ith].o[i][2].x,zpr_curves[ith].o[i][2].y,
+                        zpr_curves[ith].o[i][3].x,zpr_curves[ith].o[i][3].y
+                    )
+                    ctx.moveTo(zpr_curves[ith].i[i][0].x, zpr_curves[ith].i[i][0].y),
+                    ctx.lineTo(zpr_curves[ith].o[i][0].x, zpr_curves[ith].o[i][0].y),
+                    ctx.lineTo(zpr_curves[ith].o[i][1].x, zpr_curves[ith].o[i][1].y);
+                    ctx.lineTo(zpr_curves[ith].o[i][2].x, zpr_curves[ith].o[i][2].y);
+                    ctx.lineTo(zpr_curves[ith].o[i][3].x, zpr_curves[ith].o[i][3].y);
                 }
                 ctx.stroke();
                 ctx.beginPath();
-                ctx.moveTo(zpr_curves[ith].ro_points[0].x, zpr_curves[ith].ro_points[0].y);
-                for (var i = 1; i < zpr_curves[ith].levers.length; i++) {
-                        ctx.bezierCurveTo(
-                            zpr_curves[ith].ro_points[3*i-2].x, zpr_curves[ith].ro_points[3*i-2].y,
-                            zpr_curves[ith].ro_points[3*i-1].x, zpr_curves[ith].ro_points[3*i-1].y,
-                            zpr_curves[ith].ro_points[3*i+0].x, zpr_curves[ith].ro_points[3*i-0].y
-                        )
-                        ctx.moveTo(zpr_curves[ith].ro_points[3*(i-1)].x, zpr_curves[ith].ro_points[3*(i-1)].y),
-                        ctx.lineTo(zpr_curves[ith].ro_points[3*i-2].x, zpr_curves[ith].ro_points[3*i-2].y);
-                        ctx.lineTo(zpr_curves[ith].ro_points[3*i-1].x, zpr_curves[ith].ro_points[3*i-1].y);
-                        ctx.lineTo(zpr_curves[ith].ro_points[3*i+0].x, zpr_curves[ith].ro_points[3*i-0].y);
+                var i = 0;
+                for (; i < zpr_curves[ith].i.length; i++) {
+                    console.log(zpr_curves[ith].i[i][0]);
+                    ctx.moveTo(zpr_curves[ith].i[i][0].x,zpr_curves[ith].i[i][0].y)
+                    ctx.bezierCurveTo(
+                        zpr_curves[ith].i[i][1].x,zpr_curves[ith].i[i][1].y,
+                        zpr_curves[ith].i[i][2].x,zpr_curves[ith].i[i][2].y,
+                        zpr_curves[ith].i[i][3].x,zpr_curves[ith].i[i][3].y
+                    )
+                    ctx.moveTo(zpr_curves[ith].i[i][0].x, zpr_curves[ith].i[i][0].y),
+                    ctx.lineTo(zpr_curves[ith].i[i][1].x, zpr_curves[ith].i[i][1].y);
+                    ctx.lineTo(zpr_curves[ith].i[i][2].x, zpr_curves[ith].i[i][2].y);
+                    ctx.lineTo(zpr_curves[ith].i[i][3].x, zpr_curves[ith].i[i][3].y);
                 }
+                ctx.lineTo(zpr_curves[ith].o[i-1][3].x, zpr_curves[ith].o[i-1][3].y)
                 ctx.stroke();
 
                 ctx.strokeStyle = "#000000";

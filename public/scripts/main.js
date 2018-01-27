@@ -984,7 +984,7 @@
 					} else {
 						this.CurrLever().TransFromArray(transArray, curr.Sub(orig));
 					}
-		            this.CurrCurve().UpdateOutlines();
+		            this.CurrCurve().GetOutlines();
 		            break;
 				case Status.EditingLever:
 					
@@ -1084,7 +1084,7 @@
 
 		UpdateDraw(context){
 			for(let curve of this.curves){
-				curve.UpdateOutlines();
+				curve.GetOutlines();
 			}
 			Draw.Curves(context, this);
 		}
@@ -1608,8 +1608,7 @@
 
 		    this.orig = orig; 
 
-		    this.lo = new Outline(1);
-		    this.ro = new Outline(3);
+		    this.outline = new Outline();
 
 	    }
 
@@ -1636,17 +1635,11 @@
 
 	    UpdateLever(ithLever, ithPoint, value){
 	        this.levers[ithLever].SetControlPoint(ithPoint, value);
-	        this.UpdateOutlines();
+	        this.outline.GetOutline(this.levers);
 	    }
 
 	    GetOutlines(){
-	        this.lo.GetPointFromLevers(this.levers);
-	        this.ro.GetPointFromLevers(this.levers);
-	    }
-
-	    UpdateOutlines(){
-	        this.lo.SetPointFromLevers(this.levers);
-	        this.ro.SetPointFromLevers(this.levers);
+	        this.outline.GetOutline(this.levers);
 	    }
 
 
@@ -1661,7 +1654,7 @@
 	        for (var i = 0; i < this.levers.length; i++) {
 	            this.levers[i].TransFromArray(array[i], increment);
 	        }
-	        this.UpdateOutlines();
+	        this.GetOutlines();
 	    }
 	}
 
@@ -1682,40 +1675,83 @@
 
 	class Outline{
 
-		constructor(side){
-			this.points = [];
-			this.side = side;
+		constructor(){
+			this.outer = [];
+	        this.inner = [];
 		}
 
-	    /// this should be called immediately after a new curve is formed.
-	    GetPointFromLevers(levers){
 
-	        this.points = [];
-	        for (var i = 0; i < levers.length * 3 - 2; i ++){
-	            this.points.push(new Vector(0, 0));
-	        }
-	        this.SetPointFromLevers(levers);
-	    }
-
-		GetIdenticalCurve(p1, p2){
-	        return CurveMath.GetIdenticalCurve(p1, p2, this.side);
-	    }
-
-	    /// update with every redraw.
-	    SetPointFromLevers(levers){
-	        if(this.points != null){
-	            for(var i = 0; i < levers.length; i++){
-
-	                this.points[3*i].Set(levers[i].points[this.side]);
-
-	                if(i < levers.length - 1){
-	                    var aux = this.GetIdenticalCurve(levers[i], levers[i+1]);
-	                    this.points[3 * i + 1].Set(aux[0]);
-	                    this.points[3 * i + 2].Set(aux[1]);
-	                }
-	            }
+	    GetOutline(levers){
+	        this.outer = [];
+	        this.inner = [];
+	        for (var i = 0; i < levers.length - 1; i++) {
+	            this.GetOutlineSegment(levers[i], levers[i+1], 0);
 	        }
 	    }
+
+
+	    GetOutlineSegment(l0, l1, level){
+	        console.log("level"+level);
+	        console.log(l0, l1);
+	        var l0aux1 = l0.points[1].Sub(l0.points[2]).Add(l0.points[4]),
+	            l1aux1 = l1.points[1].Sub(l1.points[2]).Add(l1.points[0]),
+	            l0aux3 = l0.points[3].Sub(l0.points[2]).Add(l0.points[4]),
+	            l1aux3 = l1.points[3].Sub(l1.points[2]).Add(l1.points[0]);
+
+	        var cent_segment = l0.points[4].Sub(l1.points[0]);
+
+	        var offl01 = cent_segment.RightPerp().Normalize().Mult(l0.points[1].Dist(l0.points[2])).Add(l0.points[4]),
+	            offl11 = cent_segment.RightPerp().Normalize().Mult(l1.points[1].Dist(l1.points[2])).Add(l1.points[0]),
+	            offl03 = cent_segment.LeftPerp().Normalize().Mult(l0.points[3].Dist(l0.points[2])).Add(l0.points[4]),
+	            offl13 = cent_segment.LeftPerp().Normalize().Mult(l1.points[3].Dist(l1.points[2])).Add(l1.points[0]);
+
+	        var l0c1 = CurveMath.LineLineIntersection(l0.points[1], l0aux1, offl01, offl11),
+	            l1c1 = CurveMath.LineLineIntersection(offl01, offl11, l1aux1, l1.points[1]),
+	            l0c3 = CurveMath.LineLineIntersection(l0.points[3], l0aux3, offl03, offl13),
+	            l1c3 = CurveMath.LineLineIntersection(offl03, offl13, l1aux3, l1.points[3]),
+	            l0l11 = CurveMath.SegSegIntersection(l0.points[1], l0aux1, l1aux1, l1.points[1]),
+	            l0l13 = CurveMath.SegSegIntersection(l0.points[3], l0aux3, l1aux3, l1.points[3]),
+	            l0l1 = CurveMath.SegSegIntersection(l0.points[2], l0.points[4], l1.points[0], l1.points[2]);
+
+	        var l0width = l0.points[1].Dist(l0.points[2]),
+	            l1width = l1.points[1].Dist(l1.points[2]);
+
+	        console.log("level "+level+": l0l1 s:" + l0l1.s.toFixed(3) + " t:" + l0l1.t.toFixed(3) + "\n",
+	                    "l0c1.p "+l0c1.p.toFixed(3) + " l1c1.p "+l1c1.p.toFixed(3) + " l0c3.p "+l0c3.p.toFixed(3) + "l1c3.p "+l1c3.p.toFixed(3));
+
+	        if(l0c1.p > 0.96){ l0c1.v = offl01; }
+	        if(l1c1.p > 0.96){ l1c1.v = offl11; }
+	        if(l0c3.p > 0.96){ l0c3.v = offl03; }
+	        if(l1c3.p > 0.99){ l1c3.v = offl13; }
+
+	        if(level == 2 || l0l1.s > 1 && l0l1.t < 0){
+	            this.outer.push([l0.points[1], l0c1.v, l1c1.v, l1.points[1]]);
+	            this.inner.push([l0.points[3], l0c3.v, l1c3.v, l1.points[3]]);
+	        } else {
+
+	            var vwo = (l0l1.s > 1 ? l1c1.v : l0c1.v),
+	                vwi = (l0l1.s > 1 ? l1c3.v : l0c3.v),
+	                vp  = (l0l1.s > 1 ? l1.points[0] : l0.points[4]);
+
+	            var t = CurveMath.GetClosestTFromGivenPoint(l0, l1, vwo, 3, 3);
+	            console.log("t val:"+t);
+
+	            var s = new Lever(new Vector(0,0)),
+	                l1copy = l1.Copy(),
+	                l0copy = l0.Copy();
+
+	            CurveMath.SetInsertedLeverOnCurve(l0copy, s, l1copy, t);
+
+	            s.points[1] = s.points[2].Add(vwo.Sub(vp).Normalize().Mult((l1width + t*(l0width - l1width))));
+	            s.points[3] = s.points[2].Add(vwi.Sub(vp).Normalize().Mult((l1width + t*(l0width - l1width))));
+
+	            // console.log("haha"+JSON.stringify(s));
+	            this.GetOutlineSegment(l0copy, s, level+1);
+	            this.GetOutlineSegment(s, l1copy, level+1);                    
+	        }
+
+	    }
+
 	}
 
 	module.exports = Outline;
@@ -1772,24 +1808,9 @@
 	    }
 
 	    static SetInsertedLeverOnCurve(p0, p1, p2, t){
-	      
-	        var strokePointsLeft	= [];
-	        var strokePointsRight	= [];
-	        
-	        var res = this.GetIdenticalCurve(p0, p2, 1);
-	        strokePointsLeft.push(p0.points[1]);
-	        strokePointsLeft.push(res[0].Copy());
-	        strokePointsLeft.push(res[1].Copy());
-	        strokePointsLeft.push(p2.points[1]);
-	      
-	        res = this.GetIdenticalCurve(p0, p2, 3);
-	        strokePointsRight.push(p0.points[3]);
-	        strokePointsRight.push(res[0].Copy());
-	        strokePointsRight.push(res[1].Copy());
-			strokePointsRight.push(p2.points[3]);
-	        
-	        p1.points[1] = this.GetPointOnCurve(t, strokePointsLeft);
-	        p1.points[3] = this.GetPointOnCurve(t, strokePointsRight);
+	              
+	        // p1.points[1] = this.GetPointOnCurve(t, strokePointsLeft);
+	        // p1.points[3] = this.GetPointOnCurve(t, strokePointsRight);
 
 	        this.SetInsertedLever(
 	            p0.points[2],
@@ -1888,7 +1909,7 @@
 	        var s = det_s/det,
 	            t = det_t/det;
 
-	        console.log((s).toFixed(3), " ", (t).toFixed(3));
+	        // console.log((s).toFixed(3), " ", (t).toFixed(3));
 
 	        return {v : pa1.Add(pa2.Sub(pa1).Mult(s)), s:s, t:t};
 
@@ -2049,7 +2070,7 @@
 
 	    static CurvesFill(ctx, curves, currCurveIndex){
 
-	        ctx.clearRect(0,0, ctx.canvas.width, ctx.canvas.height);
+	        // ctx.clearRect(0,0, ctx.canvas.width, ctx.canvas.height);
 
 	        for (var ithCurve = curves.length - 1; ithCurve >= 0; ithCurve--) {
 	            var curve = curves[ithCurve];
@@ -2161,11 +2182,13 @@
 	                            leverMode : lever.leverMode
 	                        }
 	                    }),
-	                lo_points : curve.lo.points.map(function(point){return zpr.Transform(point)}),
-	                ro_points : curve.ro.points.map(function(point){return zpr.Transform(point)})
+	                o : curve.outline.outer.map(function(group){return group.map(function(point){return zpr.Transform(point)})}),
+	                i : curve.outline.inner.map(function(group){return group.map(function(point){return zpr.Transform(point)})})
 	            }
 
 	        });
+
+	        // console.log(zpr_curves);
 
 	        if(currCurveIndex != null){
 	            var levers = zpr_curves[currCurveIndex].levers;
@@ -2218,32 +2241,37 @@
 
 	                ctx.strokeStyle = "#434343";
 	                ctx.beginPath();
-	                ctx.moveTo(zpr_curves[ith].lo_points[0].x, zpr_curves[ith].lo_points[0].y);
-	                for (var i = 1; i < zpr_curves[ith].levers.length; i++) {
-	                        ctx.bezierCurveTo(
-	                            zpr_curves[ith].lo_points[3*i-2].x, zpr_curves[ith].lo_points[3*i-2].y,
-	                            zpr_curves[ith].lo_points[3*i-1].x, zpr_curves[ith].lo_points[3*i-1].y,
-	                            zpr_curves[ith].lo_points[3*i+0].x, zpr_curves[ith].lo_points[3*i-0].y
-	                        )
-	                        ctx.moveTo(zpr_curves[ith].lo_points[3*(i-1)].x, zpr_curves[ith].lo_points[3*(i-1)].y),
-	                        ctx.lineTo(zpr_curves[ith].lo_points[3*i-2].x, zpr_curves[ith].lo_points[3*i-2].y);
-	                        ctx.lineTo(zpr_curves[ith].lo_points[3*i-1].x, zpr_curves[ith].lo_points[3*i-1].y);
-	                        ctx.lineTo(zpr_curves[ith].lo_points[3*i+0].x, zpr_curves[ith].lo_points[3*i-0].y);
+	                for (let i = 0; i < zpr_curves[ith].o.length; i++) {
+	                    console.log(zpr_curves[ith].o[i][0]);
+	                    ctx.moveTo(zpr_curves[ith].o[i][0].x,zpr_curves[ith].o[i][0].y)
+	                    ctx.bezierCurveTo(
+	                        zpr_curves[ith].o[i][1].x,zpr_curves[ith].o[i][1].y,
+	                        zpr_curves[ith].o[i][2].x,zpr_curves[ith].o[i][2].y,
+	                        zpr_curves[ith].o[i][3].x,zpr_curves[ith].o[i][3].y
+	                    )
+	                    ctx.moveTo(zpr_curves[ith].i[i][0].x, zpr_curves[ith].i[i][0].y),
+	                    ctx.lineTo(zpr_curves[ith].o[i][0].x, zpr_curves[ith].o[i][0].y),
+	                    ctx.lineTo(zpr_curves[ith].o[i][1].x, zpr_curves[ith].o[i][1].y);
+	                    ctx.lineTo(zpr_curves[ith].o[i][2].x, zpr_curves[ith].o[i][2].y);
+	                    ctx.lineTo(zpr_curves[ith].o[i][3].x, zpr_curves[ith].o[i][3].y);
 	                }
 	                ctx.stroke();
 	                ctx.beginPath();
-	                ctx.moveTo(zpr_curves[ith].ro_points[0].x, zpr_curves[ith].ro_points[0].y);
-	                for (var i = 1; i < zpr_curves[ith].levers.length; i++) {
-	                        ctx.bezierCurveTo(
-	                            zpr_curves[ith].ro_points[3*i-2].x, zpr_curves[ith].ro_points[3*i-2].y,
-	                            zpr_curves[ith].ro_points[3*i-1].x, zpr_curves[ith].ro_points[3*i-1].y,
-	                            zpr_curves[ith].ro_points[3*i+0].x, zpr_curves[ith].ro_points[3*i-0].y
-	                        )
-	                        ctx.moveTo(zpr_curves[ith].ro_points[3*(i-1)].x, zpr_curves[ith].ro_points[3*(i-1)].y),
-	                        ctx.lineTo(zpr_curves[ith].ro_points[3*i-2].x, zpr_curves[ith].ro_points[3*i-2].y);
-	                        ctx.lineTo(zpr_curves[ith].ro_points[3*i-1].x, zpr_curves[ith].ro_points[3*i-1].y);
-	                        ctx.lineTo(zpr_curves[ith].ro_points[3*i+0].x, zpr_curves[ith].ro_points[3*i-0].y);
+	                var i = 0;
+	                for (; i < zpr_curves[ith].i.length; i++) {
+	                    console.log(zpr_curves[ith].i[i][0]);
+	                    ctx.moveTo(zpr_curves[ith].i[i][0].x,zpr_curves[ith].i[i][0].y)
+	                    ctx.bezierCurveTo(
+	                        zpr_curves[ith].i[i][1].x,zpr_curves[ith].i[i][1].y,
+	                        zpr_curves[ith].i[i][2].x,zpr_curves[ith].i[i][2].y,
+	                        zpr_curves[ith].i[i][3].x,zpr_curves[ith].i[i][3].y
+	                    )
+	                    ctx.moveTo(zpr_curves[ith].i[i][0].x, zpr_curves[ith].i[i][0].y),
+	                    ctx.lineTo(zpr_curves[ith].i[i][1].x, zpr_curves[ith].i[i][1].y);
+	                    ctx.lineTo(zpr_curves[ith].i[i][2].x, zpr_curves[ith].i[i][2].y);
+	                    ctx.lineTo(zpr_curves[ith].i[i][3].x, zpr_curves[ith].i[i][3].y);
 	                }
+	                ctx.lineTo(zpr_curves[ith].o[i-1][3].x, zpr_curves[ith].o[i-1][3].y)
 	                ctx.stroke();
 
 	                ctx.strokeStyle = "#000000";

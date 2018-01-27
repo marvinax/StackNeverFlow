@@ -161,7 +161,7 @@ class Document{
 				} else {
 					this.CurrLever().TransFromArray(transArray, curr.Sub(orig));
 				}
-	            this.CurrCurve().UpdateOutlines();
+	            this.CurrCurve().GetOutlines();
 	            break;
 			case Status.EditingLever:
 				
@@ -261,7 +261,7 @@ class Document{
 
 	UpdateDraw(context){
 		for(let curve of this.curves){
-			curve.UpdateOutlines();
+			curve.GetOutlines();
 		}
 		Draw.Curves(context, this);
 	}
