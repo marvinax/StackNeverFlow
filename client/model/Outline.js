@@ -51,14 +51,18 @@ class Outline{
             l1width = l1.points[1].Dist(l1.points[2]);
 
         console.log("level "+level+": l0l1 s:" + l0l1.s.toFixed(3) + " t:" + l0l1.t.toFixed(3) + "\n",
-                    "l0c1.p "+l0c1.p.toFixed(3) + " l1c1.p "+l1c1.p.toFixed(3) + " l0c3.p "+l0c3.p.toFixed(3) + "l1c3.p "+l1c3.p.toFixed(3));
+                    "l0c1.p "+l0c1.p.toFixed(3) + " l1c1.p "+l1c1.p.toFixed(3)+
+                    " l0c3.p "+l0c3.p.toFixed(3) + "l1c3.p "+l1c3.p.toFixed(3));
 
         if(l0c1.p > 0.96){ l0c1.v = offl01; }
         if(l1c1.p > 0.96){ l1c1.v = offl11; }
         if(l0c3.p > 0.96){ l0c3.v = offl03; }
         if(l1c3.p > 0.99){ l1c3.v = offl13; }
 
-        if(level == 2 || l0l1.s > 1 && l0l1.t < 0){
+        if(l0l1.s < 1 && l0l1.s > 0 && l0l1.t < 1 && l0l1.t > 0){
+            this.outer.push([l0.points[1], l0l11.v, l0l11.v, l1.points[1]]);
+            this.inner.push([l0.points[3], l0l13.v, l0l13.v, l1.points[3]]);            
+        } else if(level == 2 || l0l1.s > 1 && l0l1.t < 0){
             this.outer.push([l0.points[1], l0c1.v, l1c1.v, l1.points[1]]);
             this.inner.push([l0.points[3], l0c3.v, l1c3.v, l1.points[3]]);
         } else {

@@ -26,13 +26,15 @@ var Status = Object.freeze({
 		Creating : 1,
 		MovingCurve : 2,
 		MovingLever : 3,
-		EditingLever : 4
+		EditingLever : 4,
+		MovingAnchor : 5
 	});
 
 class Document{
 	constructor(canvas){
 		this.canvas = canvas;
 		this.curves = [];
+		this.anchor = new Vector(300, 300);
 
 		this.params = {};
 		this.init = "";

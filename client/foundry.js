@@ -114,8 +114,8 @@ function LoadName(context, docu, neutron){
 		EditingLever : 4
 	});
 
-	var isTranslatingLever = false,
-		isEditingLever = false;
+	var isEditingLever = false,
+		isRelocatingAnchor = false;
 
 	function MouseV(event) {
 		var rect = event.target.getBoundingClientRect();
@@ -150,8 +150,10 @@ function LoadName(context, docu, neutron){
 			if(docu.status == Status.Creating){
 				console.log("creating");
     			docu.AddPoint(orig);
-
-			} else if (docu.status == Status.Editing){
+			}
+			else if (docu.status == Status.MovingAnchor){
+				docu.anchor = zpr.InvTransform(curr);
+			}else if (docu.status == Status.Editing){
 				if(isEditingLever){
 					currPointIndex = docu.SelectControlPoint(zpr.InvTransform(curr));
 				} else {
@@ -225,7 +227,11 @@ function LoadName(context, docu, neutron){
                 }
                 Draw.Curves(context, docu);
             }
-                      
+
+			if(evt.key == "Shift" && docu.status == Status.Editing){
+				console.log("yay");
+				docu.status = Status.MovingAnchor;
+			}                      
 
 			if(evt.keyCode == 18){
 				isEditingLever = true;
@@ -264,12 +270,14 @@ function LoadName(context, docu, neutron){
 
 		document.onkeyup = function(evt){
 
-            if(evt.ctrlKey && evt.key=="d"){
-                Draw.Curves(context, docu);
-            }
+
+			if(evt.key == "Shift" && docu.status == Status.MovingAnchor){
+				console.log("yey");
+				docu.status = Status.Editing;
+			}                      
 
 			if(evt.keyCode == 16){
-				isTranslatingLever = false;
+				isRelocatingAnchor = false;
 			}
 
 			if(evt.keyCode == 18){

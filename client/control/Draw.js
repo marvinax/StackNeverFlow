@@ -3,54 +3,10 @@ var Vector = require('../model/Vector.js');
 
 class Draw{
 
-    static CurvesFill(ctx, curves, currCurveIndex){
-
-        // ctx.clearRect(0,0, ctx.canvas.width, ctx.canvas.height);
-
-        for (var ithCurve = curves.length - 1; ithCurve >= 0; ithCurve--) {
-            var curve = curves[ithCurve];
-
-            ctx.lineWidth = 1;
-
-            ctx.beginPath();
-            ctx.moveTo(curve.lo.points[0].x, curve.lo.points[0].y);
-            for(var i = 1; i < curve.levers.length; i++){
-
-                ctx.lineTo(curve.lo.points[3*i-2].x,   curve.lo.points[3*i-2].y);
-                ctx.moveTo(curve.lo.points[3*i-1].x,   curve.lo.points[3*i-1].y);
-                ctx.lineTo(curve.lo.points[3*i+0].x,   curve.lo.points[3*i-0].y);
-                ctx.moveTo(curve.lo.points[3*(i-1)].x, curve.lo.points[3*(i-1)].y);
-
-                ctx.bezierCurveTo(
-                    curve.lo.points[3*i-2].x, curve.lo.points[3*i-2].y,
-                    curve.lo.points[3*i-1].x, curve.lo.points[3*i-1].y,
-                    curve.lo.points[3*i+0].x, curve.lo.points[3*i-0].y
-                )
-            }
-            ctx.lineTo(curve.ro.points[curve.ro.points.length-1].x, curve.ro.points[curve.ro.points.length-1].y);
-            for(var i = curve.levers.length-1; i >0; i--){
-
-                ctx.lineTo(curve.ro.points[3*i-1].x,   curve.ro.points[3*i-1].y);
-                ctx.moveTo(curve.ro.points[3*i-2].x,   curve.ro.points[3*i-2].y);
-                ctx.lineTo(curve.ro.points[3*(i-1)].x,   curve.ro.points[3*(i-1)].y);
-                ctx.moveTo(curve.ro.points[3*i].x,     curve.ro.points[3*i].y);
-
-                ctx.bezierCurveTo(
-                    curve.ro.points[3*i-1].x, curve.ro.points[3*i-1].y,
-                    curve.ro.points[3*i-2].x, curve.ro.points[3*i-2].y,
-                    curve.ro.points[3*(i-1)].x, curve.ro.points[3*(i-1)].y
-                )
-            }
-            // ctx.lineTo(curve.lo.points[0].x, curve.lo.points[0].y);
-            // ctx.closePath();
-            ctx.stroke();
-        };
-
-    }
-
     static Curves(ctx, docu){
 
         var curves = docu.curves,
+            anchor = docu.anchor,
             currCurveIndex = docu.currCurveIndex,
             currLeverIndex = docu.currLeverIndex,
             captured = docu.captured,
@@ -78,11 +34,12 @@ class Draw{
 
         var status;
         switch(docu.status){
-            case 0: ctx.fillText('Editing', 10, 25); break; 
+            case 0: ctx.fillText('Editing', 10, 25); break;
             case 1: ctx.fillText('Creating', 10, 25); break; 
             case 2: ctx.fillText('MovingCurve', 10, 25); break; 
             case 3: ctx.fillText('MovingLever', 10, 25); break; 
             case 4: ctx.fillText('EditingLever', 10, 25); break;
+            case 5: ctx.fillText('MovingAnchor', 10, 25); break;
         }
 
         ctx.fillText(docu.zpr.zoom.toFixed(3)+"x", 10, 45);
@@ -107,6 +64,18 @@ class Draw{
                 ctx.arc(captured.by.x, captured.by.y, 10, 0, 2 * Math.PI);
             ctx.stroke();
         }
+
+        ctx.strokeStyle = "#606060";
+        var zpr_anchor = zpr.Transform(docu.anchor);
+        ctx.beginPath();
+            ctx.moveTo(zpr_anchor.x-10, zpr_anchor.y);
+            ctx.lineTo(zpr_anchor.x+10, zpr_anchor.y);
+            ctx.moveTo(zpr_anchor.x, zpr_anchor.y-10);
+            ctx.lineTo(zpr_anchor.x, zpr_anchor.y+10);
+            ctx.moveTo(zpr_anchor.x+15, zpr_anchor.y);
+            ctx.arc(zpr_anchor.x, zpr_anchor.y, 15, 0, Math.PI*2);
+        ctx.stroke();   
+
 
         ctx.strokeStyle = "#000000";
         var zpr_curves = docu.curves.map(function(curve){

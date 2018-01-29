@@ -160,8 +160,8 @@
 			EditingLever : 4
 		});
 
-		var isTranslatingLever = false,
-			isEditingLever = false;
+		var isEditingLever = false,
+			isRelocatingAnchor = false;
 
 		function MouseV(event) {
 			var rect = event.target.getBoundingClientRect();
@@ -196,8 +196,10 @@
 				if(docu.status == Status.Creating){
 					console.log("creating");
 	    			docu.AddPoint(orig);
-
-				} else if (docu.status == Status.Editing){
+				}
+				else if (docu.status == Status.MovingAnchor){
+					docu.anchor = zpr.InvTransform(curr);
+				}else if (docu.status == Status.Editing){
 					if(isEditingLever){
 						currPointIndex = docu.SelectControlPoint(zpr.InvTransform(curr));
 					} else {
@@ -271,7 +273,11 @@
 	                }
 	                Draw.Curves(context, docu);
 	            }
-	                      
+
+				if(evt.key == "Shift" && docu.status == Status.Editing){
+					console.log("yay");
+					docu.status = Status.MovingAnchor;
+				}                      
 
 				if(evt.keyCode == 18){
 					isEditingLever = true;
@@ -310,12 +316,14 @@
 
 			document.onkeyup = function(evt){
 
-	            if(evt.ctrlKey && evt.key=="d"){
-	                Draw.Curves(context, docu);
-	            }
+
+				if(evt.key == "Shift" && docu.status == Status.MovingAnchor){
+					console.log("yey");
+					docu.status = Status.Editing;
+				}                      
 
 				if(evt.keyCode == 16){
-					isTranslatingLever = false;
+					isRelocatingAnchor = false;
 				}
 
 				if(evt.keyCode == 18){
@@ -849,13 +857,15 @@
 			Creating : 1,
 			MovingCurve : 2,
 			MovingLever : 3,
-			EditingLever : 4
+			EditingLever : 4,
+			MovingAnchor : 5
 		});
 
 	class Document{
 		constructor(canvas){
 			this.canvas = canvas;
 			this.curves = [];
+			this.anchor = new Vector(300, 300);
 
 			this.params = {};
 			this.init = "";
@@ -1717,14 +1727,18 @@
 	            l1width = l1.points[1].Dist(l1.points[2]);
 
 	        console.log("level "+level+": l0l1 s:" + l0l1.s.toFixed(3) + " t:" + l0l1.t.toFixed(3) + "\n",
-	                    "l0c1.p "+l0c1.p.toFixed(3) + " l1c1.p "+l1c1.p.toFixed(3) + " l0c3.p "+l0c3.p.toFixed(3) + "l1c3.p "+l1c3.p.toFixed(3));
+	                    "l0c1.p "+l0c1.p.toFixed(3) + " l1c1.p "+l1c1.p.toFixed(3)+
+	                    " l0c3.p "+l0c3.p.toFixed(3) + "l1c3.p "+l1c3.p.toFixed(3));
 
 	        if(l0c1.p > 0.96){ l0c1.v = offl01; }
 	        if(l1c1.p > 0.96){ l1c1.v = offl11; }
 	        if(l0c3.p > 0.96){ l0c3.v = offl03; }
 	        if(l1c3.p > 0.99){ l1c3.v = offl13; }
 
-	        if(level == 2 || l0l1.s > 1 && l0l1.t < 0){
+	        if(l0l1.s < 1 && l0l1.s > 0 && l0l1.t < 1 && l0l1.t > 0){
+	            this.outer.push([l0.points[1], l0l11.v, l0l11.v, l1.points[1]]);
+	            this.inner.push([l0.points[3], l0l13.v, l0l13.v, l1.points[3]]);            
+	        } else if(level == 2 || l0l1.s > 1 && l0l1.t < 0){
 	            this.outer.push([l0.points[1], l0c1.v, l1c1.v, l1.points[1]]);
 	            this.inner.push([l0.points[3], l0c3.v, l1c3.v, l1.points[3]]);
 	        } else {
@@ -2068,54 +2082,10 @@
 
 	class Draw{
 
-	    static CurvesFill(ctx, curves, currCurveIndex){
-
-	        // ctx.clearRect(0,0, ctx.canvas.width, ctx.canvas.height);
-
-	        for (var ithCurve = curves.length - 1; ithCurve >= 0; ithCurve--) {
-	            var curve = curves[ithCurve];
-
-	            ctx.lineWidth = 1;
-
-	            ctx.beginPath();
-	            ctx.moveTo(curve.lo.points[0].x, curve.lo.points[0].y);
-	            for(var i = 1; i < curve.levers.length; i++){
-
-	                ctx.lineTo(curve.lo.points[3*i-2].x,   curve.lo.points[3*i-2].y);
-	                ctx.moveTo(curve.lo.points[3*i-1].x,   curve.lo.points[3*i-1].y);
-	                ctx.lineTo(curve.lo.points[3*i+0].x,   curve.lo.points[3*i-0].y);
-	                ctx.moveTo(curve.lo.points[3*(i-1)].x, curve.lo.points[3*(i-1)].y);
-
-	                ctx.bezierCurveTo(
-	                    curve.lo.points[3*i-2].x, curve.lo.points[3*i-2].y,
-	                    curve.lo.points[3*i-1].x, curve.lo.points[3*i-1].y,
-	                    curve.lo.points[3*i+0].x, curve.lo.points[3*i-0].y
-	                )
-	            }
-	            ctx.lineTo(curve.ro.points[curve.ro.points.length-1].x, curve.ro.points[curve.ro.points.length-1].y);
-	            for(var i = curve.levers.length-1; i >0; i--){
-
-	                ctx.lineTo(curve.ro.points[3*i-1].x,   curve.ro.points[3*i-1].y);
-	                ctx.moveTo(curve.ro.points[3*i-2].x,   curve.ro.points[3*i-2].y);
-	                ctx.lineTo(curve.ro.points[3*(i-1)].x,   curve.ro.points[3*(i-1)].y);
-	                ctx.moveTo(curve.ro.points[3*i].x,     curve.ro.points[3*i].y);
-
-	                ctx.bezierCurveTo(
-	                    curve.ro.points[3*i-1].x, curve.ro.points[3*i-1].y,
-	                    curve.ro.points[3*i-2].x, curve.ro.points[3*i-2].y,
-	                    curve.ro.points[3*(i-1)].x, curve.ro.points[3*(i-1)].y
-	                )
-	            }
-	            // ctx.lineTo(curve.lo.points[0].x, curve.lo.points[0].y);
-	            // ctx.closePath();
-	            ctx.stroke();
-	        };
-
-	    }
-
 	    static Curves(ctx, docu){
 
 	        var curves = docu.curves,
+	            anchor = docu.anchor,
 	            currCurveIndex = docu.currCurveIndex,
 	            currLeverIndex = docu.currLeverIndex,
 	            captured = docu.captured,
@@ -2143,11 +2113,12 @@
 
 	        var status;
 	        switch(docu.status){
-	            case 0: ctx.fillText('Editing', 10, 25); break; 
+	            case 0: ctx.fillText('Editing', 10, 25); break;
 	            case 1: ctx.fillText('Creating', 10, 25); break; 
 	            case 2: ctx.fillText('MovingCurve', 10, 25); break; 
 	            case 3: ctx.fillText('MovingLever', 10, 25); break; 
 	            case 4: ctx.fillText('EditingLever', 10, 25); break;
+	            case 5: ctx.fillText('MovingAnchor', 10, 25); break;
 	        }
 
 	        ctx.fillText(docu.zpr.zoom.toFixed(3)+"x", 10, 45);
@@ -2172,6 +2143,18 @@
 	                ctx.arc(captured.by.x, captured.by.y, 10, 0, 2 * Math.PI);
 	            ctx.stroke();
 	        }
+
+	        ctx.strokeStyle = "#606060";
+	        var zpr_anchor = zpr.Transform(docu.anchor);
+	        ctx.beginPath();
+	            ctx.moveTo(zpr_anchor.x-10, zpr_anchor.y);
+	            ctx.lineTo(zpr_anchor.x+10, zpr_anchor.y);
+	            ctx.moveTo(zpr_anchor.x, zpr_anchor.y-10);
+	            ctx.lineTo(zpr_anchor.x, zpr_anchor.y+10);
+	            ctx.moveTo(zpr_anchor.x+15, zpr_anchor.y);
+	            ctx.arc(zpr_anchor.x, zpr_anchor.y, 15, 0, Math.PI*2);
+	        ctx.stroke();   
+
 
 	        ctx.strokeStyle = "#000000";
 	        var zpr_curves = docu.curves.map(function(curve){
