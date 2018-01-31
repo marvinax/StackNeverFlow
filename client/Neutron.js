@@ -1,7 +1,7 @@
 class Neutron {
-	constructor(context, docu){
-		this.context = context;
+	constructor(docu){
 		this.docu = docu;
+		this.context = docu.canvas.getContext("2d");
 		this.param_ui = document.getElementById("param-group");
 	}
 

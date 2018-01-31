@@ -25,8 +25,8 @@ class Outline{
 
 
     GetOutlineSegment(l0, l1, level){
-        console.log("level"+level);
-        console.log(l0, l1);
+        // console.log("level"+level);
+        // console.log(l0, l1);
         var l0aux1 = l0.points[1].Sub(l0.points[2]).Add(l0.points[4]),
             l1aux1 = l1.points[1].Sub(l1.points[2]).Add(l1.points[0]),
             l0aux3 = l0.points[3].Sub(l0.points[2]).Add(l0.points[4]),
@@ -50,9 +50,9 @@ class Outline{
         var l0width = l0.points[1].Dist(l0.points[2]),
             l1width = l1.points[1].Dist(l1.points[2]);
 
-        console.log("level "+level+": l0l1 s:" + l0l1.s.toFixed(3) + " t:" + l0l1.t.toFixed(3) + "\n",
-                    "l0c1.p "+l0c1.p.toFixed(3) + " l1c1.p "+l1c1.p.toFixed(3)+
-                    " l0c3.p "+l0c3.p.toFixed(3) + "l1c3.p "+l1c3.p.toFixed(3));
+        // console.log("level "+level+": l0l1 s:" + l0l1.s.toFixed(3) + " t:" + l0l1.t.toFixed(3) + "\n",
+        //             "l0c1.p "+l0c1.p.toFixed(3) + " l1c1.p "+l1c1.p.toFixed(3)+
+        //             " l0c3.p "+l0c3.p.toFixed(3) + "l1c3.p "+l1c3.p.toFixed(3));
 
         if(l0c1.p > 0.96){ l0c1.v = offl01; }
         if(l1c1.p > 0.96){ l1c1.v = offl11; }
@@ -72,7 +72,7 @@ class Outline{
                 vp  = (l0l1.s > 1 ? l1.points[0] : l0.points[4]);
 
             var t = CurveMath.GetClosestTFromGivenPoint(l0, l1, vwo, 3, 3);
-            console.log("t val:"+t);
+            // console.log("t val:"+t);
 
             var s = new Lever(new Vector(0,0)),
                 l1copy = l1.Copy(),

@@ -16,7 +16,7 @@ function ClearDOMChildren(elem){
 }
 
 
-function Save(context, docu, neutron, docu_id){
+function Save(docu, neutron, docu_id){
 	var xhr = new XMLHttpRequest();
 	xhr.open('PUT', 'save/');
 	xhr.setRequestHeader('Content-Type', 'application/json');
@@ -24,7 +24,7 @@ function Save(context, docu, neutron, docu_id){
 	    if (xhr.status === 200) {
 	        var userInfo = JSON.parse(xhr.responseText);
 	        console.log(userInfo);
-	        LoadName(context, docu, neutron);
+	        LoadName(docu, neutron);
 	    }
 	};
 	docu.ClearEval();
@@ -32,7 +32,7 @@ function Save(context, docu, neutron, docu_id){
 }
 
 
-function Load(context, docu, neutron, docu_id){
+function Load(docu, neutron, docu_id){
 
 	var xhr = new XMLHttpRequest();
 	xhr.open('GET', 'load/'+docu_id);
@@ -41,6 +41,8 @@ function Load(context, docu, neutron, docu_id){
 	        var res = JSON.parse(xhr.responseText);
 	    	console.log(res);
 	        docu.curves = LoadData.Curves(res.curves);
+	        docu.anchor = new Vector(res.anchor.x, res.anchor.y);
+	        docu.importedDocuments = res.importedDocuments;
 	        docu.params = res.params;
 	        docu.init   = res.init;
 	        docu.update = res.update;
@@ -54,7 +56,7 @@ function Load(context, docu, neutron, docu_id){
 	        docu.InitEval();
 	        docu.Eval(docu.init);
 	        docu.Eval(docu.update);
-	        docu.UpdateDraw(context);
+	        docu.UpdateDraw("load");
 
 	    }
 	    else {
@@ -64,7 +66,8 @@ function Load(context, docu, neutron, docu_id){
 	xhr.send();
 }
 
-function LoadName(context, docu, neutron){
+function LoadName(docu, neutron){
+
 	var xhr = new XMLHttpRequest();
 	xhr.open('GET', 'load_name/');
 	xhr.onload = function() {
@@ -80,7 +83,8 @@ function LoadName(context, docu, neutron){
 	    		a.innerHTML = r.split("_").pop();
 	    		a.class = "char-link";
 	    		a.onclick = function(){
-	    			Load(context, docu, neutron, r);
+	    			console.log(neutron);
+	    			Load(docu, neutron, r);
 	    			document.getElementById("prefix").value = r.split("_")[0];
 	    			document.getElementById("name").value = r.split("_")[1];
 	    		}
@@ -104,7 +108,7 @@ function LoadName(context, docu, neutron){
 	var docu = new Document(canvas);
 	var zpr  = docu.zpr;
 	
-	var neutron = new Neutron(context, docu);
+	var neutron = new Neutron(docu);
 
 	var Status = Object.freeze({
 		Editing : 0,
@@ -163,7 +167,7 @@ function LoadName(context, docu, neutron){
 					docu.Deselect();
 				}
 			}
-			Draw.Curves(context, docu);
+			docu.UpdateDraw("mouseDown");
 		}
 		
 		if (event.type == "mousemove"){
@@ -180,7 +184,7 @@ function LoadName(context, docu, neutron){
 				docu.CaptureControlTest(curr, currPointIndex);
 			
 			docu.UpdateEdit(zpr.InvTransform(curr), zpr.InvTransform(orig), tempTransArray);
-			Draw.Curves(context, docu);
+			docu.UpdateDraw("mouseMoved");
 		}
 		
 		if (down && (event.type == "mouseup")) {
@@ -188,27 +192,26 @@ function LoadName(context, docu, neutron){
 			orig = null;
 			docu.FinishEdit();
 			docu.ClearCapture();
-			Draw.Curves(context, docu);
+			docu.UpdateDraw("mouseUp");
 		}
 
 	}
 
 	window.onload = function() {
-		
-		LoadName(context, docu, neutron);
+		LoadName(docu, neutron);
 
 		document.onkeydown = function(evt) {
 
 			if(evt.keyCode == 27 && docu.status == Status.Creating){
 				docu.status = Status.Editing;
 				docu.Deselect();
-				Draw.Curves(context, docu);
+				docu.UpdateDraw();
 			}
 
 			if(evt.ctrlKey && evt.key == "c" && docu.status == Status.Editing){
 				docu.status = Status.Creating;
                 docu.Deselect();
-				Draw.Curves(context, docu);
+				docu.UpdateDraw();
 			}
 
             if(evt.ctrlKey && evt.keyCode == 8){
@@ -225,7 +228,7 @@ function LoadName(context, docu, neutron){
                         docu.currCurveIndex = null;
                     }
                 }
-                Draw.Curves(context, docu);
+                docu.UpdateDraw();
             }
 
 			if(evt.key == "Shift" && docu.status == Status.Editing){
@@ -241,29 +244,36 @@ function LoadName(context, docu, neutron){
 				if(currCurveIndex != null && currLeverIndex != null){
 					console.log("yaya");
 					docu.curves[currCurveIndex].levers[currLeverIndex].leverMode = 4;
-					Draw.Curves(context, docu);
+					docu.UpdateDraw();
 				}
 			}
 
 			if(evt.key == "2" && evt.ctrlKey){
 				if(currCurveIndex != null && currLeverIndex != null){
 					docu.curves[currCurveIndex].levers[currLeverIndex].leverMode = 3;
-					Draw.Curves(context, docu);
+					docu.UpdateDraw();
 				}
 			}
 
 			if(evt.key == "3" && evt.ctrlKey){
 				if(currCurveIndex != null && currLeverIndex != null){
 					docu.curves[currCurveIndex].levers[currLeverIndex].leverMode = 2;
-					Draw.Curves(context, docu);
+					docu.UpdateDraw();
 				}
 			}
 
 			if(evt.key == "4" && evt.ctrlKey){
 				if(currCurveIndex != null && currLeverIndex != null){
 					docu.curves[currCurveIndex].levers[currLeverIndex].leverMode = 0;
-					Draw.Curves(context, docu);
+					docu.UpdateDraw();
 				}
+			}
+
+			if(evt.key == "z" && evt.ctrlKey){
+				console.log("zpr");
+				// docu.zpr.Zoom(new Vector(0, 0), 1);
+				docu.zpr.zoom = 1;
+				docu.UpdateDraw();
 			}
 
 		};
@@ -293,7 +303,7 @@ function LoadName(context, docu, neutron){
 			
 			var zoomInc = event.deltaY*0.00005;
 			docu.zpr.Zoom(docu.zpr.InvTransform(MouseV(event)), zoomInc);
-			Draw.Curves(context, docu);
+			docu.UpdateDraw();
 		}
 
 		var saveButton = document.getElementById("save"),
@@ -303,17 +313,17 @@ function LoadName(context, docu, neutron){
 		saveButton.onclick = function(){
 			var prefix = document.getElementById("prefix").value;
 			console.log(prefix);
-			Save(context, docu, neutron, prefix + "_" + nameInput.value);
+			Save(docu, neutron, prefix + "_" + nameInput.value);
 		}
 
 		loadButton.onclick = function(){
 			var prefix = document.getElementById("prefix").value;
-			Load(context, docu, neutron, prefix + "_" + nameInput.value);
+			Load(docu, neutron, prefix + "_" + nameInput.value);
 		}
 
 		document.getElementById("init-eval").onclick = function(){
 			docu.Eval(document.getElementById("init-code").value);
-			docu.UpdateDraw(context);
+			docu.UpdateDraw();
 		};
 
 		document.getElementById("init-code").onchange = function(){

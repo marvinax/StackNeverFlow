@@ -3,18 +3,8 @@ var Vector = require('../model/Vector.js');
 
 class Draw{
 
-    static Curves(ctx, docu){
-
-        var curves = docu.curves,
-            anchor = docu.anchor,
-            currCurveIndex = docu.currCurveIndex,
-            currLeverIndex = docu.currLeverIndex,
-            captured = docu.captured,
-            zpr = docu.zpr;
-
-        ctx.lineWidth = 1;
-        ctx.clearRect(0,0, ctx.canvas.width, ctx.canvas.height);
-
+    static Status(ctx, docu){
+        var zpr = docu.zpr;
         ctx.strokeStyle = "#000000";
         ctx.font = "16px TheMixMono";
 
@@ -42,29 +32,11 @@ class Draw{
             case 5: ctx.fillText('MovingAnchor', 10, 25); break;
         }
 
-        ctx.fillText(docu.zpr.zoom.toFixed(3)+"x", 10, 45);
+        ctx.fillText(docu.zpr.zoom.toFixed(3)+"x", 10, 45);        
+    }
 
-        ctx.strokeStyle = "#AE0000";
-        if(captured != null){
-            ctx.beginPath();
-                if(captured.type == "center")
-                    if(captured.over == "x"){
-                        ctx.moveTo(captured.by.x, captured.by.y);
-                        ctx.lineTo(docu.CurrLever().points[2].x, captured.by.y);
-                    } else {
-                        ctx.moveTo(captured.by.x, captured.by.y);
-                        ctx.lineTo(captured.by.x, docu.CurrLever().points[2].y);                    
-                    }
-                if(captured.type == "control"){
-                    var longer = captured.over.Mult(10);
-                    ctx.moveTo(captured.by.x, captured.by.y);
-                    ctx.lineTo(captured.by.x + longer.x, captured.by.y + longer.y);
-                }
-
-                ctx.arc(captured.by.x, captured.by.y, 10, 0, 2 * Math.PI);
-            ctx.stroke();
-        }
-
+    static Anchor(ctx, docu){
+        var zpr = docu.zpr;
         ctx.strokeStyle = "#606060";
         var zpr_anchor = zpr.Transform(docu.anchor);
         ctx.beginPath();
@@ -76,23 +48,10 @@ class Draw{
             ctx.arc(zpr_anchor.x, zpr_anchor.y, 15, 0, Math.PI*2);
         ctx.stroke();   
 
+    }
 
-        ctx.strokeStyle = "#000000";
-        var zpr_curves = docu.curves.map(function(curve){
-            
-            return { levers: curve.levers.map(function(lever){
-                        return {
-                            points: lever.points.map(function(point){ return zpr.Transform(point);}),
-                            leverMode : lever.leverMode
-                        }
-                    }),
-                o : curve.outline.outer.map(function(group){return group.map(function(point){return zpr.Transform(point)})}),
-                i : curve.outline.inner.map(function(group){return group.map(function(point){return zpr.Transform(point)})})
-            }
-
-        });
-
-        // console.log(zpr_curves);
+    static CurrentCurve(ctx, docu, zpr_curves){
+        var currCurveIndex = docu.currCurveIndex;
 
         if(currCurveIndex != null){
             var levers = zpr_curves[currCurveIndex].levers;
@@ -100,44 +59,42 @@ class Draw{
             for (var i = 0; i < levers.length; i++) {
 
                 // if(i == currLeverIndex){
-                    for(var j = 0; j < 5; j++){
-
-                        ctx.beginPath();
-                        ctx.arc(levers[i].points[j].x, levers[i].points[j].y, 4, 0, 2 * Math.PI);
-                        ctx.fillText("p"+i+","+j, levers[i].points[j].x-10, levers[i].points[j].y-10);
-                        ctx.stroke();
-                    }
+                for(var j = 0; j < 5; j++){
 
                     ctx.beginPath();
-                    // for (var i = 0; i < levers.length; i++) {
-                        ctx.moveTo(levers[i].points[0].x, levers[i].points[0].y);
-                        ctx.lineTo(levers[i].points[2].x, levers[i].points[2].y);
-                        ctx.lineTo(levers[i].points[4].x, levers[i].points[4].y);
-                        ctx.moveTo(levers[i].points[1].x, levers[i].points[1].y);
-                        ctx.lineTo(levers[i].points[2].x, levers[i].points[2].y);
-                        ctx.lineTo(levers[i].points[3].x, levers[i].points[3].y);
-                    // }
+                    ctx.arc(levers[i].points[j].x, levers[i].points[j].y, 4, 0, 2 * Math.PI);
+                    ctx.fillText("p"+i+","+j, levers[i].points[j].x-10, levers[i].points[j].y-10);
                     ctx.stroke();
+                }
 
-                    var s;
-                    switch(levers[i].leverMode){
-                        case 0: s = "broken"; break;
-                        case 2: s = "linear"; break;
-                        case 3: s = "proper"; break;
-                        case 4: s = "symmetric"; break;
-                    }
-
-                    ctx.fillText(s, levers[i].points[4].x + 10, levers[i].points[4].y + 5);
-
-                // } else {
-                //     ctx.beginPath();
-                //     ctx.arc(levers[i].points[2].x, levers[i].points[2].y, 4, 0, 2 * Math.PI);
-                //     ctx.stroke();
+                ctx.beginPath();
+                // for (var i = 0; i < levers.length; i++) {
+                    ctx.moveTo(levers[i].points[0].x, levers[i].points[0].y);
+                    ctx.lineTo(levers[i].points[2].x, levers[i].points[2].y);
+                    ctx.lineTo(levers[i].points[4].x, levers[i].points[4].y);
+                    ctx.moveTo(levers[i].points[1].x, levers[i].points[1].y);
+                    ctx.lineTo(levers[i].points[2].x, levers[i].points[2].y);
+                    ctx.lineTo(levers[i].points[3].x, levers[i].points[3].y);
                 // }
+                ctx.stroke();
+
+                var s;
+                switch(levers[i].leverMode){
+                    case 0: s = "broken"; break;
+                    case 2: s = "linear"; break;
+                    case 3: s = "proper"; break;
+                    case 4: s = "symmetric"; break;
+                }
+
+                ctx.fillText(s, levers[i].points[4].x + 10, levers[i].points[4].y + 5);
             }
         }
 
-        ctx.font = "20px TheMixMono";
+    }
+
+
+    static Outline(ctx, docu, zpr_curves){
+
         for (var ith = zpr_curves.length - 1; ith >= 0; ith--) {
             ctx.lineWidth = 1;
             if(zpr_curves[ith].levers.length > 1){
@@ -146,34 +103,24 @@ class Draw{
                 ctx.strokeStyle = "#434343";
                 ctx.beginPath();
                 for (let i = 0; i < zpr_curves[ith].o.length; i++) {
-                    console.log(zpr_curves[ith].o[i][0]);
+                    // console.log(zpr_curves[ith].o[i][0]);
                     ctx.moveTo(zpr_curves[ith].o[i][0].x,zpr_curves[ith].o[i][0].y)
                     ctx.bezierCurveTo(
                         zpr_curves[ith].o[i][1].x,zpr_curves[ith].o[i][1].y,
                         zpr_curves[ith].o[i][2].x,zpr_curves[ith].o[i][2].y,
                         zpr_curves[ith].o[i][3].x,zpr_curves[ith].o[i][3].y
                     )
-                    ctx.moveTo(zpr_curves[ith].i[i][0].x, zpr_curves[ith].i[i][0].y),
-                    ctx.lineTo(zpr_curves[ith].o[i][0].x, zpr_curves[ith].o[i][0].y),
-                    ctx.lineTo(zpr_curves[ith].o[i][1].x, zpr_curves[ith].o[i][1].y);
-                    ctx.lineTo(zpr_curves[ith].o[i][2].x, zpr_curves[ith].o[i][2].y);
-                    ctx.lineTo(zpr_curves[ith].o[i][3].x, zpr_curves[ith].o[i][3].y);
                 }
                 ctx.stroke();
                 ctx.beginPath();
                 var i = 0;
                 for (; i < zpr_curves[ith].i.length; i++) {
-                    console.log(zpr_curves[ith].i[i][0]);
                     ctx.moveTo(zpr_curves[ith].i[i][0].x,zpr_curves[ith].i[i][0].y)
                     ctx.bezierCurveTo(
                         zpr_curves[ith].i[i][1].x,zpr_curves[ith].i[i][1].y,
                         zpr_curves[ith].i[i][2].x,zpr_curves[ith].i[i][2].y,
                         zpr_curves[ith].i[i][3].x,zpr_curves[ith].i[i][3].y
                     )
-                    ctx.moveTo(zpr_curves[ith].i[i][0].x, zpr_curves[ith].i[i][0].y),
-                    ctx.lineTo(zpr_curves[ith].i[i][1].x, zpr_curves[ith].i[i][1].y);
-                    ctx.lineTo(zpr_curves[ith].i[i][2].x, zpr_curves[ith].i[i][2].y);
-                    ctx.lineTo(zpr_curves[ith].i[i][3].x, zpr_curves[ith].i[i][3].y);
                 }
                 ctx.lineTo(zpr_curves[ith].o[i-1][3].x, zpr_curves[ith].o[i-1][3].y)
                 ctx.stroke();
@@ -205,6 +152,69 @@ class Draw{
             }
 
         }
+
+    }
+
+    static Curve(ctx, docu, zpr){
+        var zpr_curves = docu.curves.map(function(curve){
+            return { levers: curve.levers.map(function(lever){
+                        return {
+                            points: lever.points.map(function(point){ return zpr.Transform(point);}),
+                            leverMode : lever.leverMode
+                        }
+                    }),
+                o : curve.outline.outer.map(function(group){return group.map(function(point){return zpr.Transform(point)})}),
+                i : curve.outline.inner.map(function(group){return group.map(function(point){return zpr.Transform(point)})})
+            }
+
+        });
+
+        // console.log(zpr_curves);
+        Draw.CurrentCurve(ctx, docu, zpr_curves);
+        Draw.Outline(ctx, docu, zpr_curves);
+        // for (var sub_docu in docu.importedDocuments){
+        //     console.log(sub_docu);
+        //     Draw.Curve(ctx, docu.importedDocuments[sub_docu], zpr);
+        // }
+    }
+
+    static Curves(ctx, docu){
+
+        var curves = docu.curves,
+            anchor = docu.anchor,
+            currCurveIndex = docu.currCurveIndex,
+            currLeverIndex = docu.currLeverIndex,
+            captured = docu.captured,
+            zpr = docu.zpr;
+
+        ctx.lineWidth = 1;
+        ctx.clearRect(0,0, ctx.canvas.width, ctx.canvas.height);
+        Draw.Status(ctx, docu);
+        Draw.Anchor(ctx, docu);
+
+        ctx.strokeStyle = "#AE0000";
+        if(captured != null){
+            ctx.beginPath();
+                if(captured.type == "center")
+                    if(captured.over == "x"){
+                        ctx.moveTo(captured.by.x, captured.by.y);
+                        ctx.lineTo(docu.CurrLever().points[2].x, captured.by.y);
+                    } else {
+                        ctx.moveTo(captured.by.x, captured.by.y);
+                        ctx.lineTo(captured.by.x, docu.CurrLever().points[2].y);                    
+                    }
+                if(captured.type == "control"){
+                    var longer = captured.over.Mult(10);
+                    ctx.moveTo(captured.by.x, captured.by.y);
+                    ctx.lineTo(captured.by.x + longer.x, captured.by.y + longer.y);
+                }
+
+                ctx.arc(captured.by.x, captured.by.y, 10, 0, 2 * Math.PI);
+            ctx.stroke();
+        }
+
+        ctx.strokeStyle = "#000000";
+        Draw.Curve(ctx, docu, zpr);
     }
 }
 

@@ -62,7 +62,7 @@
 	}
 
 
-	function Save(context, docu, neutron, docu_id){
+	function Save(docu, neutron, docu_id){
 		var xhr = new XMLHttpRequest();
 		xhr.open('PUT', 'save/');
 		xhr.setRequestHeader('Content-Type', 'application/json');
@@ -70,7 +70,7 @@
 		    if (xhr.status === 200) {
 		        var userInfo = JSON.parse(xhr.responseText);
 		        console.log(userInfo);
-		        LoadName(context, docu, neutron);
+		        LoadName(docu, neutron);
 		    }
 		};
 		docu.ClearEval();
@@ -78,7 +78,7 @@
 	}
 
 
-	function Load(context, docu, neutron, docu_id){
+	function Load(docu, neutron, docu_id){
 
 		var xhr = new XMLHttpRequest();
 		xhr.open('GET', 'load/'+docu_id);
@@ -87,6 +87,8 @@
 		        var res = JSON.parse(xhr.responseText);
 		    	console.log(res);
 		        docu.curves = LoadData.Curves(res.curves);
+		        docu.anchor = new Vector(res.anchor.x, res.anchor.y);
+		        docu.importedDocuments = res.importedDocuments;
 		        docu.params = res.params;
 		        docu.init   = res.init;
 		        docu.update = res.update;
@@ -100,7 +102,7 @@
 		        docu.InitEval();
 		        docu.Eval(docu.init);
 		        docu.Eval(docu.update);
-		        docu.UpdateDraw(context);
+		        docu.UpdateDraw("load");
 
 		    }
 		    else {
@@ -110,7 +112,8 @@
 		xhr.send();
 	}
 
-	function LoadName(context, docu, neutron){
+	function LoadName(docu, neutron){
+
 		var xhr = new XMLHttpRequest();
 		xhr.open('GET', 'load_name/');
 		xhr.onload = function() {
@@ -126,7 +129,8 @@
 		    		a.innerHTML = r.split("_").pop();
 		    		a.class = "char-link";
 		    		a.onclick = function(){
-		    			Load(context, docu, neutron, r);
+		    			console.log(neutron);
+		    			Load(docu, neutron, r);
 		    			document.getElementById("prefix").value = r.split("_")[0];
 		    			document.getElementById("name").value = r.split("_")[1];
 		    		}
@@ -150,7 +154,7 @@
 		var docu = new Document(canvas);
 		var zpr  = docu.zpr;
 		
-		var neutron = new Neutron(context, docu);
+		var neutron = new Neutron(docu);
 
 		var Status = Object.freeze({
 			Editing : 0,
@@ -209,7 +213,7 @@
 						docu.Deselect();
 					}
 				}
-				Draw.Curves(context, docu);
+				docu.UpdateDraw("mouseDown");
 			}
 			
 			if (event.type == "mousemove"){
@@ -226,7 +230,7 @@
 					docu.CaptureControlTest(curr, currPointIndex);
 				
 				docu.UpdateEdit(zpr.InvTransform(curr), zpr.InvTransform(orig), tempTransArray);
-				Draw.Curves(context, docu);
+				docu.UpdateDraw("mouseMoved");
 			}
 			
 			if (down && (event.type == "mouseup")) {
@@ -234,27 +238,26 @@
 				orig = null;
 				docu.FinishEdit();
 				docu.ClearCapture();
-				Draw.Curves(context, docu);
+				docu.UpdateDraw("mouseUp");
 			}
 
 		}
 
 		window.onload = function() {
-			
-			LoadName(context, docu, neutron);
+			LoadName(docu, neutron);
 
 			document.onkeydown = function(evt) {
 
 				if(evt.keyCode == 27 && docu.status == Status.Creating){
 					docu.status = Status.Editing;
 					docu.Deselect();
-					Draw.Curves(context, docu);
+					docu.UpdateDraw();
 				}
 
 				if(evt.ctrlKey && evt.key == "c" && docu.status == Status.Editing){
 					docu.status = Status.Creating;
 	                docu.Deselect();
-					Draw.Curves(context, docu);
+					docu.UpdateDraw();
 				}
 
 	            if(evt.ctrlKey && evt.keyCode == 8){
@@ -271,7 +274,7 @@
 	                        docu.currCurveIndex = null;
 	                    }
 	                }
-	                Draw.Curves(context, docu);
+	                docu.UpdateDraw();
 	            }
 
 				if(evt.key == "Shift" && docu.status == Status.Editing){
@@ -287,29 +290,36 @@
 					if(currCurveIndex != null && currLeverIndex != null){
 						console.log("yaya");
 						docu.curves[currCurveIndex].levers[currLeverIndex].leverMode = 4;
-						Draw.Curves(context, docu);
+						docu.UpdateDraw();
 					}
 				}
 
 				if(evt.key == "2" && evt.ctrlKey){
 					if(currCurveIndex != null && currLeverIndex != null){
 						docu.curves[currCurveIndex].levers[currLeverIndex].leverMode = 3;
-						Draw.Curves(context, docu);
+						docu.UpdateDraw();
 					}
 				}
 
 				if(evt.key == "3" && evt.ctrlKey){
 					if(currCurveIndex != null && currLeverIndex != null){
 						docu.curves[currCurveIndex].levers[currLeverIndex].leverMode = 2;
-						Draw.Curves(context, docu);
+						docu.UpdateDraw();
 					}
 				}
 
 				if(evt.key == "4" && evt.ctrlKey){
 					if(currCurveIndex != null && currLeverIndex != null){
 						docu.curves[currCurveIndex].levers[currLeverIndex].leverMode = 0;
-						Draw.Curves(context, docu);
+						docu.UpdateDraw();
 					}
+				}
+
+				if(evt.key == "z" && evt.ctrlKey){
+					console.log("zpr");
+					// docu.zpr.Zoom(new Vector(0, 0), 1);
+					docu.zpr.zoom = 1;
+					docu.UpdateDraw();
 				}
 
 			};
@@ -339,7 +349,7 @@
 				
 				var zoomInc = event.deltaY*0.00005;
 				docu.zpr.Zoom(docu.zpr.InvTransform(MouseV(event)), zoomInc);
-				Draw.Curves(context, docu);
+				docu.UpdateDraw();
 			}
 
 			var saveButton = document.getElementById("save"),
@@ -349,17 +359,17 @@
 			saveButton.onclick = function(){
 				var prefix = document.getElementById("prefix").value;
 				console.log(prefix);
-				Save(context, docu, neutron, prefix + "_" + nameInput.value);
+				Save(docu, neutron, prefix + "_" + nameInput.value);
 			}
 
 			loadButton.onclick = function(){
 				var prefix = document.getElementById("prefix").value;
-				Load(context, docu, neutron, prefix + "_" + nameInput.value);
+				Load(docu, neutron, prefix + "_" + nameInput.value);
 			}
 
 			document.getElementById("init-eval").onclick = function(){
 				docu.Eval(document.getElementById("init-code").value);
-				docu.UpdateDraw(context);
+				docu.UpdateDraw();
 			};
 
 			document.getElementById("init-code").onchange = function(){
@@ -829,7 +839,8 @@
 /* 6 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	
+	var DocuCore = __webpack_require__(16);
+
 	var Vector =  __webpack_require__(5);
 	var Lever =   __webpack_require__(7);
 	var Curve =   __webpack_require__(8);
@@ -838,6 +849,8 @@
 	var Cast =   __webpack_require__(11);
 	var Draw =   __webpack_require__(12);
 	var ZPR =    __webpack_require__(13);
+
+	var LoadData = __webpack_require__(14);
 
 	Array.prototype.last = function(){
 		return this[this.length - 1];
@@ -861,15 +874,11 @@
 			MovingAnchor : 5
 		});
 
-	class Document{
+	class Document extends DocuCore{
 		constructor(canvas){
-			this.canvas = canvas;
-			this.curves = [];
-			this.anchor = new Vector(300, 300);
+			super();
 
-			this.params = {};
-			this.init = "";
-			this.update = "";
+			this.canvas = canvas;
 
 			this.status = Status.Editing;
 			this.isTranslatingLever = false;
@@ -1076,365 +1085,17 @@
 			this.captured = null;		
 		}
 
-		InitEval(){
-			this.dstack = [];
-			this.rstack = [];
-			this.lstack = [];
-			this.vars = {};
-			this.funs = {};
-		}
 
-		ClearEval(){
-			delete this.dstack;
-			delete this.rstack;
-			delete this.lstack;
-			delete this.vars;
-			delete this.funs;
-		}
-
-		UpdateDraw(context){
+		UpdateDraw(info){
+			console.log(info);
 			for(let curve of this.curves){
 				curve.GetOutlines();
 			}
-			Draw.Curves(context, this);
-		}
-
-		Eval(expr){
-			var text = expr.split('\n'),
-				literal_flag = false,
-				exec_err_flag = false;
-
-			var lit = function(){
-				literal_flag = true;
-			};
-
-			var unlit = function(){
-				literal_flag = false;
-			};
-
-			var pop = function(){
-				return this.dstack.pop();
-			}.bind(this);
-
-			var push = function(elem){
-				this.dstack.push(elem);
-				// console.log(JSON.stringify(dstack));
-			}.bind(this);
-
-			var dup = function(){
-				var val = pop();
-				push(val);
-				push(val);
+			Draw.Curves(this.canvas.getContext("2d"), this);
+			for(let sub_curves in this.importedDocuments){
+				console.log(this.importedDocuments[sub_curves]);
+				Draw.Curve(this.canvas.getContext("2d"), this.importedDocuments[sub_curves], this.zpr);
 			}
-
-			var rot = function(){
-				var val = parseInt(pop());
-				if(val <= this.dstack.length){
-					this.dstack.push(this.dstack.splice(-val,1)[0]);
-					console.log("rot "+	JSON.stringify(this.dstack))
-				}
-
-				else {
-					console.log('rotating length larger than dstack ');
-					exec_err_flag = true;				
-				}
-			}.bind(this);
-
-			var refer = function(){
-				var name = pop();
-				var xhr = new XMLHttpRequest();
-				xhr.open('GET', 'load/'+name);
-				xhr.onload = function() {
-					if (xhr.status === 200) {
-						var res = JSON.parse(xhr.responseText);
-						push(LoadData.Curves(res.curves));
-
-					}
-					else {
-						console.log('Request failed.  Returned status of ' + xhr.status);
-						exec_err_flag = true;
-					}
-				};
-				xhr.send();
-			};
-
-			var put = function(){
-				var key = pop();
-				var val = pop();
-				console.log(val);
-				this.vars[key] = val.Copy();
-				console.log(key.toString() + " " + JSON.stringify(this.vars[key]));
-			}.bind(this);
-
-			var fun = function(){
-				var key = pop();
-				this.funs[key] = this.lstack.reverse();
-				this.lstack = [];
-			}.bind(this);
-
-			var vec = function(){
-				var x = pop();
-				var y = pop();
-				push(new Vector(parseFloat(x), parseFloat(y)));
-			};
-
-			var set_curve = function(){
-				var index = pop();
-				var value = pop();
-				this.curve[parseInt(index)] = value;
-				puhs(value);
-			};
-
-			var set_lever = function(){
-				var index = pop();
-				var value = pop();
-				var curve = pop();
-				curve.levers[parseInt(index)] = value;
-				push(curve);
-			};
-
-			var set_point = function(){
-				var index = pop();
-				var value = pop();
-				var lever = pop();
-				lever.SetControlPoint(parseInt(index), value);
-				push(lever);
-			};
-
-			var float = function(){
-				var p = pop();
-				push(parseFloat(p));
-			};
-
-			var plus = function(){
-				var p1 = pop();
-				var p2 = pop();
-
-				if(typeof p1 == "number" && typeof p2 == "number")
-					push(p1 + p2);
-				else if(typeof p1.x == "number" && typeof p2.x == "number")
-					push(p1.Add(p2));
-				else{
-					console.log("plus type error");
-					exec_err_flag = true;
-				}
-			};
-
-			var subt = function(){
-				var p1 = pop();
-				var p2 = pop();
-
-				if(typeof p1 == "number" && typeof p2 == "number")
-					push(p1 - p2);
-				else if(typeof p1.x == "number" && typeof p2.x == "number")
-					push(p1.Sub(p2));
-				else{
-					console.log("sub type error: " + JSON.stringify(p1) + " " + typeof p1 + " " + p2 + " " + typeof p2 );
-					exec_err_flag = true;
-				}
-			};
-
-			var mult = function(){
-				var p = pop();
-				var n  = pop();
-				if(typeof p == "number" && typeof n == "number")
-					push(n * p);
-				else if(typeof p.x == "number" && typeof n == "number")
-					push(p.Mult(n));
-				else{
-					console.log("mult type error: " + typeof p + " " + typeof n);
-					exec_err_flag = true;
-				}
-			};
-
-			var dist = function(){
-				var p1 = pop();
-				var p2 = pop();
-				push(p1.Dist(p2));
-			};
-
-			var trans = function(){
-				var elem = pop(),
-					increm = pop();
-					console.log(increm);
-				push(elem.TransCreate(increm));
-			};
-
-			var sin = function(){
-				var elem = pop();
-				push(Math.sin(elem / 180 * Math.PI));
-			};
-
-			var cos = function(){
-				var elem = pop();
-				push(Math.cos(elem / 180 * Math.PI));
-			};
-
-			var tan = function(){
-				var elem = pop();
-				push(Math.tan(elem / 180*Math.PI));
-			};
-
-			var mag = function(){
-				var elem = pop();
-				push(elem.Dist());
-			};
-
-			var norm = function(){
-				var elem = pop();
-				console.log(elem);
-				push(elem.Mult(1/elem.Mag()));
-			};
-
-			var rotate = function(){
-				var angle = pop(),
-					rad   = angle / 180.0 * Math.PI;
-				var about = pop();
-				var dest  = pop();
-
-				var newVec = dest.Sub(about);
-				var x = newVec.x,
-					y = newVec.y;
-				newVec.x = Math.cos(rad) * x - Math.sin(rad) * y;
-				newVec.y = Math.sin(rad) * x + Math.cos(rad) * y;
-
-
-				push(newVec.Add(about));
-			};
-
-			var rot_lever = function(){
-				var angle = pop(),
-					rad   = angle / 180.0 * Math.PI;
-				var about = pop();
-				var dest  = pop();
-
-				var destCopy = dest.Copy();
-				var newVec;
-				for (var i = destCopy.points.length - 1; i >= 0; i--) {
-					newVec = destCopy.points[i].Sub(about);
-					var x = newVec.x,
-						y = newVec.y;
-					newVec.x = Math.cos(rad) * x - Math.sin(rad) * y;
-					newVec.y = Math.sin(rad) * x + Math.cos(rad) * y;
-					destCopy.points[i] = about.Add(newVec);
-				}
-
-				push(destCopy);
-			}
-
-			var get_curve = function(){
-				var ith = parseInt(pop());
-				push(this.curves[ith]);
-			}.bind(this);
-
-			var get_lever = function(){
-				var elem = pop();
-				var ith = parseInt(pop());
-				if(elem.levers != undefined)
-					push(elem.levers[ith]);
-				else{
-					console.log("lever needs a curve ref ahead");
-					exec_err_flag = true;
-				}
-			};
-
-			var get_point = function(){
-				var elem = pop();
-				var ith = parseInt(pop());
-				if(elem.points != undefined)
-					push(elem.points[ith]);
-				else{
-					console.log("point needs a lever ref ahead");
-					exec_err_flag = true;
-				}
-			};
-
-			var get = function(){
-				var key = pop();
-				if(this.params[key] != undefined){
-					push(parseFloat(this.params[key].value));
-				} else if(this.vars[key] != undefined){
-					push(this.vars[key]);
-				} else if(this.funs[key] != undefined){
-					this.rstack.push(this.funs[key].slice());
-					exec(true);
-				} else {
-					console.log("key "+ key +"neither found in params nor vars");
-					exec_err_flag = true;				
-				}			
-			}.bind(this);
-
-			var exec = function(mark){
-				while(true){
-					curr = this.rstack.last().pop();
-					// if(mark){
-					// 	console.log(this.dstack.map(function(x){return JSON.stringify(x)}));
-					// }
-					if(literal_flag && curr != "{" ){
-						this.lstack.push(curr);
-					} else {
-						switch(curr){
-							case "sin"	 : sin();       break;
-							case "cos"   : cos();       break;
-							case "tan"   : tan();       break;
-
-							case "float" : float();		break;
-							case "mag"	 : mag();   	break;
-							case "dist"  : dist();      break;
-							case "rotate": rotate();	break;
-							case "rotlev": rot_lever(); break;
-							case "vec"   : vec();		break;
-							case "plus"  : plus();		break;
-							case "sub"   : subt();		break;
-							case "mult"  : mult();		break;
-
-							case "@curve": get_curve();	break;
-							case "@lever": get_lever();	break;
-							case "@point": get_point();	break;
-
-							case "&curve": set_curve(); break;
-							case "&lever": set_lever(); break;
-							case "&point": set_point(); break;
-							case "trans" : trans();		break;
-
-							case "dup"   : dup();       break;
-							case "rot"   : rot();       break;
-
-							case "@"     : get();       break;
-							case "&"     : put();       break;
-							case "."     : pop();       break;
-							case "#"     : fun();       break;
-							case "}"     : lit();       break;
-							case "{"     : unlit();     break;
-							default	:
-								if(curr != "") push(curr);
-						}
-					}
-					// if(mark){
-					// 	console.log(this.dstack.map(function(x){return JSON.stringify(x)}));
-					// }
-					if(this.rstack.last().length == 0) {this.rstack.pop(); break;}
-					if(exec_err_flag) {
-						console.log("at "+curr);
-						break;
-					}
-					// console.log(JSON.stringify(this.consts));
-				}
-			}.bind(this);
-
-			var curr;
-
-			for (var i = 0; i < text.length; i++) {
-				this.rstack.push(text[i].split(" "));
-				exec();
-				if(exec_err_flag){
-					console.log("error raised, further Eval stopped");
-					console.log(text[i]);
-					break;
-				}
-			}
-			this.dstack = []
-			// console.log(this.dstack);
 		}
 		
 	}
@@ -1701,8 +1362,8 @@
 
 
 	    GetOutlineSegment(l0, l1, level){
-	        console.log("level"+level);
-	        console.log(l0, l1);
+	        // console.log("level"+level);
+	        // console.log(l0, l1);
 	        var l0aux1 = l0.points[1].Sub(l0.points[2]).Add(l0.points[4]),
 	            l1aux1 = l1.points[1].Sub(l1.points[2]).Add(l1.points[0]),
 	            l0aux3 = l0.points[3].Sub(l0.points[2]).Add(l0.points[4]),
@@ -1726,9 +1387,9 @@
 	        var l0width = l0.points[1].Dist(l0.points[2]),
 	            l1width = l1.points[1].Dist(l1.points[2]);
 
-	        console.log("level "+level+": l0l1 s:" + l0l1.s.toFixed(3) + " t:" + l0l1.t.toFixed(3) + "\n",
-	                    "l0c1.p "+l0c1.p.toFixed(3) + " l1c1.p "+l1c1.p.toFixed(3)+
-	                    " l0c3.p "+l0c3.p.toFixed(3) + "l1c3.p "+l1c3.p.toFixed(3));
+	        // console.log("level "+level+": l0l1 s:" + l0l1.s.toFixed(3) + " t:" + l0l1.t.toFixed(3) + "\n",
+	        //             "l0c1.p "+l0c1.p.toFixed(3) + " l1c1.p "+l1c1.p.toFixed(3)+
+	        //             " l0c3.p "+l0c3.p.toFixed(3) + "l1c3.p "+l1c3.p.toFixed(3));
 
 	        if(l0c1.p > 0.96){ l0c1.v = offl01; }
 	        if(l1c1.p > 0.96){ l1c1.v = offl11; }
@@ -1748,7 +1409,7 @@
 	                vp  = (l0l1.s > 1 ? l1.points[0] : l0.points[4]);
 
 	            var t = CurveMath.GetClosestTFromGivenPoint(l0, l1, vwo, 3, 3);
-	            console.log("t val:"+t);
+	            // console.log("t val:"+t);
 
 	            var s = new Lever(new Vector(0,0)),
 	                l1copy = l1.Copy(),
@@ -2082,18 +1743,8 @@
 
 	class Draw{
 
-	    static Curves(ctx, docu){
-
-	        var curves = docu.curves,
-	            anchor = docu.anchor,
-	            currCurveIndex = docu.currCurveIndex,
-	            currLeverIndex = docu.currLeverIndex,
-	            captured = docu.captured,
-	            zpr = docu.zpr;
-
-	        ctx.lineWidth = 1;
-	        ctx.clearRect(0,0, ctx.canvas.width, ctx.canvas.height);
-
+	    static Status(ctx, docu){
+	        var zpr = docu.zpr;
 	        ctx.strokeStyle = "#000000";
 	        ctx.font = "16px TheMixMono";
 
@@ -2121,29 +1772,11 @@
 	            case 5: ctx.fillText('MovingAnchor', 10, 25); break;
 	        }
 
-	        ctx.fillText(docu.zpr.zoom.toFixed(3)+"x", 10, 45);
+	        ctx.fillText(docu.zpr.zoom.toFixed(3)+"x", 10, 45);        
+	    }
 
-	        ctx.strokeStyle = "#AE0000";
-	        if(captured != null){
-	            ctx.beginPath();
-	                if(captured.type == "center")
-	                    if(captured.over == "x"){
-	                        ctx.moveTo(captured.by.x, captured.by.y);
-	                        ctx.lineTo(docu.CurrLever().points[2].x, captured.by.y);
-	                    } else {
-	                        ctx.moveTo(captured.by.x, captured.by.y);
-	                        ctx.lineTo(captured.by.x, docu.CurrLever().points[2].y);                    
-	                    }
-	                if(captured.type == "control"){
-	                    var longer = captured.over.Mult(10);
-	                    ctx.moveTo(captured.by.x, captured.by.y);
-	                    ctx.lineTo(captured.by.x + longer.x, captured.by.y + longer.y);
-	                }
-
-	                ctx.arc(captured.by.x, captured.by.y, 10, 0, 2 * Math.PI);
-	            ctx.stroke();
-	        }
-
+	    static Anchor(ctx, docu){
+	        var zpr = docu.zpr;
 	        ctx.strokeStyle = "#606060";
 	        var zpr_anchor = zpr.Transform(docu.anchor);
 	        ctx.beginPath();
@@ -2155,23 +1788,10 @@
 	            ctx.arc(zpr_anchor.x, zpr_anchor.y, 15, 0, Math.PI*2);
 	        ctx.stroke();   
 
+	    }
 
-	        ctx.strokeStyle = "#000000";
-	        var zpr_curves = docu.curves.map(function(curve){
-	            
-	            return { levers: curve.levers.map(function(lever){
-	                        return {
-	                            points: lever.points.map(function(point){ return zpr.Transform(point);}),
-	                            leverMode : lever.leverMode
-	                        }
-	                    }),
-	                o : curve.outline.outer.map(function(group){return group.map(function(point){return zpr.Transform(point)})}),
-	                i : curve.outline.inner.map(function(group){return group.map(function(point){return zpr.Transform(point)})})
-	            }
-
-	        });
-
-	        // console.log(zpr_curves);
+	    static CurrentCurve(ctx, docu, zpr_curves){
+	        var currCurveIndex = docu.currCurveIndex;
 
 	        if(currCurveIndex != null){
 	            var levers = zpr_curves[currCurveIndex].levers;
@@ -2179,44 +1799,42 @@
 	            for (var i = 0; i < levers.length; i++) {
 
 	                // if(i == currLeverIndex){
-	                    for(var j = 0; j < 5; j++){
-
-	                        ctx.beginPath();
-	                        ctx.arc(levers[i].points[j].x, levers[i].points[j].y, 4, 0, 2 * Math.PI);
-	                        ctx.fillText("p"+i+","+j, levers[i].points[j].x-10, levers[i].points[j].y-10);
-	                        ctx.stroke();
-	                    }
+	                for(var j = 0; j < 5; j++){
 
 	                    ctx.beginPath();
-	                    // for (var i = 0; i < levers.length; i++) {
-	                        ctx.moveTo(levers[i].points[0].x, levers[i].points[0].y);
-	                        ctx.lineTo(levers[i].points[2].x, levers[i].points[2].y);
-	                        ctx.lineTo(levers[i].points[4].x, levers[i].points[4].y);
-	                        ctx.moveTo(levers[i].points[1].x, levers[i].points[1].y);
-	                        ctx.lineTo(levers[i].points[2].x, levers[i].points[2].y);
-	                        ctx.lineTo(levers[i].points[3].x, levers[i].points[3].y);
-	                    // }
+	                    ctx.arc(levers[i].points[j].x, levers[i].points[j].y, 4, 0, 2 * Math.PI);
+	                    ctx.fillText("p"+i+","+j, levers[i].points[j].x-10, levers[i].points[j].y-10);
 	                    ctx.stroke();
+	                }
 
-	                    var s;
-	                    switch(levers[i].leverMode){
-	                        case 0: s = "broken"; break;
-	                        case 2: s = "linear"; break;
-	                        case 3: s = "proper"; break;
-	                        case 4: s = "symmetric"; break;
-	                    }
-
-	                    ctx.fillText(s, levers[i].points[4].x + 10, levers[i].points[4].y + 5);
-
-	                // } else {
-	                //     ctx.beginPath();
-	                //     ctx.arc(levers[i].points[2].x, levers[i].points[2].y, 4, 0, 2 * Math.PI);
-	                //     ctx.stroke();
+	                ctx.beginPath();
+	                // for (var i = 0; i < levers.length; i++) {
+	                    ctx.moveTo(levers[i].points[0].x, levers[i].points[0].y);
+	                    ctx.lineTo(levers[i].points[2].x, levers[i].points[2].y);
+	                    ctx.lineTo(levers[i].points[4].x, levers[i].points[4].y);
+	                    ctx.moveTo(levers[i].points[1].x, levers[i].points[1].y);
+	                    ctx.lineTo(levers[i].points[2].x, levers[i].points[2].y);
+	                    ctx.lineTo(levers[i].points[3].x, levers[i].points[3].y);
 	                // }
+	                ctx.stroke();
+
+	                var s;
+	                switch(levers[i].leverMode){
+	                    case 0: s = "broken"; break;
+	                    case 2: s = "linear"; break;
+	                    case 3: s = "proper"; break;
+	                    case 4: s = "symmetric"; break;
+	                }
+
+	                ctx.fillText(s, levers[i].points[4].x + 10, levers[i].points[4].y + 5);
 	            }
 	        }
 
-	        ctx.font = "20px TheMixMono";
+	    }
+
+
+	    static Outline(ctx, docu, zpr_curves){
+
 	        for (var ith = zpr_curves.length - 1; ith >= 0; ith--) {
 	            ctx.lineWidth = 1;
 	            if(zpr_curves[ith].levers.length > 1){
@@ -2225,34 +1843,24 @@
 	                ctx.strokeStyle = "#434343";
 	                ctx.beginPath();
 	                for (let i = 0; i < zpr_curves[ith].o.length; i++) {
-	                    console.log(zpr_curves[ith].o[i][0]);
+	                    // console.log(zpr_curves[ith].o[i][0]);
 	                    ctx.moveTo(zpr_curves[ith].o[i][0].x,zpr_curves[ith].o[i][0].y)
 	                    ctx.bezierCurveTo(
 	                        zpr_curves[ith].o[i][1].x,zpr_curves[ith].o[i][1].y,
 	                        zpr_curves[ith].o[i][2].x,zpr_curves[ith].o[i][2].y,
 	                        zpr_curves[ith].o[i][3].x,zpr_curves[ith].o[i][3].y
 	                    )
-	                    ctx.moveTo(zpr_curves[ith].i[i][0].x, zpr_curves[ith].i[i][0].y),
-	                    ctx.lineTo(zpr_curves[ith].o[i][0].x, zpr_curves[ith].o[i][0].y),
-	                    ctx.lineTo(zpr_curves[ith].o[i][1].x, zpr_curves[ith].o[i][1].y);
-	                    ctx.lineTo(zpr_curves[ith].o[i][2].x, zpr_curves[ith].o[i][2].y);
-	                    ctx.lineTo(zpr_curves[ith].o[i][3].x, zpr_curves[ith].o[i][3].y);
 	                }
 	                ctx.stroke();
 	                ctx.beginPath();
 	                var i = 0;
 	                for (; i < zpr_curves[ith].i.length; i++) {
-	                    console.log(zpr_curves[ith].i[i][0]);
 	                    ctx.moveTo(zpr_curves[ith].i[i][0].x,zpr_curves[ith].i[i][0].y)
 	                    ctx.bezierCurveTo(
 	                        zpr_curves[ith].i[i][1].x,zpr_curves[ith].i[i][1].y,
 	                        zpr_curves[ith].i[i][2].x,zpr_curves[ith].i[i][2].y,
 	                        zpr_curves[ith].i[i][3].x,zpr_curves[ith].i[i][3].y
 	                    )
-	                    ctx.moveTo(zpr_curves[ith].i[i][0].x, zpr_curves[ith].i[i][0].y),
-	                    ctx.lineTo(zpr_curves[ith].i[i][1].x, zpr_curves[ith].i[i][1].y);
-	                    ctx.lineTo(zpr_curves[ith].i[i][2].x, zpr_curves[ith].i[i][2].y);
-	                    ctx.lineTo(zpr_curves[ith].i[i][3].x, zpr_curves[ith].i[i][3].y);
 	                }
 	                ctx.lineTo(zpr_curves[ith].o[i-1][3].x, zpr_curves[ith].o[i-1][3].y)
 	                ctx.stroke();
@@ -2284,6 +1892,69 @@
 	            }
 
 	        }
+
+	    }
+
+	    static Curve(ctx, docu, zpr){
+	        var zpr_curves = docu.curves.map(function(curve){
+	            return { levers: curve.levers.map(function(lever){
+	                        return {
+	                            points: lever.points.map(function(point){ return zpr.Transform(point);}),
+	                            leverMode : lever.leverMode
+	                        }
+	                    }),
+	                o : curve.outline.outer.map(function(group){return group.map(function(point){return zpr.Transform(point)})}),
+	                i : curve.outline.inner.map(function(group){return group.map(function(point){return zpr.Transform(point)})})
+	            }
+
+	        });
+
+	        // console.log(zpr_curves);
+	        Draw.CurrentCurve(ctx, docu, zpr_curves);
+	        Draw.Outline(ctx, docu, zpr_curves);
+	        // for (var sub_docu in docu.importedDocuments){
+	        //     console.log(sub_docu);
+	        //     Draw.Curve(ctx, docu.importedDocuments[sub_docu], zpr);
+	        // }
+	    }
+
+	    static Curves(ctx, docu){
+
+	        var curves = docu.curves,
+	            anchor = docu.anchor,
+	            currCurveIndex = docu.currCurveIndex,
+	            currLeverIndex = docu.currLeverIndex,
+	            captured = docu.captured,
+	            zpr = docu.zpr;
+
+	        ctx.lineWidth = 1;
+	        ctx.clearRect(0,0, ctx.canvas.width, ctx.canvas.height);
+	        Draw.Status(ctx, docu);
+	        Draw.Anchor(ctx, docu);
+
+	        ctx.strokeStyle = "#AE0000";
+	        if(captured != null){
+	            ctx.beginPath();
+	                if(captured.type == "center")
+	                    if(captured.over == "x"){
+	                        ctx.moveTo(captured.by.x, captured.by.y);
+	                        ctx.lineTo(docu.CurrLever().points[2].x, captured.by.y);
+	                    } else {
+	                        ctx.moveTo(captured.by.x, captured.by.y);
+	                        ctx.lineTo(captured.by.x, docu.CurrLever().points[2].y);                    
+	                    }
+	                if(captured.type == "control"){
+	                    var longer = captured.over.Mult(10);
+	                    ctx.moveTo(captured.by.x, captured.by.y);
+	                    ctx.lineTo(captured.by.x + longer.x, captured.by.y + longer.y);
+	                }
+
+	                ctx.arc(captured.by.x, captured.by.y, 10, 0, 2 * Math.PI);
+	            ctx.stroke();
+	        }
+
+	        ctx.strokeStyle = "#000000";
+	        Draw.Curve(ctx, docu, zpr);
 	    }
 	}
 
@@ -2350,6 +2021,14 @@
 	var Outline = __webpack_require__(9);
 
 	class LoadData {
+		static Doc(doc) {
+			var actualDoc = new Document();
+			doc.curves = this.Curves(doc.curves);
+			doc.anchor = new Vector(doc.anchor.x, doc.anchor.y);
+
+			return doc
+		}
+
 		static Curves(curves){
 			return curves.map(function(x){return this.Curve(x)}.bind(this));
 		}
@@ -2357,9 +2036,8 @@
 		static Curve(curve){
 			var curveRes = new Curve();
 			// console.log(curve);
-			curveRes.lo = this.Outline(curve.lo);
-			curveRes.ro = this.Outline(curve.ro);
 			curveRes.levers = curve.levers.map(function(x){return this.Lever(x)}.bind(this));
+			curveRes.GetOutlines();
 			curveRes.orig = this.Point(curve.orig);
 			return curveRes;
 		}
@@ -2373,7 +2051,6 @@
 
 		static Outline(outline){
 			var outlineRes = new Outline();
-			outlineRes.side = outline.side;
 			outlineRes.points = outline.points.map(function(x){return this.Point(x)}.bind(this));
 			return outlineRes;
 		}
@@ -2390,9 +2067,9 @@
 /***/ (function(module, exports) {
 
 	class Neutron {
-		constructor(context, docu){
-			this.context = context;
+		constructor(docu){
 			this.docu = docu;
+			this.context = docu.canvas.getContext("2d");
 			this.param_ui = document.getElementById("param-group");
 		}
 
@@ -2540,6 +2217,437 @@
 	}
 
 	module.exports = Neutron;
+
+/***/ }),
+/* 16 */
+/***/ (function(module, exports, __webpack_require__) {
+
+	var Vector =  __webpack_require__(5);
+	var Lever =   __webpack_require__(7);
+	var Curve =   __webpack_require__(8);
+
+	class DocuCore{
+
+		constructor(){
+			/**
+			 * params for adjusting the curves
+			 * @type {Object}
+			 */
+			this.params = {};
+
+			/**
+			 * initialization code. Executed only once in beginning
+			 * @type {String}
+			 */
+			this.init = "";
+
+			/**
+			 * Updating code. Executed during keypressing, mousepressing, dragging
+			 * and any other editing actions.
+			 * @type {String}
+			 */
+			this.update = "";
+
+			/**
+			 * Other imported documents, a dictionary contains the key
+			 * mapped to corresponding DocuCore objects.
+			 * @type {Object}
+			 */
+			this.importedDocuments = {};
+
+			/**
+			 * All curves that constitutes the document.
+			 */
+			this.curves = [];
+
+			/**
+			 * the anchor that locates the document in the parent
+			 * @type {Vector}
+			 */
+			this.anchor = new Vector(0, 0);
+		}
+
+		InitEval(){
+			this.dstack = [];
+			this.rstack = [];
+			this.lstack = [];
+			this.vars = {};
+			this.funs = {};
+		}
+
+		ClearEval(){
+			delete this.dstack;
+			delete this.rstack;
+			delete this.lstack;
+			delete this.vars;
+			delete this.funs;
+		}
+
+		Eval(expr){
+			var text = expr.split('\n'),
+				literal_flag = false,
+				exec_err_flag = false;
+
+			var lit = function(){
+				literal_flag = true;
+			};
+
+			var unlit = function(){
+				literal_flag = false;
+			};
+
+			var pop = function(){
+				return this.dstack.pop();
+			}.bind(this);
+
+			var push = function(elem){
+				this.dstack.push(elem);
+				// console.log(JSON.stringify(dstack));
+			}.bind(this);
+
+			var dup = function(){
+				var val = pop();
+				push(val);
+				push(val);
+			}
+
+			var rot = function(){
+				var val = parseInt(pop());
+				if(val <= this.dstack.length){
+					this.dstack.push(this.dstack.splice(-val,1)[0]);
+					console.log("rot "+	JSON.stringify(this.dstack))
+				}
+
+				else {
+					console.log('rotating length larger than dstack ');
+					exec_err_flag = true;				
+				}
+			}.bind(this);
+
+			var refer = function(){
+				var name = pop();
+				var xhr = new XMLHttpRequest();
+				xhr.open('GET', 'load/'+name);
+				xhr.onload = function() {
+					if (xhr.status === 200) {
+						var res = JSON.parse(xhr.responseText);
+						push(LoadData.Curves(res.curves));
+
+					}
+					else {
+						console.log('Request failed.  Returned status of ' + xhr.status);
+						exec_err_flag = true;
+					}
+				};
+				xhr.send();
+			};
+
+			var put = function(){
+				var key = pop();
+				var val = pop();
+				console.log(val);
+				this.vars[key] = val.Copy();
+				console.log(key.toString() + " " + JSON.stringify(this.vars[key]));
+			}.bind(this);
+
+			var fun = function(){
+				var key = pop();
+				this.funs[key] = this.lstack.reverse();
+				this.lstack = [];
+			}.bind(this);
+
+			var vec = function(){
+				var x = pop();
+				var y = pop();
+				push(new Vector(parseFloat(x), parseFloat(y)));
+			};
+
+			var set_curve = function(){
+				var index = pop();
+				var value = pop();
+				this.curve[parseInt(index)] = value;
+				puhs(value);
+			};
+
+			var set_lever = function(){
+				var index = pop();
+				var value = pop();
+				var curve = pop();
+				curve.levers[parseInt(index)] = value;
+				push(curve);
+			};
+
+			var set_point = function(){
+				var index = pop();
+				var value = pop();
+				var lever = pop();
+				lever.SetControlPoint(parseInt(index), value);
+				push(lever);
+			};
+
+			var float = function(){
+				var p = pop();
+				push(parseFloat(p));
+			};
+
+			var plus = function(){
+				var p1 = pop();
+				var p2 = pop();
+
+				if(typeof p1 == "number" && typeof p2 == "number")
+					push(p1 + p2);
+				else if(typeof p1.x == "number" && typeof p2.x == "number")
+					push(p1.Add(p2));
+				else{
+					console.log("plus type error");
+					exec_err_flag = true;
+				}
+			};
+
+			var subt = function(){
+				var p1 = pop();
+				var p2 = pop();
+
+				if(typeof p1 == "number" && typeof p2 == "number")
+					push(p1 - p2);
+				else if(typeof p1.x == "number" && typeof p2.x == "number")
+					push(p1.Sub(p2));
+				else{
+					console.log("sub type error: " + JSON.stringify(p1) + " " + typeof p1 + " " + p2 + " " + typeof p2 );
+					exec_err_flag = true;
+				}
+			};
+
+			var mult = function(){
+				var p = pop();
+				var n  = pop();
+				if(typeof p == "number" && typeof n == "number")
+					push(n * p);
+				else if(typeof p.x == "number" && typeof n == "number")
+					push(p.Mult(n));
+				else{
+					console.log("mult type error: " + typeof p + " " + typeof n);
+					exec_err_flag = true;
+				}
+			};
+
+			var dist = function(){
+				var p1 = pop();
+				var p2 = pop();
+				push(p1.Dist(p2));
+			};
+
+			var trans = function(){
+				var elem = pop(),
+					increm = pop();
+					console.log(increm);
+				push(elem.TransCreate(increm));
+			};
+
+			var sin = function(){
+				var elem = pop();
+				push(Math.sin(elem / 180 * Math.PI));
+			};
+
+			var cos = function(){
+				var elem = pop();
+				push(Math.cos(elem / 180 * Math.PI));
+			};
+
+			var tan = function(){
+				var elem = pop();
+				push(Math.tan(elem / 180*Math.PI));
+			};
+
+			var mag = function(){
+				var elem = pop();
+				push(elem.Dist());
+			};
+
+			var norm = function(){
+				var elem = pop();
+				console.log(elem);
+				push(elem.Mult(1/elem.Mag()));
+			};
+
+			var rotate = function(){
+				var angle = pop(),
+					rad   = angle / 180.0 * Math.PI;
+				var about = pop();
+				var dest  = pop();
+
+				var newVec = dest.Sub(about);
+				var x = newVec.x,
+					y = newVec.y;
+				newVec.x = Math.cos(rad) * x - Math.sin(rad) * y;
+				newVec.y = Math.sin(rad) * x + Math.cos(rad) * y;
+
+
+				push(newVec.Add(about));
+			};
+
+			var rot_lever = function(){
+				var angle = pop(),
+					rad   = angle / 180.0 * Math.PI;
+				var about = pop();
+				var dest  = pop();
+
+				var destCopy = dest.Copy();
+				var newVec;
+				for (var i = destCopy.points.length - 1; i >= 0; i--) {
+					newVec = destCopy.points[i].Sub(about);
+					var x = newVec.x,
+						y = newVec.y;
+					newVec.x = Math.cos(rad) * x - Math.sin(rad) * y;
+					newVec.y = Math.sin(rad) * x + Math.cos(rad) * y;
+					destCopy.points[i] = about.Add(newVec);
+				}
+
+				push(destCopy);
+			}
+
+			var get_curve = function(){
+				var ith = parseInt(pop());
+				push(this.curves[ith]);
+			}.bind(this);
+
+			var get_lever = function(){
+				var elem = pop();
+				var ith = parseInt(pop());
+				if(elem.levers != undefined)
+					push(elem.levers[ith]);
+				else{
+					console.log("lever needs a curve ref ahead");
+					exec_err_flag = true;
+				}
+			};
+
+			var get_point = function(){
+				var elem = pop();
+				var ith = parseInt(pop());
+				if(elem.points != undefined)
+					push(elem.points[ith]);
+				else{
+					console.log("point needs a lever ref ahead");
+					exec_err_flag = true;
+				}
+			};
+
+			var get = function(){
+				var key = pop();
+				if(this.params[key] != undefined){
+					push(parseFloat(this.params[key].value));
+				} else if(this.vars[key] != undefined){
+					push(this.vars[key]);
+				} else if(this.funs[key] != undefined){
+					this.rstack.push(this.funs[key].slice());
+					exec(true);
+				} else {
+					console.log("key "+ key +"neither found in params nor vars");
+					exec_err_flag = true;				
+				}			
+			}.bind(this);
+
+			var imp = function(){
+				var docu_id = pop();
+				var xhr = new XMLHttpRequest();
+				xhr.open('GET', 'load/'+docu_id);
+					xhr.onload = function() {
+					    if (xhr.status === 200) {
+					        var res = JSON.parse(xhr.responseText);
+							delete res.currLeverIndex;
+							delete res.currCurveIndex;
+							delete res.currPoint;
+							delete res.captured;
+							delete res.canvas;
+							delete res.isEditingLever;
+							delete res.isTranslatingLever;
+							delete res.zpr;
+							delete res.status;
+
+							this.importedDocuments[docu_id]=res;
+							this.importedDocuments[docu_id].curves = LoadData.Curves(this.importedDocuments[docu_id].curves);
+							Draw.Curve(this.canvas.getContext("2d"), res, this.zpr);
+					    }
+					    else {
+					        alert('Request failed.  Returned status of ' + xhr.status);
+					    }
+					}.bind(this);
+				xhr.send();
+
+			}.bind(this);
+
+			var exec = function(mark){
+				while(true){
+					curr = this.rstack.last().pop();
+
+					if(literal_flag && curr != "{" ){
+						this.lstack.push(curr);
+					} else {
+						switch(curr){
+							case "sin"	 : sin();       break;
+							case "cos"   : cos();       break;
+							case "tan"   : tan();       break;
+
+							case "float" : float();		break;
+							case "mag"	 : mag();   	break;
+							case "dist"  : dist();      break;
+							case "rotate": rotate();	break;
+							case "rotlev": rot_lever(); break;
+							case "vec"   : vec();		break;
+							case "plus"  : plus();		break;
+							case "sub"   : subt();		break;
+							case "mult"  : mult();		break;
+
+							case "@curve": get_curve();	break;
+							case "@lever": get_lever();	break;
+							case "@point": get_point();	break;
+
+							case "&curve": set_curve(); break;
+							case "&lever": set_lever(); break;
+							case "&point": set_point(); break;
+							case "trans" : trans();		break;
+
+							case "dup"   : dup();       break;
+							case "rot"   : rot();       break;
+
+							case "@"     : get();       break;
+							case "&"     : put();       break;
+							case "."     : pop();       break;
+							case "#"     : fun();       break;
+							case "}"     : lit();       break;
+							case "{"     : unlit();     break;
+							case "import": imp(); 		break;
+							default	:
+								if(curr != "") push(curr);
+						}
+					}
+
+					if(this.rstack.last().length == 0) {this.rstack.pop(); break;}
+					if(exec_err_flag) {
+						console.log("at "+curr);
+						break;
+					}
+				}
+			}.bind(this);
+
+			var curr;
+
+			for (var i = 0; i < text.length; i++) {
+				this.rstack.push(text[i].split(" "));
+				exec();
+				if(exec_err_flag){
+					console.log("error raised, further Eval stopped");
+					console.log(text[i]);
+					break;
+				}
+			}
+			this.dstack = []
+		}
+		
+	}
+
+	module.exports = DocuCore;
 
 /***/ })
 /******/ ]);
