@@ -59,6 +59,57 @@ class DocuCore{
 		delete this.funs;
 	}
 
+	Save(){
+		var xhr = new XMLHttpRequest();
+		xhr.open('PUT', 'save/');
+		xhr.setRequestHeader('Content-Type', 'application/json');
+		xhr.onload = function() {
+		    if (xhr.status === 200) {
+		        var userInfo = JSON.parse(xhr.responseText);
+		    }
+		};
+		this.ClearEval();
+		xhr.send(JSON.stringify({id: docu_id, data:docu}));
+	}
+
+	Load(){
+		var xhr = new XMLHttpRequest();
+		xhr.open('GET', 'load/'+docu_id);
+		xhr.onload = function() {
+		    if (xhr.status === 200) {
+		        var res = JSON.parse(xhr.responseText);
+		    	console.log(res);
+		        docu.curves = LoadData.Curves(res.curves);
+		        docu.anchor = new Vector(res.anchor.x, res.anchor.y);
+		        docu.importedDocuments = res.importedDocuments;
+		        docu.params = res.params;
+		        docu.init   = res.init;
+		        docu.update = res.update;
+
+		        console.log(neutron);
+		        neutron.ReloadExistingParams();
+
+		        document.getElementById("init-code").value = docu.init;
+		        document.getElementById("update-code").value = docu.update;
+
+		        docu.InitEval();
+		        docu.Eval(docu.init);
+		        docu.Eval(docu.update);
+		        docu.UpdateDraw("load");
+
+		    }
+		    else {
+		        alert('Request failed.  Returned status of ' + xhr.status);
+		    }
+		};
+		xhr.send();
+
+	}
+
+	Parse(){
+
+	}
+
 	Eval(expr){
 		var text = expr.split('\n'),
 			literal_flag = false,
@@ -257,7 +308,6 @@ class DocuCore{
 				y = newVec.y;
 			newVec.x = Math.cos(rad) * x - Math.sin(rad) * y;
 			newVec.y = Math.sin(rad) * x + Math.cos(rad) * y;
-
 
 			push(newVec.Add(about));
 		};

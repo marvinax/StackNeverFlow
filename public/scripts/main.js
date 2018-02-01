@@ -738,8 +738,13 @@
 	class Vector{
 
 		constructor(x, y){
-			this.x = x;
-			this.y = y;
+			if(x.x != undefined && x.y != undefined && y == undefined){
+				this.x = x.x;
+				this.y = x.y;
+			} else {
+				this.x = x;
+				this.y = y;
+			}
 		}
 
 		Copy(){
@@ -876,8 +881,8 @@
 
 	class Document extends DocuCore{
 		constructor(canvas){
-			super();
-
+			
+			this.docu = new DocuCore();
 			this.canvas = canvas;
 
 			this.status = Status.Editing;
@@ -894,15 +899,15 @@
 		}
 
 		CurrCurve(){
-			return this.curves[this.currCurveIndex];
+			return this.docu.curves[this.currCurveIndex];
 		}
 
 		CurrLever(){
-			return this.curves[this.currCurveIndex].levers[this.currLeverIndex];
+			return this.docu.curves[this.currCurveIndex].levers[this.currLeverIndex];
 		}
 
 		AddCurve(curve){
-			this.currCurveIndex = this.curves.push(curve) - 1;
+			this.currCurveIndex = this.docu.curves.push(curve) - 1;
 		}
 
 		AddPoint(point){
@@ -952,7 +957,7 @@
 
 		PrepareLeverTrans(ith, point){
 			var transArray = [];
-			var curve = this.curves[ith];
+			var curve = this.docu.curves[ith];
 
 			for (const [i, lever] of this.CurrCurve().levers.entries()){
 				var cast = Cast.Lever(lever, point);
@@ -971,7 +976,7 @@
 
 		PrepareTrans(point){
 			var transArray = [];
-			for (const [ith, curve] of this.curves.entries()){
+			for (const [ith, curve] of this.docu.curves.entries()){
 				if(Cast.Curve(curve, point) != -1) {
 					this.currCurveIndex = ith;
 					transArray = this.PrepareLeverTrans(ith, point);
@@ -1027,7 +1032,7 @@
 		}
 
 		CaptureCenterTest(mouseV){
-			for(const [ithc, curve] of this.curves.entries()){
+			for(const [ithc, curve] of this.docu.curves.entries()){
 				for(const [ithl, lever] of curve.levers.entries()){
 					if(this.captured == null){
 						if((this.currCurveIndex != ithc) || (this.currCurveIndex == ithc && this.currLeverIndex != ithl))
@@ -1052,7 +1057,7 @@
 
 		CaptureControlTest(mouseV, pIndex){
 			if(pIndex != 2 && pIndex != null)
-				for(const [ithc, curve] of this.curves.entries()){
+				for(const [ithc, curve] of this.docu.curves.entries()){
 					for(const [ithl, lever] of curve.levers.entries()){
 
 						var angle = mouseV.Sub(this.CurrLever().points[2]).Angle();
@@ -1088,12 +1093,11 @@
 
 		UpdateDraw(info){
 			console.log(info);
-			for(let curve of this.curves){
+			for(let curve of this.docu.curves){
 				curve.GetOutlines();
 			}
 			Draw.Curves(this.canvas.getContext("2d"), this);
 			for(let sub_curves in this.importedDocuments){
-				console.log(this.importedDocuments[sub_curves]);
 				Draw.Curve(this.canvas.getContext("2d"), this.importedDocuments[sub_curves], this.zpr);
 			}
 		}
@@ -1135,21 +1139,17 @@
 
 	class Lever {
 
-		constructor(points){
+		constructor(input){
 
-			if(typeof points == "Array") {
-				this.points = points;
-			}
-			if(typeof points == "object") {
-				this.points = [
-					points.Copy(),
-					points.Copy(),
-					points.Copy(),
-					points.Copy(),
-					points.Copy()
-				]
-			}
-			if(typeof points == "undefined") {
+	        if(input != undefined){
+
+	            this.points     = input.points.map(function(point){return new Vector(point)});
+	            this.leverMode  = input.leverMode;
+	            this.selectMode = input.selectMode;
+	            this.strokeMode = input.strokeMode;
+
+
+	        } else {
 				this.points = [
 					Vector.Zero,
 					Vector.Zero,
@@ -1157,11 +1157,12 @@
 					Vector.Zero,
 					Vector.Zero
 				]
-			}
 
-			this.leverMode = LeverMode.SYMMETRIC;
-			this.selectMode = SelectMode.NONE;
-	        this.strokeMode = StrokeMode.FREE;
+	            this.leverMode = LeverMode.SYMMETRIC;
+	            this.selectMode = SelectMode.NONE;
+	            this.strokeMode = StrokeMode.FREE;
+
+			}
 		}
 
 	    Copy(){
@@ -1273,13 +1274,15 @@
 
 	class Curve {
 
-	    constructor(orig){
+	    constructor(input){
 
-		    this.levers = [];
-
-		    this.orig = orig; 
-
-		    this.outline = new Outline();
+	        if(input != undefined){
+	            this.levers = input.levers.map(function(lever){return new Lever(lever)});
+	            this.outline = new Outline(input.outline);
+	        } else {
+	            this.levers = [];
+	            this.outline = new Outline();            
+	        }
 
 	    }
 
@@ -1346,9 +1349,18 @@
 
 	class Outline{
 
-		constructor(){
-			this.outer = [];
-	        this.inner = [];
+		constructor(input){
+	        if(input == undefined){
+	            this.outer = [];
+	            this.inner = [];            
+	        } else {
+	            if(input.outer != undefined){
+	                this.outer = input.outer.map(function(bezGroup){ return bezGroup.map(function(point){return new Vector(point)})});
+	            }
+	            if(input.inner != undefined){
+	                this.inner = input.inner.map(function(bezGroup){ return bezGroup.map(function(point){return new Vector(point)})});
+	            }
+	        }
 		}
 
 
@@ -2283,6 +2295,57 @@
 			delete this.funs;
 		}
 
+		Save(){
+			var xhr = new XMLHttpRequest();
+			xhr.open('PUT', 'save/');
+			xhr.setRequestHeader('Content-Type', 'application/json');
+			xhr.onload = function() {
+			    if (xhr.status === 200) {
+			        var userInfo = JSON.parse(xhr.responseText);
+			    }
+			};
+			this.ClearEval();
+			xhr.send(JSON.stringify({id: docu_id, data:docu}));
+		}
+
+		Load(){
+			var xhr = new XMLHttpRequest();
+			xhr.open('GET', 'load/'+docu_id);
+			xhr.onload = function() {
+			    if (xhr.status === 200) {
+			        var res = JSON.parse(xhr.responseText);
+			    	console.log(res);
+			        docu.curves = LoadData.Curves(res.curves);
+			        docu.anchor = new Vector(res.anchor.x, res.anchor.y);
+			        docu.importedDocuments = res.importedDocuments;
+			        docu.params = res.params;
+			        docu.init   = res.init;
+			        docu.update = res.update;
+
+			        console.log(neutron);
+			        neutron.ReloadExistingParams();
+
+			        document.getElementById("init-code").value = docu.init;
+			        document.getElementById("update-code").value = docu.update;
+
+			        docu.InitEval();
+			        docu.Eval(docu.init);
+			        docu.Eval(docu.update);
+			        docu.UpdateDraw("load");
+
+			    }
+			    else {
+			        alert('Request failed.  Returned status of ' + xhr.status);
+			    }
+			};
+			xhr.send();
+
+		}
+
+		Parse(){
+
+		}
+
 		Eval(expr){
 			var text = expr.split('\n'),
 				literal_flag = false,
@@ -2481,7 +2544,6 @@
 					y = newVec.y;
 				newVec.x = Math.cos(rad) * x - Math.sin(rad) * y;
 				newVec.y = Math.sin(rad) * x + Math.cos(rad) * y;
-
 
 				push(newVec.Add(about));
 			};

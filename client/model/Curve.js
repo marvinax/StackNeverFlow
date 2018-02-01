@@ -7,13 +7,15 @@ var CurveMath = require('../math/CurveMath.js');
 
 class Curve {
 
-    constructor(orig){
+    constructor(input){
 
-	    this.levers = [];
-
-	    this.orig = orig; 
-
-	    this.outline = new Outline();
+        if(input != undefined){
+            this.levers = input.levers.map(function(lever){return new Lever(lever)});
+            this.outline = new Outline(input.outline);
+        } else {
+            this.levers = [];
+            this.outline = new Outline();            
+        }
 
     }
 

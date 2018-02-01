@@ -1,8 +1,13 @@
 class Vector{
 
 	constructor(x, y){
-		this.x = x;
-		this.y = y;
+		if(x.x != undefined && x.y != undefined && y == undefined){
+			this.x = x.x;
+			this.y = x.y;
+		} else {
+			this.x = x;
+			this.y = y;
+		}
 	}
 
 	Copy(){

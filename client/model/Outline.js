@@ -9,9 +9,18 @@ var CurveSide = Object.freeze({
 
 class Outline{
 
-	constructor(){
-		this.outer = [];
-        this.inner = [];
+	constructor(input){
+        if(input == undefined){
+            this.outer = [];
+            this.inner = [];            
+        } else {
+            if(input.outer != undefined){
+                this.outer = input.outer.map(function(bezGroup){ return bezGroup.map(function(point){return new Vector(point)})});
+            }
+            if(input.inner != undefined){
+                this.inner = input.inner.map(function(bezGroup){ return bezGroup.map(function(point){return new Vector(point)})});
+            }
+        }
 	}
 
 

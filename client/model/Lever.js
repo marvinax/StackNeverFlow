@@ -27,21 +27,17 @@ var LeverPoint = Object.freeze({
 
 class Lever {
 
-	constructor(points){
+	constructor(input){
 
-		if(typeof points == "Array") {
-			this.points = points;
-		}
-		if(typeof points == "object") {
-			this.points = [
-				points.Copy(),
-				points.Copy(),
-				points.Copy(),
-				points.Copy(),
-				points.Copy()
-			]
-		}
-		if(typeof points == "undefined") {
+        if(input != undefined){
+
+            this.points     = input.points.map(function(point){return new Vector(point)});
+            this.leverMode  = input.leverMode;
+            this.selectMode = input.selectMode;
+            this.strokeMode = input.strokeMode;
+
+
+        } else {
 			this.points = [
 				Vector.Zero,
 				Vector.Zero,
@@ -49,11 +45,12 @@ class Lever {
 				Vector.Zero,
 				Vector.Zero
 			]
-		}
 
-		this.leverMode = LeverMode.SYMMETRIC;
-		this.selectMode = SelectMode.NONE;
-        this.strokeMode = StrokeMode.FREE;
+            this.leverMode = LeverMode.SYMMETRIC;
+            this.selectMode = SelectMode.NONE;
+            this.strokeMode = StrokeMode.FREE;
+
+		}
 	}
 
     Copy(){

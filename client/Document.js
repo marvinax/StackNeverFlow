@@ -35,8 +35,8 @@ var Status = Object.freeze({
 
 class Document extends DocuCore{
 	constructor(canvas){
-		super();
-
+		
+		this.docu = new DocuCore();
 		this.canvas = canvas;
 
 		this.status = Status.Editing;
@@ -53,15 +53,15 @@ class Document extends DocuCore{
 	}
 
 	CurrCurve(){
-		return this.curves[this.currCurveIndex];
+		return this.docu.curves[this.currCurveIndex];
 	}
 
 	CurrLever(){
-		return this.curves[this.currCurveIndex].levers[this.currLeverIndex];
+		return this.docu.curves[this.currCurveIndex].levers[this.currLeverIndex];
 	}
 
 	AddCurve(curve){
-		this.currCurveIndex = this.curves.push(curve) - 1;
+		this.currCurveIndex = this.docu.curves.push(curve) - 1;
 	}
 
 	AddPoint(point){
@@ -111,7 +111,7 @@ class Document extends DocuCore{
 
 	PrepareLeverTrans(ith, point){
 		var transArray = [];
-		var curve = this.curves[ith];
+		var curve = this.docu.curves[ith];
 
 		for (const [i, lever] of this.CurrCurve().levers.entries()){
 			var cast = Cast.Lever(lever, point);
@@ -130,7 +130,7 @@ class Document extends DocuCore{
 
 	PrepareTrans(point){
 		var transArray = [];
-		for (const [ith, curve] of this.curves.entries()){
+		for (const [ith, curve] of this.docu.curves.entries()){
 			if(Cast.Curve(curve, point) != -1) {
 				this.currCurveIndex = ith;
 				transArray = this.PrepareLeverTrans(ith, point);
@@ -186,7 +186,7 @@ class Document extends DocuCore{
 	}
 
 	CaptureCenterTest(mouseV){
-		for(const [ithc, curve] of this.curves.entries()){
+		for(const [ithc, curve] of this.docu.curves.entries()){
 			for(const [ithl, lever] of curve.levers.entries()){
 				if(this.captured == null){
 					if((this.currCurveIndex != ithc) || (this.currCurveIndex == ithc && this.currLeverIndex != ithl))
@@ -211,7 +211,7 @@ class Document extends DocuCore{
 
 	CaptureControlTest(mouseV, pIndex){
 		if(pIndex != 2 && pIndex != null)
-			for(const [ithc, curve] of this.curves.entries()){
+			for(const [ithc, curve] of this.docu.curves.entries()){
 				for(const [ithl, lever] of curve.levers.entries()){
 
 					var angle = mouseV.Sub(this.CurrLever().points[2]).Angle();
@@ -247,12 +247,11 @@ class Document extends DocuCore{
 
 	UpdateDraw(info){
 		console.log(info);
-		for(let curve of this.curves){
+		for(let curve of this.docu.curves){
 			curve.GetOutlines();
 		}
 		Draw.Curves(this.canvas.getContext("2d"), this);
 		for(let sub_curves in this.importedDocuments){
-			console.log(this.importedDocuments[sub_curves]);
 			Draw.Curve(this.canvas.getContext("2d"), this.importedDocuments[sub_curves], this.zpr);
 		}
 	}
