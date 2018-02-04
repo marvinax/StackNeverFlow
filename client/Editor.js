@@ -1,3 +1,6 @@
+var Status = require("./Status.js");
+var EditorCoreData = require('./EditorCoreData.js');
+
 var Document = require('./model/Document.js');
 var Neutron  = require('./Neutron.js');
 
@@ -12,15 +15,19 @@ var ZPR      = require('./control/ZPR.js');
 
 class Editor extends EditorCoreData {
 	constructor(){
+		super();
 		
+		this.neutron = new Neutron();
 		this.docu = new Document();
 		this.zpr = new ZPR();
-		this.canvas = document.getElementById("canvas").getContext("2d");
+		this.context = document.getElementById("canvas").getContext("2d");
 
 		this.down = null;
 		this.curr = null;
 		this.orig = null;
 
+		this.InitEvents();
+		this.UpdateDraw("init");
 	}
 
 	setAnchor(newPoint){
@@ -32,9 +39,9 @@ class Editor extends EditorCoreData {
 			var cap = this.curr.Copy(),
 				other = this.captured.over == "x" ? "y" : "x";
 			cap[other] = this.captured.by[other];
-			this.CurrLever().TransFromArray(transArray, cap.Sub(orig));
+			this.TransCurrLever(cap.Sub(this.orig));
 		} else {
-			this.CurrLever().TransFromArray(transArray, this.curr.Sub(orig));
+			this.TransCurrLever(this.curr.Sub(this.orig));
 		}		
 	}
 
@@ -42,8 +49,9 @@ class Editor extends EditorCoreData {
 		if(this.captured != null){
 			var cent = this.CurrLever().points[2],
 				vec  = curr.Copy().Sub(cent),
-				over = this.captured.over;
-			this.UpdateCurrLever(cent.Add(over.Mult(vec.Dot(over) / over.Dot(over))));
+				over = this.captured.over,
+				cap  = cent.Add(over.Mult(vec.Dot(over) / over.Dot(over)));
+			this.UpdateCurrLever(cap);
 		} else {
 			this.UpdateCurrLever(curr);
 		}		
@@ -53,11 +61,10 @@ class Editor extends EditorCoreData {
 
 		switch(this.status){
 		case Status.Creaating:
-			this.CurrCurve().UpdateLever(this.currLeverIndex, 4, curr);
+			this.CurrCurve().UpdateLever(this.currLeverIndex, 4, this.curr);
 			break;
 		case Status.MovingCurve:
-			this.CurrCurve().TransFromArray(this.transArray, 
-				zpr.InvTransform(this.curr).Sub(zpr.InvTransform(this.orig)));
+			this.TransCurrCurve(this.curr.Sub(this.orig));
 			break;
 		case Status.MovingLever:
 			this.checkMovingCapture();
@@ -80,12 +87,13 @@ class Editor extends EditorCoreData {
 				for(const [ithl, lever] of curve.levers.entries()){
 					var curveMatch = this.currCurveIndex == ithc,
 						leverMatch = this.currLeverMatch == ithl;
-					if(!curveMatch || !leverMatch && curveMatch)
-						enter(lever, ithPoint);
+					if(this.captured == null){
+						if(!curveMatch || !leverMatch && curveMatch) enter(lever, ithPoint);							
+					} else {
+						leave(lever, ithPoint);
+					}
 				}
 			}			
-		} else {
-			leave(lever, ithPoint);
 		}
 	}
 
@@ -93,7 +101,7 @@ class Editor extends EditorCoreData {
 
 		var enter = function(lever){
 				if(this.CurrLever().points[2].Dist(lever.points[2]) < 100){
-					var abs = mouseV.Sub(lever.points[2]).Abs();
+					var abs = this.curr.Sub(lever.points[2]).Abs();
 					this.captured = {
 						by   : lever.points[2],
 						over : (abs.x < abs.y) ? "x" : "y",
@@ -111,14 +119,17 @@ class Editor extends EditorCoreData {
 		}.bind(this);
 
 		this.CaptureFramework(null, enter, leave);
+		this.UpdateDraw("MoveLever");
 	}
 
 
-	CapturedEdit(){
+	CapturedEdit(ithPoint){
 
 		var enter = function(lever, ithPoint){
 
-				var angle = mouseV.Sub(this.CurrLever().points[2]).Angle(),
+			console.log(ithPoint);
+
+				var angle = this.curr.Sub(this.CurrLever().points[2]).Angle(),
 					control = lever.points[ithPoint].Sub(lever.points[2]),
 					leverAngle = control.Angle();
 				
@@ -151,42 +162,54 @@ class Editor extends EditorCoreData {
 			}
 		}.bind(this);
 
-		this.CaptureFramework(null, enter, leave);
+		this.CaptureFramework(ithPoint, enter, leave);
+		this.UpdateDraw("EditLever");
 	}
-
 
 	Drag(event) {
 		
 		event.stopPropagation();
 
+		var rect = event.target.getBoundingClientRect();
+		var MouseV = new Vector(
+			Math.max(rect.left, Math.min(rect.right, event.clientX - rect.left)) * 1.5,
+			Math.max(rect.top,  Math.min(rect.bottom, event.clientY - rect.top)  * 1.5)
+		);
+
 		if (!this.down && (event.type == "mousedown")) {
 			this.down   = true;
-			this.orig = this.MouseV(event);
-			this.curr = this.MouseV(event);
+			this.orig = this.zpr.InvTransform(MouseV);
+			this.curr = this.zpr.InvTransform(MouseV);
 
 			switch(this.status){
 			case Status.Creating:
 				this.AddPoint(this.orig); break;
 			case Status.MovingAnchor:
-				this.setAnchor(zpr.InvTransform(curr)); break;
+				this.setAnchor(this.curr); break;
 			case Status.EditingLever:
-				this.SelectControlPoint(zpr.InvTransform(curr));
+				this.SelectControlPoint(this.curr);
 				if(this.currLeverIndex == null) this.Deselect(); break;
 			case Status.Editing:
-				this.PrepareTrans(zpr.InvTransform(curr));
-				if(tempTransArray.length == 0) this.Deselect(); break;
+				this.PrepareTrans(this.curr);
+				if(this.transArray.length == 0) this.Deselect(); break;
 			}
 			this.UpdateDraw("mouseDown");
 		}
 
 		if (this.down && (event.type == "mousemove")) {
-			this.curr = this.MouseV(event);
+			
+			this.curr = this.zpr.InvTransform(MouseV);
 			
 			switch(this.status){
 				case Status.MovingLever:
-					this.CaptureCenterTest(curr); break;
+					this.CapturedMove(); break;
 				case Status.EditingLever:
-					this.CaptureControlTest(curr, currPointIndex);
+					this.CapturedEdit(this.currPointIndex); break;
+				case Status.Creating:
+					console.log(JSON.stringify(this.currLeverIndex));
+					this.CapturedEdit(4);
+					this.CurrLever().SetControlPoint(4, this.curr);
+					break;
 			}
 				
 			this.UpdateEdit();
@@ -210,27 +233,111 @@ class Editor extends EditorCoreData {
 
 	UpdateDraw(info){
 		console.log(info);
-		for(var curve of this.docu.curves){
-			curve.GetOutlines();
-		}
-		Draw.Curves(this.canvas.getContext("2d"), this);
-		for(var sub_curves in this.importedDocuments){
-			Draw.Curve(this.canvas.getContext("2d"), this.importedDocuments[sub_curves], this.zpr);
+		// for(var curve of this.docu.curves){
+		// 	curve.GetOutlines();
+		// }
+		Draw.Editor(this);
+	}
+
+	ToggleCreate(){
+		console.log(this.status);
+		if(this.status == Status.Creating){
+			this.status = Status.Editing;
+			this.Deselect();
+			this.UpdateDraw("set to editing mode");			
+		} else if(this.status == Status.Editing){
+			this.status = Status.Creating;
+	        this.Deselect();
+			this.UpdateDraw("set to creating mode");			
 		}
 	}
 
-	SetEdit(){
-		docu.status = Status.Editing;
-		docu.Deselect();
-		docu.UpdateDraw();
+	ToggleEditingLever(){
+		if(this.status == Status.EditingLever){
+			this.status = Status.Editing;
+		}
+		if(this.status == Status.Editing){
+			this.status = Status.EditingLever;
+		}		
 	}
 
-	SetCreate(){
-		docu.status = Status.Creating;
-        docu.Deselect();
-		docu.UpdateDraw();
+	ToggleMoveAnchor(){
+		evt.preventDefault();
+		if(editor.status == Status.Editing){
+			editor.status = Status.MovingAnchor;
+		}
+		if(editor.status == Status.MovingAnchor){
+			editor.status = Status.Editing;	
+		}
 	}
-	
+
+	SetLeverType(evt){
+		var typeIndex = parseInt(evt.key),
+			typeArray = [4, 3, 2, 0];
+		if(typeIndex > 0 && typeIndex < 9){
+			if(this.currCurveIndex != null && this.currLeverIndex != null){
+				this.CurrLever().leverMode = typeArray[typeIndex];
+				this.UpdateDraw();
+			}					
+		}
+
+	}
+
+	RemoveLeverUpdate(){
+		this.RemoveLever();
+		this.UpdateDraw("lever removed");
+	}
+
+	Zoom(event){
+		event.preventDefault();
+		
+		var zoomInc = event.deltaY*0.00005;
+		this.zpr.Zoom(this.curr, zoomInc);
+		this.UpdateDraw();
+	}
+
+	InitEvents(){
+		document.onkeydown = function(evt) {
+
+			if(evt.ctrlKey && evt.key == "c"){
+				this.ToggleCreate();
+			}
+
+            if(evt.ctrlKey && evt.key == "Delete"){
+            	this.RemoveLever();
+            }
+
+			if(evt.ctrlKey && evt.key == "a"){
+				this.ToggleMoveAnchor();
+			}                      
+
+			this.SetLeverType(evt);
+
+			if(evt.key == "Shift"){
+				this.ToggleEditingLever();
+			}
+
+			if(evt.key == "z" && evt.ctrlKey){
+				this.zpr.zoom = 1;
+				this.UpdateDraw();
+			}
+
+		}.bind(this);
+
+		document.onkeyup = function(evt){
+
+			if(evt.key == "Control"){
+				evt.preventDefault();
+				this.ToggleEditingLever();
+			}
+		}.bind(this)
+
+		canvas.onmousedown = canvas.onmousemove = canvas.onmouseup = this.Drag.bind(this);
+
+		canvas.onmousewheel = this.Zoom.bind(this);
+
+	}
+
 }
 
 module.exports = Editor;

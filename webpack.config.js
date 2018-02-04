@@ -1,7 +1,7 @@
 var webpack = require('webpack')
 
 module.exports = {
-    entry: "./client/foundry.js",
+    entry: "./client/Foundry.js",
     output: {
         path: __dirname + '/public/scripts/',
         filename: "main.js"

@@ -1,7 +1,6 @@
 class Neutron {
 	constructor(docu){
 		this.docu = docu;
-		this.context = docu.canvas.getContext("2d");
 		this.param_ui = document.getElementById("param-group");
 	}
 
@@ -35,13 +34,13 @@ class Neutron {
 		valueInput.onchange = valueInput.oninput = function(){
 			param.value = valueSlider.value = valueInput.value;
 	        this.docu.EvalUpdate();
-	        this.docu.UpdateDraw();
+	        // this.docu.UpdateDraw();
 		}.bind(this);
 
 		valueSlider.onchange = valueSlider.oninput = function(){
 			param.value = valueInput.value = valueSlider.value;
 	        this.docu.EvalUpdate();
-	        this.docu.UpdateDraw();
+	        // this.docu.UpdateDraw();
 		}.bind(this);
 
 		var deleteButton = document.createElement('button');
@@ -50,8 +49,8 @@ class Neutron {
 		deleteButton.onclick = function(){
 			var elem = document.getElementById(paramElem.id);
 			elem.parentNode.removeChild(elem);
-			console.log(this.docu.params);
-			delete this.docu.params[param.name];
+			// console.log(this.docu.params);
+			// delete this.docu.params[param.name];
 		}.bind(this);
 
 		paramElem.appendChild(name);
@@ -64,10 +63,10 @@ class Neutron {
 
 	ReloadExistingParams(){
 		this.ClearParams();
-		for(let param in this.docu.params) {
-			console.log(this.docu.params[param]);
-			this.AddExistingParam(this.docu.params[param]);
-		}
+		// for(let param in this.docu.params) {
+			// console.log(this.docu.params[param]);
+			// this.AddExistingParam(this.docu.params[param]);
+		// }
 		this.AddParamUI();
 	}
 
@@ -97,8 +96,6 @@ class Neutron {
 		var saveButton = document.createElement("button");
 		saveButton.id = "param-save-button";
 		saveButton.innerHTML = "save param";
-		
-		var context = document.getElementById("canvas").getContext("2d");
 
 		saveButton.onclick = function(){
 			var nameInput = document.getElementById("param-name"),
@@ -112,7 +109,7 @@ class Neutron {
 				min : minInput.value,
 				max : maxInput.value
 			};
-			this.docu.params[param.name] = param;
+			// this.docu.params[param.name] = param;
 
 			this.ReloadExistingParams();
 		}.bind(this);

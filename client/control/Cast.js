@@ -3,37 +3,37 @@ var CurveMath = require('../math/CurveMath.js');
 
 class Cast{
     
-    static CurveRect(curve, mouseV){
-        return curve.bounding[0].x < mouseV.x && curve.bounding[1].x > mouseV.x &&
-               curve.bounding[0].y < mouseV.y && curve.bounding[1].y > mouseV.y;
+    static CurveRect(curve, curr){
+        return curve.bounding[0].x < curr.x && curve.bounding[1].x > curr.x &&
+               curve.bounding[0].y < curr.y && curve.bounding[1].y > curr.y;
     }
     
-    static CurveBody(curve, mouseV) {
+    static CurveBody(curve, curr) {
         
     	var CAST_DIST = 9;
 
         var t, p, dist;
         for (var i = 0; i < curve.levers.length - 1; i++) {
 
-            t = CurveMath.GetClosestTFromGivenPoint(curve.levers[i], curve.levers[i+1], mouseV, 6, 4);
+            t = CurveMath.GetClosestTFromGivenPoint(curve.levers[i], curve.levers[i+1], curr, 6, 4);
             p = CurveMath.GetPointOnCurveBetweenLever(t, curve.levers[i], curve.levers[i+1]);
-            dist = p.Dist(mouseV);
+            dist = p.Dist(curr);
             if (dist < CAST_DIST)
                 return i + t;
         }
         return -1;
     } 
 
-    static Curve(curve, mouseV){
+    static Curve(curve, curr){
     	// console.log(curve.bounding);
-        // if(this.CurveRect(curve, mouseV)){
-            return this.CurveBody(curve, mouseV);
+        // if(this.CurveRect(curve, curr)){
+            return this.CurveBody(curve, curr);
         // }
         // else
         //     return -1;
     }
 
-    static CurveIthLever(curve, mouseV) {
+    static CurveIthLever(curve, curr) {
 
     	var CAST_DIST = 9;
 
@@ -41,7 +41,7 @@ class Cast{
         	found = false;
 
         for (; i < curve.levers.length; i ++) {
-        	found = PVector.dist(curve.levers[i].points[2], mouseV) < CAST_DIST;
+        	found = PVector.dist(curve.levers[i].points[2], curr) < CAST_DIST;
         	if(found) break;	
         } 
 
@@ -50,14 +50,14 @@ class Cast{
         return i;
     }
 
-    static Lever(lever, mouseV){
+    static Lever(lever, curr){
 
 		var CAST_DIST = 9;    
         var castSequence = [0, 4, 1, 3, 2];
         
         var res = -1;
         for(var ith = 0; ith < 5; ith++)
-            if(lever.points[castSequence[ith]].Dist(mouseV) < CAST_DIST){
+            if(lever.points[castSequence[ith]].Dist(curr) < CAST_DIST){
             	console.log(ith + " " + castSequence[ith]);
                 res = castSequence[ith];
                 break;

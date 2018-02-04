@@ -35,59 +35,38 @@ class Draw{
         ctx.fillText(docu.zpr.zoom.toFixed(3)+"x", 10, 45);        
     }
 
-    static Anchor(ctx, docu){
-        var zpr = docu.zpr;
-        ctx.strokeStyle = "#606060";
-        var zpr_anchor = zpr.Transform(docu.anchor);
-        ctx.beginPath();
-            ctx.moveTo(zpr_anchor.x-10, zpr_anchor.y);
-            ctx.lineTo(zpr_anchor.x+10, zpr_anchor.y);
-            ctx.moveTo(zpr_anchor.x, zpr_anchor.y-10);
-            ctx.lineTo(zpr_anchor.x, zpr_anchor.y+10);
-            ctx.moveTo(zpr_anchor.x+15, zpr_anchor.y);
-            ctx.arc(zpr_anchor.x, zpr_anchor.y, 15, 0, Math.PI*2);
-        ctx.stroke();   
+    static currCurve(ctx, docu, zpr_curves){
 
-    }
+        for (var curve of zpr_curves){
 
-    static CurrentCurve(ctx, docu, zpr_curves){
-        var currCurveIndex = docu.currCurveIndex;
+            for (var [i, lever] of curve.levers.entries()) {
 
-        if(currCurveIndex != null){
-            var levers = zpr_curves[currCurveIndex].levers;
-
-            for (var i = 0; i < levers.length; i++) {
-
-                // if(i == currLeverIndex){
-                for(var j = 0; j < 5; j++){
+                for(var [j, point] of lever.points.entries()){
 
                     ctx.beginPath();
-                    ctx.arc(levers[i].points[j].x, levers[i].points[j].y, 4, 0, 2 * Math.PI);
-                    ctx.fillText("p"+i+","+j, levers[i].points[j].x-10, levers[i].points[j].y-10);
+                    ctx.arc(point.x, point.y, 4, 0, 2 * Math.PI);
+                    ctx.fillText("p"+i+","+j, point.x-10, point.y-10);
                     ctx.stroke();
                 }
 
                 ctx.beginPath();
-                // for (var i = 0; i < levers.length; i++) {
-                    ctx.moveTo(levers[i].points[0].x, levers[i].points[0].y);
-                    ctx.lineTo(levers[i].points[2].x, levers[i].points[2].y);
-                    ctx.lineTo(levers[i].points[4].x, levers[i].points[4].y);
-                    ctx.moveTo(levers[i].points[1].x, levers[i].points[1].y);
-                    ctx.lineTo(levers[i].points[2].x, levers[i].points[2].y);
-                    ctx.lineTo(levers[i].points[3].x, levers[i].points[3].y);
-                // }
+                for (var i of [0, 1, 3, 4]) {
+                    ctx.moveTo(lever.points[2].x, lever.points[2].y);
+                    ctx.lineTo(lever.points[i].x, lever.points[i].y);
+                }
                 ctx.stroke();
 
                 var s;
-                switch(levers[i].leverMode){
+                switch(lever.leverMode){
                     case 0: s = "broken"; break;
                     case 2: s = "linear"; break;
                     case 3: s = "proper"; break;
                     case 4: s = "symmetric"; break;
                 }
 
-                ctx.fillText(s, levers[i].points[4].x + 10, levers[i].points[4].y + 5);
+                ctx.fillText(s, lever.points[4].x + 10, lever.points[4].y + 5);
             }
+
         }
 
     }
@@ -134,7 +113,7 @@ class Draw{
                 ctx.fillText("C"+ith, first.x + diam.y - 10, first.y -diam.x - 10);
 
                 for (var i = 0; i < zpr_curves[ith].levers.length; i++) {
-                    var point = zpr_curves[ith].levers[i].points[2];
+                    var point = zpr_curves[ith].lever.points[2];
                     ctx.fillText(i, point.x+10, point.y-10);
                 }
 
@@ -142,7 +121,7 @@ class Draw{
                 ctx.moveTo(zpr_curves[ith].levers[0].points[2].x, zpr_curves[ith].levers[0].points[2].y);
                 for (var i = 0; i < zpr_curves[ith].levers.length - 1; i++) {
                     ctx.bezierCurveTo(
-                        zpr_curves[ith].levers[i].points[4].x,   zpr_curves[ith].levers[i].points[4].y,
+                        zpr_curves[ith].lever.points[4].x,   zpr_curves[ith].lever.points[4].y,
                         zpr_curves[ith].levers[i+1].points[0].x, zpr_curves[ith].levers[i+1].points[0].y,
                         zpr_curves[ith].levers[i+1].points[2].x, zpr_curves[ith].levers[i+1].points[2].y
                     )
@@ -155,7 +134,7 @@ class Draw{
 
     }
 
-    static Curve(ctx, docu, zpr){
+    static Curve(ctx, docu, zpr, currCurve){
         var zpr_curves = docu.curves.map(function(curve){
             return { levers: curve.levers.map(function(lever){
                         return {
@@ -170,29 +149,34 @@ class Draw{
         });
 
         // console.log(zpr_curves);
-        Draw.CurrentCurve(ctx, docu, zpr_curves);
-        Draw.Outline(ctx, docu, zpr_curves);
+        Draw.currCurve(ctx, docu, zpr_curves);
+        // Draw.Outline(ctx, docu, zpr_curves);
         // for (var sub_docu in docu.importedDocuments){
         //     console.log(sub_docu);
         //     Draw.Curve(ctx, docu.importedDocuments[sub_docu], zpr);
         // }
     }
 
-    static Curves(ctx, docu){
+    static Anchor(ctx, docu, zpr){
+        ctx.strokeStyle = "#606060";
+        var zpr_anchor = zpr.Transform(docu.anchor);
+        ctx.beginPath();
+            ctx.moveTo(zpr_anchor.x-10, zpr_anchor.y);
+            ctx.lineTo(zpr_anchor.x+10, zpr_anchor.y);
+            ctx.moveTo(zpr_anchor.x, zpr_anchor.y-10);
+            ctx.lineTo(zpr_anchor.x, zpr_anchor.y+10);
+            ctx.moveTo(zpr_anchor.x+15, zpr_anchor.y);
+            ctx.arc(zpr_anchor.x, zpr_anchor.y, 15, 0, Math.PI*2);
+        ctx.stroke();   
 
-        var curves = docu.curves,
-            anchor = docu.anchor,
-            currCurveIndex = docu.currCurveIndex,
-            currLeverIndex = docu.currLeverIndex,
-            captured = docu.captured,
-            zpr = docu.zpr;
+    }
 
-        ctx.lineWidth = 1;
-        ctx.clearRect(0,0, ctx.canvas.width, ctx.canvas.height);
-        Draw.Status(ctx, docu);
-        Draw.Anchor(ctx, docu);
+
+    static Captured(ctx, docu){
+        var captured = docu.captured;
 
         ctx.strokeStyle = "#AE0000";
+
         if(captured != null){
             ctx.beginPath();
                 if(captured.type == "center")
@@ -212,9 +196,20 @@ class Draw{
                 ctx.arc(captured.by.x, captured.by.y, 10, 0, 2 * Math.PI);
             ctx.stroke();
         }
+    }
+
+    static Editor(editor){
+
+        var ctx = editor.context;
+
+        ctx.clearRect(0,0, ctx.canvas.width, ctx.canvas.height);
+
+        Draw.Status(ctx, editor);
+        // Draw.Captured(ctx, docu);
 
         ctx.strokeStyle = "#000000";
-        Draw.Curve(ctx, docu, zpr);
+        Draw.Curve(ctx,  editor.docu, editor.zpr);
+        Draw.Anchor(ctx, editor.docu, editor.zpr);
     }
 }
 

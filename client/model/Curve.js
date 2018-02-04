@@ -20,7 +20,7 @@ class Curve {
 
     Add(mouseV){
         this.levers.push(new Lever(mouseV));
-        this.GetOutlines();
+        // this.GetOutlines();
         return this.levers.length - 1;
     }
 

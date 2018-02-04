@@ -1,3 +1,7 @@
+var Status = require("./Status.js");
+
+var Curve    = require('./model/Curve.js');
+var Cast     = require('./control/Cast.js');
 
 /**
  * stores current editing context, including
@@ -9,14 +13,6 @@
  * 5. captured context
  */
 
-var Status = Object.freeze({
-		Editing : 0,
-		Creating : 1,
-		MovingCurve : 2,
-		MovingLever : 3,
-		EditingLever : 4,
-		MovingAnchor : 5
-	});
 
 class EditorCoreData{
 	constructor(){
@@ -29,7 +25,7 @@ class EditorCoreData{
 		this.currLeverIndex = null;
 		this.currPointIndex = null;
 
-		this.transArray = null;
+		this.transArray = [];
 
 		this.captured = null;
 
@@ -43,19 +39,29 @@ class EditorCoreData{
 		return this.docu.curves[this.currCurveIndex].levers[this.currLeverIndex];
 	}
 
+	TransCurrCurve(vec){
+		this.CurrCurve().TransFromArray(this.transArray, vec);
+	}
+
+	TransCurrLever(vec){
+		this.CurrLever().TransFromArray(this.transArray, vec);
+	}
+
 	AddCurve(curve){
 		this.currCurveIndex = this.docu.curves.push(curve) - 1;
 	}
 
 	AddPoint(point){
 		if(this.currCurveIndex == null){
-			this.AddCurve(new Curve(point));
-		} else {
-			if(this.SelectControlPoint(point, false) == -1){
-				this.currLeverIndex = this.CurrCurve().Add(point);
-				console.log(this.currLeverIndex);
-			}
+			this.AddCurve(new Curve());
 		}
+
+		this.SelectControlPoint(point, false);
+		if(this.currLeverIndex == null){
+			this.currLeverIndex = this.CurrCurve().Add({point:point});
+		}
+
+		console.log(this.CurrCurve());
 	}
 
 	RemoveLever(){
@@ -81,7 +87,7 @@ class EditorCoreData{
 	Deselect(){
 		this.currCurveIndex = null,
 		this.currLeverIndex = null,
-		this.currPoint = null;
+		this.currPointIndex = null;
 	}
 
 	/**
@@ -95,7 +101,7 @@ class EditorCoreData{
 		this.currLeverIndex = null;
 		if(this.currCurveIndex != null){
 			for (const [i, lever] of this.CurrCurve().levers.entries()){
-				cast = Cast.Lever(lever, point);
+				var cast = Cast.Lever(lever, point);
 				if(cast != -1 && cast != (no_center ? 2 : -1)){
 					this.currLeverIndex = i;
 					this.currPointIndex = cast;
@@ -116,8 +122,11 @@ class EditorCoreData{
 
 	PrepareTrans(point){
 
-		var prepareLeverTrans = function(ith, point){
-			var curve = this.docu.curves[ith];
+		// first clear the transArray
+		this.transArray = [];
+
+		// check if we are moving a lever, done by a cast test
+		var prepareLeverTrans = function(curve, ith, point){
 
 			for (const [i, lever] of this.CurrCurve().levers.entries()){
 				var cast = Cast.Lever(lever, point);
@@ -129,12 +138,16 @@ class EditorCoreData{
 					break;
 				}
 			}
-		}
+		}.bind(this);
 
+		// check if we are moving the whole curve, if not moving a lever
+		// also done by cast test
+		
+		console.log(this.currLeverIndex);
 		for (const [ith, curve] of this.docu.curves.entries()){
 			if(Cast.Curve(curve, point) != -1) {
 				this.currCurveIndex = ith;
-				this.transArray = this.PrepareLeverTrans(ith, point);
+				this.transArray = prepareLeverTrans(curve, ith, point);
 				if(transArray.length == 0){
 					this.status = Status.MovingCurve;
 					this.transArray = this.CurrCurve().ExtractArray();

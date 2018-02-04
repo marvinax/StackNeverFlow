@@ -31,11 +31,22 @@ class Lever {
 
         if(input != undefined){
 
-            this.points     = input.points.map(function(point){return new Vector(point)});
-            this.leverMode  = input.leverMode;
-            this.selectMode = input.selectMode;
-            this.strokeMode = input.strokeMode;
+            if(input.points != undefined){
+                this.points     = input.points.map(function(point){return new Vector(point)});    
+            }
+            if(input.point != undefined){
+                this.points = [
+                    new Vector(input.point),
+                    new Vector(input.point),
+                    new Vector(input.point),
+                    new Vector(input.point),
+                    new Vector(input.point)
+                ]
+            }
 
+            this.leverMode = (input.leverMode != undefined) ? input.leverMode : LeverMode.SYMMETRIC;
+            this.selectMode = (input.selectMode != undefined) ? input.selectMode : SelectMode.NONE;
+            this.strokeMode = (input.strokeMode != undefined) ? input.strokeMode : StrokeMode.FREE;
 
         } else {
 			this.points = [
@@ -45,11 +56,6 @@ class Lever {
 				Vector.Zero,
 				Vector.Zero
 			]
-
-            this.leverMode = LeverMode.SYMMETRIC;
-            this.selectMode = SelectMode.NONE;
-            this.strokeMode = StrokeMode.FREE;
-
 		}
 	}
 
