@@ -34,16 +34,14 @@ class Neutron {
 
 		valueInput.onchange = valueInput.oninput = function(){
 			param.value = valueSlider.value = valueInput.value;
-
-	        this.docu.Eval(this.docu.update);
-	        this.docu.UpdateDraw(this.context);
+	        this.docu.EvalUpdate();
+	        this.docu.UpdateDraw();
 		}.bind(this);
 
 		valueSlider.onchange = valueSlider.oninput = function(){
 			param.value = valueInput.value = valueSlider.value;
-
-	        this.docu.Eval(this.docu.update);
-	        this.docu.UpdateDraw(this.context);
+	        this.docu.EvalUpdate();
+	        this.docu.UpdateDraw();
 		}.bind(this);
 
 		var deleteButton = document.createElement('button');

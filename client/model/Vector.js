@@ -14,6 +14,10 @@ class Vector{
 		return new Vector(this.x, this.y);
 	}
 
+	Abs(){
+		return new Vector(Math.abs(this.x), Math.abs(this.y));
+	}
+
 	Dist(v){
 		var dx = v.x - this.x;
 		var dy = v.y - this.y;

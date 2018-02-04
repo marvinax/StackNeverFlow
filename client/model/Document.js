@@ -1,46 +1,36 @@
-var Vector =  require('./model/Vector.js');
-var Lever =   require('./model/Lever.js');
-var Curve =   require('./model/Curve.js');
+var Vector =  require('./Vector.js');
+var Lever =   require('./Lever.js');
+var Curve =   require('./Curve.js');
 
-class DocuCore{
+Array.prototype.last = function(){
+	return this[this.length - 1];
+}
 
-	constructor(){
-		/**
-		 * params for adjusting the curves
-		 * @type {Object}
-		 */
-		this.params = {};
+class Document{
 
-		/**
-		 * initialization code. Executed only once in beginning
-		 * @type {String}
-		 */
-		this.init = "";
+	constructor(input){
+		if(input != undefined){
+			this.SetDocument(input);
+		} else {
+			this.params = {};
+			this.init = "";
+			this.update = "";
+			this.curves = [];
+			this.anchor = new Vector(0, 0);
+			this.importedDocuments = {};
+		}
+	}
 
-		/**
-		 * Updating code. Executed during keypressing, mousepressing, dragging
-		 * and any other editing actions.
-		 * @type {String}
-		 */
-		this.update = "";
+	SetDocument(input){
+		this.params = input.params;
+		this.init = input.init;
+		this.update = input.update;
+		this.curves = input.curves.map(function(curve){return new Curve(curve)});
+		this.anchor = new Vector(input.anchor);
+		for(var docName in res.importDocuments){
+			this.importedDocuments[docName] = new Document(this.importedDocuments[docName]);
+		}
 
-		/**
-		 * Other imported documents, a dictionary contains the key
-		 * mapped to corresponding DocuCore objects.
-		 * @type {Object}
-		 */
-		this.importedDocuments = {};
-
-		/**
-		 * All curves that constitutes the document.
-		 */
-		this.curves = [];
-
-		/**
-		 * the anchor that locates the document in the parent
-		 * @type {Vector}
-		 */
-		this.anchor = new Vector(0, 0);
 	}
 
 	InitEval(){
@@ -79,23 +69,17 @@ class DocuCore{
 		    if (xhr.status === 200) {
 		        var res = JSON.parse(xhr.responseText);
 		    	console.log(res);
-		        docu.curves = LoadData.Curves(res.curves);
-		        docu.anchor = new Vector(res.anchor.x, res.anchor.y);
-		        docu.importedDocuments = res.importedDocuments;
-		        docu.params = res.params;
-		        docu.init   = res.init;
-		        docu.update = res.update;
+		        this.SetDocument(res);
 
-		        console.log(neutron);
-		        neutron.ReloadExistingParams();
-
-		        document.getElementById("init-code").value = docu.init;
-		        document.getElementById("update-code").value = docu.update;
-
-		        docu.InitEval();
-		        docu.Eval(docu.init);
-		        docu.Eval(docu.update);
-		        docu.UpdateDraw("load");
+		        // Move the things below to the outside, and triggered by
+		        // finishing loading the data from server
+		        
+		        // neutron.ReloadExistingParams();
+		        // document.getElementById("init-code").value = docu.init;
+		        // document.getElementById("update-code").value = docu.update;
+		        // docu.InitEval();
+		        // docu.Eval(docu.init);
+		        // docu.Eval(docu.update);
 
 		    }
 		    else {
@@ -103,10 +87,6 @@ class DocuCore{
 		    }
 		};
 		xhr.send();
-
-	}
-
-	Parse(){
 
 	}
 
@@ -473,4 +453,4 @@ class DocuCore{
 	
 }
 
-module.exports = DocuCore;
+module.exports = Document;

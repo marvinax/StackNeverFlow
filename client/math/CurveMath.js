@@ -47,9 +47,6 @@ class CurveMath{
 
     static SetInsertedLeverOnCurve(p0, p1, p2, t){
               
-        // p1.points[1] = this.GetPointOnCurve(t, strokePointsLeft);
-        // p1.points[3] = this.GetPointOnCurve(t, strokePointsRight);
-
         this.SetInsertedLever(
             p0.points[2],
             p0.points[4],
@@ -66,7 +63,6 @@ class CurveMath{
             levers[ithNode],
             levers[(ithNode == levers.length - 1 ? ithNode : ithNode + 1)],
             t);
-        // console.log(JSON.stringify([levers[ithNode == 0 ? 0 : ithNode - 1], levers[ithNode], levers[(ithNode == levers.length - 1 ? ithNode : ithNode + 1)]], null, '\t'));
     }
 
     static GetClosestTFromGivenPoint(p0, p1, givenPoint, iter, slices) {
