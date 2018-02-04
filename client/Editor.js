@@ -34,45 +34,51 @@ class Editor extends EditorCoreData {
 		this.docu.anchor = newPoint;
 	}
 
-	checkMovingCapture(){
-		if(this.captured != null){
-			var cap = this.curr.Copy(),
-				other = this.captured.over == "x" ? "y" : "x";
-			cap[other] = this.captured.by[other];
-			this.TransCurrLever(cap.Sub(this.orig));
-		} else {
+	MoveLever(){
+		// if(this.captured != null){
+		// 	var cap = this.curr.Copy(),
+		// 		other = this.captured.over == "x" ? "y" : "x";
+		// 	cap[other] = this.captured.by[other];
+		// 	this.TransCurrLever(cap.Sub(this.orig));
+		// } else {
 			this.TransCurrLever(this.curr.Sub(this.orig));
-		}		
+		// }		
 	}
 
-	checkEditingCapture(){
-		if(this.captured != null){
-			var cent = this.CurrLever().points[2],
-				vec  = curr.Copy().Sub(cent),
-				over = this.captured.over,
-				cap  = cent.Add(over.Mult(vec.Dot(over) / over.Dot(over)));
-			this.UpdateCurrLever(cap);
-		} else {
-			this.UpdateCurrLever(curr);
-		}		
+	EditLever(){
+		// if(this.captured != null){
+		// 	var cent = this.CurrLever().points[2],
+		// 		vec  = this.curr.Copy().Sub(cent),
+		// 		over = this.captured.over,
+		// 		cap  = cent.Add(over.Mult(vec.Dot(over) / over.Dot(over)));
+		// 	this.UpdateCurrLever(cap);
+		// } else {
+			this.UpdateCurrLever(this.curr);
+		// }		
 	}
 
 	UpdateEdit(){
 
 		switch(this.status){
-		case Status.Creaating:
+		case Status.Creating:
 			this.CurrCurve().UpdateLever(this.currLeverIndex, 4, this.curr);
 			break;
 		case Status.MovingCurve:
 			this.TransCurrCurve(this.curr.Sub(this.orig));
 			break;
 		case Status.MovingLever:
-			this.checkMovingCapture();
+			this.MoveLever();
             break;
 		case Status.EditingLever:
-			this.checkEditingCapture();
+			this.EditLever();
 			break;
 		}
+
+		for(var curve of this.docu.curves){
+			curve.GetOutlines();
+			console.log(curve.outline);
+		}
+
 	}
 
 	FinishEdit(){
@@ -81,90 +87,88 @@ class Editor extends EditorCoreData {
 		}
 	}
 
-	CaptureFramework(ithPoint, enter, leave){
-		if(this.captured == null){
-			for(const [ithc, curve] of this.docu.curves.entries()){
-				for(const [ithl, lever] of curve.levers.entries()){
-					var curveMatch = this.currCurveIndex == ithc,
-						leverMatch = this.currLeverMatch == ithl;
-					if(this.captured == null){
-						if(!curveMatch || !leverMatch && curveMatch) enter(lever, ithPoint);							
-					} else {
-						leave(lever, ithPoint);
-					}
-				}
-			}			
-		}
-	}
+	// CaptureFramework(ithPoint, enter, leave){
+	// 	for(const [ithc, curve] of this.docu.curves.entries()){
+	// 		for(const [ithl, lever] of curve.levers.entries()){
+	// 			var curveMatch = this.currCurveIndex == ithc,
+	// 				leverMatch = this.currLeverMatch == ithl;
+	// 			if(this.captured == null){
+	// 				if(!curveMatch || (!leverMatch && curveMatch)) enter(lever, ithPoint);							
+	// 			} else {
+	// 				leave(lever, ithPoint);
+	// 			}
+	// 		}
+	// 	}			
+	// }
 
-	CapturedMove(){
+	// CapturedMove(){
 
-		var enter = function(lever){
-				if(this.CurrLever().points[2].Dist(lever.points[2]) < 100){
-					var abs = this.curr.Sub(lever.points[2]).Abs();
-					this.captured = {
-						by   : lever.points[2],
-						over : (abs.x < abs.y) ? "x" : "y",
-						type : "center"
-					};
-				}
-			}.bind(this);
-		var leave = function(){
-			if(this.captured.type == "center"){
-				var otherDir = this.captured.over == "x" ? "y" : "x";
-				if(Math.abs(this.curr[otherDir] - this.captured.by[otherDir]) > 50){
-					this.captured = null;
-				}				
-			}
-		}.bind(this);
+	// 	var enter = function(lever){
+	// 			if(this.CurrLever().points[2].Dist(lever.points[2]) < 100){
+	// 				var abs = this.curr.Sub(lever.points[2]).Abs();
+	// 				this.captured = {
+	// 					by   : lever.points[2],
+	// 					over : (abs.x < abs.y) ? "x" : "y",
+	// 					type : "center"
+	// 				};
+	// 			}
+	// 		}.bind(this);
+	// 	var leave = function(){
+	// 		if(this.captured.type == "center"){
+	// 			var otherDir = this.captured.over == "x" ? "y" : "x";
+	// 			if(Math.abs(this.curr[otherDir] - this.captured.by[otherDir]) > 50){
+	// 				this.captured = null;
+	// 			}				
+	// 		}
+	// 	}.bind(this);
 
-		this.CaptureFramework(null, enter, leave);
-		this.UpdateDraw("MoveLever");
-	}
+	// 	this.CaptureFramework(null, enter, leave);
+	// 	this.UpdateDraw("MoveLever");
+	// }
 
 
-	CapturedEdit(ithPoint){
+	// CapturedEdit(ithPoint){
 
-		var enter = function(lever, ithPoint){
+	// 	var enter = function(lever, ithPoint){
 
-			console.log(ithPoint);
+	// 		console.log(ithPoint);
 
-				var angle = this.curr.Sub(this.CurrLever().points[2]).Angle(),
-					control = lever.points[ithPoint].Sub(lever.points[2]),
-					leverAngle = control.Angle();
+	// 			var angle = this.curr.Sub(this.CurrLever().points[2]).Angle(),
+	// 				control = lever.points[ithPoint].Sub(lever.points[2]),
+	// 				leverAngle = control.Angle();
 				
-				for(let i = 0; i < 3; i++){
-					if(Math.abs(angle - Math.PI/2 * i) < 0.09){
-						var x = Math.cos(Math.PI/2 * i),
-							y = Math.sin(Math.PI/2 * i);
-						this.captured = {
-							by:this.CurrLever().points[2],
-							over: new Vector(x, y),
-							type: "control"
-						}
-					}								
-				}
+	// 			for(let i = 0; i < 3; i++){
+	// 				if(Math.abs(angle - Math.PI/2 * i) < 0.09){
+	// 					var x = Math.cos(Math.PI/2 * i),
+	// 						y = Math.sin(Math.PI/2 * i);
+	// 					this.captured = {
+	// 						by:this.CurrLever().points[2],
+	// 						over: new Vector(x, y),
+	// 						type: "control"
+	// 					}
+	// 				}								
+	// 			}
 
-				if(Math.abs(angle - leverAngle) < 0.09){
-					this.captured = {
-						by : lever.points[2],
-						over: control,
-						type: "control"
-					};
-				}
-			}.bind(this);
-		var leave = function(){
-			if(this.captured.type == "center"){
-				var control = lever.points[pIndex].Sub(lever.points[2]);
-				if(Math.abs(angle - control.Angle()) >= 0.09){
-					this.captured = null;
-				}
-			}
-		}.bind(this);
+	// 			if(Math.abs(angle - leverAngle) < 0.09){
+	// 				this.captured = {
+	// 					by : lever.points[2],
+	// 					over: control,
+	// 					type: "control"
+	// 				};
+	// 			}
+	// 		}.bind(this);
+	// 	var leave = function(){
+	// 		if(this.captured.type == "center"){
+	// 			var control = lever.points[pIndex].Sub(lever.points[2]);
+	// 			if(Math.abs(angle - control.Angle()) >= 0.09){
+	// 				this.captured = null;
+	// 			}
+	// 		}
+	// 	}.bind(this);
 
-		this.CaptureFramework(ithPoint, enter, leave);
-		this.UpdateDraw("EditLever");
-	}
+	// 	this.CaptureFramework(ithPoint, enter, leave);
+	// 	this.UpdateDraw("EditLever");
+	// }
 
 	Drag(event) {
 		
@@ -199,19 +203,7 @@ class Editor extends EditorCoreData {
 		if (this.down && (event.type == "mousemove")) {
 			
 			this.curr = this.zpr.InvTransform(MouseV);
-			
-			switch(this.status){
-				case Status.MovingLever:
-					this.CapturedMove(); break;
-				case Status.EditingLever:
-					this.CapturedEdit(this.currPointIndex); break;
-				case Status.Creating:
-					console.log(JSON.stringify(this.currLeverIndex));
-					this.CapturedEdit(4);
-					this.CurrLever().SetControlPoint(4, this.curr);
-					break;
-			}
-				
+							
 			this.UpdateEdit();
 			this.UpdateDraw("mouseMoved");
 		}
@@ -220,22 +212,13 @@ class Editor extends EditorCoreData {
 			this.down = false;
 			this.orig = null;
 			this.FinishEdit();
-			this.ClearCapture();
 			this.UpdateDraw("mouseUp");
 		}
 
 	}
 
-	ClearCapture(){
-		this.captured = null;		
-	}
-
-
 	UpdateDraw(info){
 		console.log(info);
-		// for(var curve of this.docu.curves){
-		// 	curve.GetOutlines();
-		// }
 		Draw.Editor(this);
 	}
 

@@ -83,10 +83,10 @@ class Outline{
             var t = CurveMath.GetClosestTFromGivenPoint(l0, l1, vwo, 3, 3);
             // console.log("t val:"+t);
 
-            var s = new Lever(new Vector(0,0)),
+            var s = new Lever({point:new Vector(0,0)}),
                 l1copy = l1.Copy(),
                 l0copy = l0.Copy();
-
+                
             CurveMath.SetInsertedLeverOnCurve(l0copy, s, l1copy, t);
 
             s.points[1] = s.points[2].Add(vwo.Sub(vp).Normalize().Mult((l1width + t*(l0width - l1width))));

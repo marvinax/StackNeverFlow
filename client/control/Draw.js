@@ -9,6 +9,7 @@ class Draw{
         ctx.font = "16px TheMixMono";
 
         ctx.strokeStyle = "#CCCCCC";
+        ctx.lineWidth = 1;
         ctx.beginPath();
         for(let i=0; i<50; i++){
             var y1 = zpr.Transform(new Vector(i*30-300, -300)),
@@ -35,9 +36,11 @@ class Draw{
         ctx.fillText(docu.zpr.zoom.toFixed(3)+"x", 10, 45);        
     }
 
-    static currCurve(ctx, docu, zpr_curves){
+    static CurrCurve(ctx, curves, currCurve){
 
-        for (var curve of zpr_curves){
+        if(currCurve != null) {
+            console.log(currCurve);
+            var curve = curves[currCurve];
 
             for (var [i, lever] of curve.levers.entries()) {
 
@@ -72,58 +75,59 @@ class Draw{
     }
 
 
-    static Outline(ctx, docu, zpr_curves){
+    static Outline(ctx, curves){
 
-        for (var ith = zpr_curves.length - 1; ith >= 0; ith--) {
+        for (const [ith, curve] of curves.entries()) {
             ctx.lineWidth = 1;
-            if(zpr_curves[ith].levers.length > 1){
+            if(curve.levers.length > 1){
 
 
                 ctx.strokeStyle = "#434343";
-                ctx.beginPath();
-                for (let i = 0; i < zpr_curves[ith].o.length; i++) {
-                    // console.log(zpr_curves[ith].o[i][0]);
-                    ctx.moveTo(zpr_curves[ith].o[i][0].x,zpr_curves[ith].o[i][0].y)
-                    ctx.bezierCurveTo(
-                        zpr_curves[ith].o[i][1].x,zpr_curves[ith].o[i][1].y,
-                        zpr_curves[ith].o[i][2].x,zpr_curves[ith].o[i][2].y,
-                        zpr_curves[ith].o[i][3].x,zpr_curves[ith].o[i][3].y
-                    )
-                }
-                ctx.stroke();
-                ctx.beginPath();
                 var i = 0;
-                for (; i < zpr_curves[ith].i.length; i++) {
-                    ctx.moveTo(zpr_curves[ith].i[i][0].x,zpr_curves[ith].i[i][0].y)
+                ctx.beginPath();
+                for (; i < curve.o.length; i++) {
+                    // console.log(curve.o[i][0]);
+                    ctx.moveTo(curve.o[i][0].x,curve.o[i][0].y)
                     ctx.bezierCurveTo(
-                        zpr_curves[ith].i[i][1].x,zpr_curves[ith].i[i][1].y,
-                        zpr_curves[ith].i[i][2].x,zpr_curves[ith].i[i][2].y,
-                        zpr_curves[ith].i[i][3].x,zpr_curves[ith].i[i][3].y
+                        curve.o[i][1].x,curve.o[i][1].y,
+                        curve.o[i][2].x,curve.o[i][2].y,
+                        curve.o[i][3].x,curve.o[i][3].y
                     )
                 }
-                ctx.lineTo(zpr_curves[ith].o[i-1][3].x, zpr_curves[ith].o[i-1][3].y)
                 ctx.stroke();
+                ctx.beginPath();
+                i = 0;
+                for (; i < curve.i.length; i++) {
+                    ctx.moveTo(curve.i[i][0].x,curve.i[i][0].y)
+                    ctx.bezierCurveTo(
+                        curve.i[i][1].x,curve.i[i][1].y,
+                        curve.i[i][2].x,curve.i[i][2].y,
+                        curve.i[i][3].x,curve.i[i][3].y
+                    )
+                }
+                // ctx.lineTo(curve.o[i-1][3].x, curve.o[i-1][3].y)
+                ctx.stroke();
+
 
                 ctx.strokeStyle = "#000000";
                 ctx.lineWidth = 2;
 
-                var first = zpr_curves[ith].levers[0].points[2],
-                    sec   = zpr_curves[ith].levers[0].points[1],
+                var first = curve.levers[0].points[2],
+                    sec   = curve.levers[0].points[1],
                     diam  = sec.Sub(first).Normalize().Mult(20);
-                ctx.fillText("C"+ith, first.x + diam.y - 10, first.y -diam.x - 10);
 
-                for (var i = 0; i < zpr_curves[ith].levers.length; i++) {
-                    var point = zpr_curves[ith].lever.points[2];
+                for (const [i, lever] of curve.levers.entries()) {
+                    var point = lever.points[2];
                     ctx.fillText(i, point.x+10, point.y-10);
                 }
 
                 ctx.beginPath();
-                ctx.moveTo(zpr_curves[ith].levers[0].points[2].x, zpr_curves[ith].levers[0].points[2].y);
-                for (var i = 0; i < zpr_curves[ith].levers.length - 1; i++) {
+                ctx.moveTo(curve.levers[0].points[2].x, curve.levers[0].points[2].y);
+                for (var i = 0; i < curve.levers.length - 1; i++) {
                     ctx.bezierCurveTo(
-                        zpr_curves[ith].lever.points[4].x,   zpr_curves[ith].lever.points[4].y,
-                        zpr_curves[ith].levers[i+1].points[0].x, zpr_curves[ith].levers[i+1].points[0].y,
-                        zpr_curves[ith].levers[i+1].points[2].x, zpr_curves[ith].levers[i+1].points[2].y
+                        curve.levers[i].points[4].x,   curve.levers[i].points[4].y,
+                        curve.levers[i+1].points[0].x, curve.levers[i+1].points[0].y,
+                        curve.levers[i+1].points[2].x, curve.levers[i+1].points[2].y
                     )
                 }
                 ctx.stroke();
@@ -149,12 +153,12 @@ class Draw{
         });
 
         // console.log(zpr_curves);
-        Draw.currCurve(ctx, docu, zpr_curves);
-        // Draw.Outline(ctx, docu, zpr_curves);
-        // for (var sub_docu in docu.importedDocuments){
-        //     console.log(sub_docu);
-        //     Draw.Curve(ctx, docu.importedDocuments[sub_docu], zpr);
-        // }
+        Draw.CurrCurve(ctx, zpr_curves, currCurve);
+        Draw.Outline(ctx, zpr_curves);
+        for (var sub_docu in docu.importedDocuments){
+            console.log(sub_docu);
+            Draw.Curve(ctx, docu.importedDocuments[sub_docu], zpr);
+        }
     }
 
     static Anchor(ctx, docu, zpr){
@@ -208,7 +212,7 @@ class Draw{
         // Draw.Captured(ctx, docu);
 
         ctx.strokeStyle = "#000000";
-        Draw.Curve(ctx,  editor.docu, editor.zpr);
+        Draw.Curve(ctx,  editor.docu, editor.zpr, editor.currCurveIndex);
         Draw.Anchor(ctx, editor.docu, editor.zpr);
     }
 }

@@ -27,7 +27,7 @@ class EditorCoreData{
 
 		this.transArray = [];
 
-		this.captured = null;
+		// this.captured = null;
 
 	}
 
@@ -120,25 +120,26 @@ class EditorCoreData{
  	 * NOTE: the editing status is also set here.
 	 */
 
+	PrepareLeverTrans(curve, ith, point){
+
+		for (const [i, lever] of this.CurrCurve().levers.entries()){
+			var cast = Cast.Lever(lever, point);
+			if(cast != -1){
+				this.currLeverIndex = i;
+				this.currPoint = cast;
+				this.status = Status.MovingLever;
+				this.transArray = this.CurrLever().ExtractArray();
+				break;
+			}
+		}
+	};
+
 	PrepareTrans(point){
 
 		// first clear the transArray
 		this.transArray = [];
 
 		// check if we are moving a lever, done by a cast test
-		var prepareLeverTrans = function(curve, ith, point){
-
-			for (const [i, lever] of this.CurrCurve().levers.entries()){
-				var cast = Cast.Lever(lever, point);
-				if(cast != -1){
-					this.currLeverIndex = i;
-					this.currPoint = cast;
-					this.status = Status.MovingLever;
-					this.transArray = this.CurrLever().ExtractArray();
-					break;
-				}
-			}
-		}.bind(this);
 
 		// check if we are moving the whole curve, if not moving a lever
 		// also done by cast test
@@ -147,8 +148,9 @@ class EditorCoreData{
 		for (const [ith, curve] of this.docu.curves.entries()){
 			if(Cast.Curve(curve, point) != -1) {
 				this.currCurveIndex = ith;
-				this.transArray = prepareLeverTrans(curve, ith, point);
-				if(transArray.length == 0){
+				this.PrepareLeverTrans(curve, ith, point);
+				console.log(this.transArray);
+				if(this.transArray.length == 0){
 					this.status = Status.MovingCurve;
 					this.transArray = this.CurrCurve().ExtractArray();
 				}

@@ -46,7 +46,7 @@ class CurveMath{
     }
 
     static SetInsertedLeverOnCurve(p0, p1, p2, t){
-              
+        
         this.SetInsertedLever(
             p0.points[2],
             p0.points[4],

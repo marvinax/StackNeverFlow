@@ -8,7 +8,7 @@ class Cast{
                curve.bounding[0].y < curr.y && curve.bounding[1].y > curr.y;
     }
     
-    static CurveBody(curve, curr) {
+    static Curve(curve, curr) {
         
     	var CAST_DIST = 9;
 
@@ -23,15 +23,6 @@ class Cast{
         }
         return -1;
     } 
-
-    static Curve(curve, curr){
-    	// console.log(curve.bounding);
-        // if(this.CurveRect(curve, curr)){
-            return this.CurveBody(curve, curr);
-        // }
-        // else
-        //     return -1;
-    }
 
     static CurveIthLever(curve, curr) {
 
