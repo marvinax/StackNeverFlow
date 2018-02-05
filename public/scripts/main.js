@@ -74,8 +74,8 @@
 	if(false) {
 		// When the styles change, update the <style> tags
 		if(!content.locals) {
-			module.hot.accept("!!../node_modules/_css-loader@0.21.0@css-loader/index.js!./styles.css", function() {
-				var newContent = require("!!../node_modules/_css-loader@0.21.0@css-loader/index.js!./styles.css");
+			module.hot.accept("!!../node_modules/css-loader/index.js!./styles.css", function() {
+				var newContent = require("!!../node_modules/css-loader/index.js!./styles.css");
 				if(typeof newContent === 'string') newContent = [[module.id, newContent, '']];
 				update(newContent);
 			});
@@ -429,8 +429,8 @@
 		constructor(){
 			super();
 			
-			this.neutron = new Neutron();
 			this.docu = new Document();
+			this.neutron = new Neutron(this);
 			this.zpr = new ZPR();
 			this.context = document.getElementById("canvas").getContext("2d");
 
@@ -442,31 +442,16 @@
 			this.UpdateDraw("init");
 		}
 
-		setAnchor(newPoint){
+		SetAnchor(newPoint){
 			this.docu.anchor = newPoint;
 		}
 
 		MoveLever(){
-			// if(this.captured != null){
-			// 	var cap = this.curr.Copy(),
-			// 		other = this.captured.over == "x" ? "y" : "x";
-			// 	cap[other] = this.captured.by[other];
-			// 	this.TransCurrLever(cap.Sub(this.orig));
-			// } else {
-				this.TransCurrLever(this.curr.Sub(this.orig));
-			// }		
+			this.TransCurrLever(this.curr.Sub(this.orig));
 		}
 
 		EditLever(){
-			// if(this.captured != null){
-			// 	var cent = this.CurrLever().points[2],
-			// 		vec  = this.curr.Copy().Sub(cent),
-			// 		over = this.captured.over,
-			// 		cap  = cent.Add(over.Mult(vec.Dot(over) / over.Dot(over)));
-			// 	this.UpdateCurrLever(cap);
-			// } else {
-				this.UpdateCurrLever(this.curr);
-			// }		
+			this.UpdateCurrLever(this.curr);
 		}
 
 		UpdateEdit(){
@@ -475,6 +460,8 @@
 			case Status.Creating:
 				this.CurrCurve().UpdateLever(this.currLeverIndex, 4, this.curr);
 				break;
+			case Status.MovingAnchor:
+				this.SetAnchor(this.curr); break;
 			case Status.MovingCurve:
 				this.TransCurrCurve(this.curr.Sub(this.orig));
 				break;
@@ -490,6 +477,7 @@
 				curve.GetOutlines();
 				console.log(curve.outline);
 			}
+			console.log(this.docu);
 
 		}
 
@@ -499,89 +487,7 @@
 			}
 		}
 
-		// CaptureFramework(ithPoint, enter, leave){
-		// 	for(const [ithc, curve] of this.docu.curves.entries()){
-		// 		for(const [ithl, lever] of curve.levers.entries()){
-		// 			var curveMatch = this.currCurveIndex == ithc,
-		// 				leverMatch = this.currLeverMatch == ithl;
-		// 			if(this.captured == null){
-		// 				if(!curveMatch || (!leverMatch && curveMatch)) enter(lever, ithPoint);							
-		// 			} else {
-		// 				leave(lever, ithPoint);
-		// 			}
-		// 		}
-		// 	}			
-		// }
-
-		// CapturedMove(){
-
-		// 	var enter = function(lever){
-		// 			if(this.CurrLever().points[2].Dist(lever.points[2]) < 100){
-		// 				var abs = this.curr.Sub(lever.points[2]).Abs();
-		// 				this.captured = {
-		// 					by   : lever.points[2],
-		// 					over : (abs.x < abs.y) ? "x" : "y",
-		// 					type : "center"
-		// 				};
-		// 			}
-		// 		}.bind(this);
-		// 	var leave = function(){
-		// 		if(this.captured.type == "center"){
-		// 			var otherDir = this.captured.over == "x" ? "y" : "x";
-		// 			if(Math.abs(this.curr[otherDir] - this.captured.by[otherDir]) > 50){
-		// 				this.captured = null;
-		// 			}				
-		// 		}
-		// 	}.bind(this);
-
-		// 	this.CaptureFramework(null, enter, leave);
-		// 	this.UpdateDraw("MoveLever");
-		// }
-
-
-		// CapturedEdit(ithPoint){
-
-		// 	var enter = function(lever, ithPoint){
-
-		// 		console.log(ithPoint);
-
-		// 			var angle = this.curr.Sub(this.CurrLever().points[2]).Angle(),
-		// 				control = lever.points[ithPoint].Sub(lever.points[2]),
-		// 				leverAngle = control.Angle();
-					
-		// 			for(let i = 0; i < 3; i++){
-		// 				if(Math.abs(angle - Math.PI/2 * i) < 0.09){
-		// 					var x = Math.cos(Math.PI/2 * i),
-		// 						y = Math.sin(Math.PI/2 * i);
-		// 					this.captured = {
-		// 						by:this.CurrLever().points[2],
-		// 						over: new Vector(x, y),
-		// 						type: "control"
-		// 					}
-		// 				}								
-		// 			}
-
-		// 			if(Math.abs(angle - leverAngle) < 0.09){
-		// 				this.captured = {
-		// 					by : lever.points[2],
-		// 					over: control,
-		// 					type: "control"
-		// 				};
-		// 			}
-		// 		}.bind(this);
-		// 	var leave = function(){
-		// 		if(this.captured.type == "center"){
-		// 			var control = lever.points[pIndex].Sub(lever.points[2]);
-		// 			if(Math.abs(angle - control.Angle()) >= 0.09){
-		// 				this.captured = null;
-		// 			}
-		// 		}
-		// 	}.bind(this);
-
-		// 	this.CaptureFramework(ithPoint, enter, leave);
-		// 	this.UpdateDraw("EditLever");
-		// }
-
+		
 		Drag(event) {
 			
 			event.stopPropagation();
@@ -601,7 +507,7 @@
 				case Status.Creating:
 					this.AddPoint(this.orig); break;
 				case Status.MovingAnchor:
-					this.setAnchor(this.curr); break;
+					this.SetAnchor(this.curr); break;
 				case Status.EditingLever:
 					this.SelectControlPoint(this.curr);
 					if(this.currLeverIndex == null) this.Deselect(); break;
@@ -630,7 +536,6 @@
 		}
 
 		UpdateDraw(info){
-			console.log(info);
 			Draw.Editor(this);
 		}
 
@@ -656,13 +561,12 @@
 			}		
 		}
 
-		ToggleMoveAnchor(){
+		ToggleMoveAnchor(evt){
 			evt.preventDefault();
-			if(editor.status == Status.Editing){
-				editor.status = Status.MovingAnchor;
-			}
-			if(editor.status == Status.MovingAnchor){
-				editor.status = Status.Editing;	
+			if(this.status == Status.Editing){
+				this.status = Status.MovingAnchor;
+			} else if(this.status == Status.MovingAnchor){
+				this.status = Status.Editing;	
 			}
 		}
 
@@ -699,11 +603,12 @@
 				}
 
 	            if(evt.ctrlKey && evt.key == "Delete"){
-	            	this.RemoveLever();
+	            	this.RemoveLever(evt);
 	            }
 
 				if(evt.ctrlKey && evt.key == "a"){
-					this.ToggleMoveAnchor();
+					console.log("here")
+					this.ToggleMoveAnchor(evt);
 				}                      
 
 				this.SetLeverType(evt);
@@ -758,6 +663,7 @@
 
 	var Status = __webpack_require__(6);
 
+	var Document = __webpack_require__(14);
 	var Curve    = __webpack_require__(8);
 	var Cast     = __webpack_require__(13);
 
@@ -784,8 +690,6 @@
 			this.currPointIndex = null;
 
 			this.transArray = [];
-
-			// this.captured = null;
 
 		}
 
@@ -839,7 +743,8 @@
 		}
 
 		UpdateCurrLever(newPoint){
-			this.CurrCurve().UpdateLever(this.currLeverIndex, this.currPointIndex, newPoint);
+			if(this.currLeverIndex != null)
+				this.CurrCurve().UpdateLever(this.currLeverIndex, this.currPointIndex, newPoint);
 		}
 
 		Deselect(){
@@ -1699,7 +1604,7 @@
 			this.update = input.update;
 			this.curves = input.curves.map(function(curve){return new Curve(curve)});
 			this.anchor = new Vector(input.anchor);
-			for(var docName in res.importDocuments){
+			for(var docName in input.importDocuments){
 				this.importedDocuments[docName] = new Document(this.importedDocuments[docName]);
 			}
 
@@ -1719,47 +1624,6 @@
 			delete this.lstack;
 			delete this.vars;
 			delete this.funs;
-		}
-
-		Save(){
-			var xhr = new XMLHttpRequest();
-			xhr.open('PUT', 'save/');
-			xhr.setRequestHeader('Content-Type', 'application/json');
-			xhr.onload = function() {
-			    if (xhr.status === 200) {
-			        var userInfo = JSON.parse(xhr.responseText);
-			    }
-			};
-			this.ClearEval();
-			xhr.send(JSON.stringify({id: docu_id, data:docu}));
-		}
-
-		Load(){
-			var xhr = new XMLHttpRequest();
-			xhr.open('GET', 'load/'+docu_id);
-			xhr.onload = function() {
-			    if (xhr.status === 200) {
-			        var res = JSON.parse(xhr.responseText);
-			    	console.log(res);
-			        this.SetDocument(res);
-
-			        // Move the things below to the outside, and triggered by
-			        // finishing loading the data from server
-			        
-			        // neutron.ReloadExistingParams();
-			        // document.getElementById("init-code").value = docu.init;
-			        // document.getElementById("update-code").value = docu.update;
-			        // docu.InitEval();
-			        // docu.Eval(docu.init);
-			        // docu.Eval(docu.update);
-
-			    }
-			    else {
-			        alert('Request failed.  Returned status of ' + xhr.status);
-			    }
-			};
-			xhr.send();
-
 		}
 
 		Eval(expr){
@@ -2129,12 +1993,101 @@
 
 /***/ }),
 /* 15 */
-/***/ (function(module, exports) {
+/***/ (function(module, exports, __webpack_require__) {
+
+	
+	var Document = __webpack_require__(14);
 
 	class Neutron {
-		constructor(docu){
-			this.docu = docu;
+		constructor(editor){
+			this.editor = editor;
 			this.param_ui = document.getElementById("param-group");
+
+			this.AddParamUI();
+			this.LoadLink();
+
+			document.getElementById("save").onclick = this.Save.bind(this);
+		}
+
+		ClearDOMChildren(elem){
+			while (elem.firstChild) {
+			    elem.removeChild(elem.firstChild);
+			}
+		}
+
+
+		Save(){
+			var xhr = new XMLHttpRequest();
+			xhr.open('PUT', 'save/');
+			xhr.setRequestHeader('Content-Type', 'application/json');
+			console.log(this.editor.docu);
+			this.editor.docu.ClearEval();
+			xhr.onload = function(){
+				if(xhr.status == 200) {
+			        var res = JSON.parse(xhr.responseText);
+					this.LoadLink();				
+				}
+			}.bind(this);
+
+			var docu_id = document.getElementById("prefix").value + "_" + document.getElementById("name").value;
+			xhr.send(JSON.stringify({id: docu_id, data:this.editor.docu}));
+		}
+
+		Load(docu_id){
+			var xhr = new XMLHttpRequest();
+			xhr.open('GET', 'load/'+docu_id);
+			xhr.onload = function() {
+			    if (xhr.status === 200) {
+			        var res = JSON.parse(xhr.responseText);
+			    	console.log(res);
+			        this.editor.docu = new Document(res);
+			        
+			        this.ReloadExistingParams();
+			        // document.getElementById("init-code").value = docu.init;
+			        // document.getElementById("update-code").value = docu.update;
+			        // docu.InitEval();
+			        // docu.Eval(docu.init);
+			        // docu.Eval(docu.update);
+			        this.editor.UpdateDraw("loaded");
+			    }
+			    else {
+			        alert('Request failed.  Returned status of ' + xhr.status);
+			    }
+			}.bind(this);
+			xhr.send();
+		}
+
+		LoadLink(){
+
+			var xhr = new XMLHttpRequest();
+			xhr.open('GET', 'load_name/');
+			xhr.onload = function() {
+			    if (xhr.status === 200) {
+			    	console.log(xhr.responseText);
+			        var res = JSON.parse(xhr.responseText);
+			    	console.log(res);
+			    
+					this.ClearDOMChildren(document.getElementById("list"));
+
+			    	for (let docu_id of res.res){
+			    		let a = document.createElement('a');
+			    		a.innerHTML = docu_id.split("_").pop();
+			    		a.class = "char-link";
+			    		a.onclick = function(){
+			    			this.Load(docu_id);
+			    			document.getElementById("prefix").value = docu_id.split("_")[0];
+			    			document.getElementById("name").value = docu_id.split("_")[1];
+			    		}.bind(this);
+			    		list.appendChild(a);
+			    		list.appendChild(document.createTextNode(" "));
+			    	}
+
+			    }
+			    else {
+			        alert('Request failed.  Returned status of ' + xhr.status);
+			    }
+			}.bind(this);
+			xhr.send();
 		}
 
 		ClearParams(){
@@ -2166,14 +2119,14 @@
 
 			valueInput.onchange = valueInput.oninput = function(){
 				param.value = valueSlider.value = valueInput.value;
-		        this.docu.EvalUpdate();
-		        // this.docu.UpdateDraw();
+		        this.editor.docu.EvalUpdate();
+		        this.editor.UpdateDraw();
 			}.bind(this);
 
 			valueSlider.onchange = valueSlider.oninput = function(){
 				param.value = valueInput.value = valueSlider.value;
-		        this.docu.EvalUpdate();
-		        // this.docu.UpdateDraw();
+		        this.editor.docu.EvalUpdate();
+		        this.editor.UpdateDraw();
 			}.bind(this);
 
 			var deleteButton = document.createElement('button');
@@ -2182,8 +2135,8 @@
 			deleteButton.onclick = function(){
 				var elem = document.getElementById(paramElem.id);
 				elem.parentNode.removeChild(elem);
-				// console.log(this.docu.params);
-				// delete this.docu.params[param.name];
+				// console.log(this.editor.docu.params);
+				delete this.editor.docu.params[param.name];
 			}.bind(this);
 
 			paramElem.appendChild(name);
@@ -2196,10 +2149,10 @@
 
 		ReloadExistingParams(){
 			this.ClearParams();
-			// for(let param in this.docu.params) {
-				// console.log(this.docu.params[param]);
-				// this.AddExistingParam(this.docu.params[param]);
-			// }
+			for(let param in this.editor.docu.params) {
+				console.log(this.editor.docu.params[param]);
+				this.AddExistingParam(this.editor.docu.params[param]);
+			}
 			this.AddParamUI();
 		}
 
@@ -2242,7 +2195,7 @@
 					min : minInput.value,
 					max : maxInput.value
 				};
-				// this.docu.params[param.name] = param;
+				this.editor.docu.params[param.name] = param;
 
 				this.ReloadExistingParams();
 			}.bind(this);

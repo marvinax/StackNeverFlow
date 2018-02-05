@@ -1,7 +1,96 @@
+
+var Document = require('./model/Document.js');
+
 class Neutron {
-	constructor(docu){
-		this.docu = docu;
+	constructor(editor){
+		this.editor = editor;
 		this.param_ui = document.getElementById("param-group");
+
+		this.AddParamUI();
+		this.LoadLink();
+
+		document.getElementById("save").onclick = this.Save.bind(this);
+	}
+
+	ClearDOMChildren(elem){
+		while (elem.firstChild) {
+		    elem.removeChild(elem.firstChild);
+		}
+	}
+
+
+	Save(){
+		var xhr = new XMLHttpRequest();
+		xhr.open('PUT', 'save/');
+		xhr.setRequestHeader('Content-Type', 'application/json');
+		console.log(this.editor.docu);
+		this.editor.docu.ClearEval();
+		xhr.onload = function(){
+			if(xhr.status == 200) {
+		        var res = JSON.parse(xhr.responseText);
+				this.LoadLink();				
+			}
+		}.bind(this);
+
+		var docu_id = document.getElementById("prefix").value + "_" + document.getElementById("name").value;
+		xhr.send(JSON.stringify({id: docu_id, data:this.editor.docu}));
+	}
+
+	Load(docu_id){
+		var xhr = new XMLHttpRequest();
+		xhr.open('GET', 'load/'+docu_id);
+		xhr.onload = function() {
+		    if (xhr.status === 200) {
+		        var res = JSON.parse(xhr.responseText);
+		    	console.log(res);
+		        this.editor.docu = new Document(res);
+		        
+		        this.ReloadExistingParams();
+		        // document.getElementById("init-code").value = docu.init;
+		        // document.getElementById("update-code").value = docu.update;
+		        // docu.InitEval();
+		        // docu.Eval(docu.init);
+		        // docu.Eval(docu.update);
+		        this.editor.UpdateDraw("loaded");
+		    }
+		    else {
+		        alert('Request failed.  Returned status of ' + xhr.status);
+		    }
+		}.bind(this);
+		xhr.send();
+	}
+
+	LoadLink(){
+
+		var xhr = new XMLHttpRequest();
+		xhr.open('GET', 'load_name/');
+		xhr.onload = function() {
+		    if (xhr.status === 200) {
+		    	console.log(xhr.responseText);
+		        var res = JSON.parse(xhr.responseText);
+		    	console.log(res);
+		    
+				this.ClearDOMChildren(document.getElementById("list"));
+
+		    	for (let docu_id of res.res){
+		    		let a = document.createElement('a');
+		    		a.innerHTML = docu_id.split("_").pop();
+		    		a.class = "char-link";
+		    		a.onclick = function(){
+		    			this.Load(docu_id);
+		    			document.getElementById("prefix").value = docu_id.split("_")[0];
+		    			document.getElementById("name").value = docu_id.split("_")[1];
+		    		}.bind(this);
+		    		list.appendChild(a);
+		    		list.appendChild(document.createTextNode(" "));
+		    	}
+
+		    }
+		    else {
+		        alert('Request failed.  Returned status of ' + xhr.status);
+		    }
+		}.bind(this);
+		xhr.send();
 	}
 
 	ClearParams(){
@@ -33,14 +122,14 @@ class Neutron {
 
 		valueInput.onchange = valueInput.oninput = function(){
 			param.value = valueSlider.value = valueInput.value;
-	        this.docu.EvalUpdate();
-	        // this.docu.UpdateDraw();
+	        this.editor.docu.EvalUpdate();
+	        this.editor.UpdateDraw();
 		}.bind(this);
 
 		valueSlider.onchange = valueSlider.oninput = function(){
 			param.value = valueInput.value = valueSlider.value;
-	        this.docu.EvalUpdate();
-	        // this.docu.UpdateDraw();
+	        this.editor.docu.EvalUpdate();
+	        this.editor.UpdateDraw();
 		}.bind(this);
 
 		var deleteButton = document.createElement('button');
@@ -49,8 +138,8 @@ class Neutron {
 		deleteButton.onclick = function(){
 			var elem = document.getElementById(paramElem.id);
 			elem.parentNode.removeChild(elem);
-			// console.log(this.docu.params);
-			// delete this.docu.params[param.name];
+			// console.log(this.editor.docu.params);
+			delete this.editor.docu.params[param.name];
 		}.bind(this);
 
 		paramElem.appendChild(name);
@@ -63,10 +152,10 @@ class Neutron {
 
 	ReloadExistingParams(){
 		this.ClearParams();
-		// for(let param in this.docu.params) {
-			// console.log(this.docu.params[param]);
-			// this.AddExistingParam(this.docu.params[param]);
-		// }
+		for(let param in this.editor.docu.params) {
+			console.log(this.editor.docu.params[param]);
+			this.AddExistingParam(this.editor.docu.params[param]);
+		}
 		this.AddParamUI();
 	}
 
@@ -109,7 +198,7 @@ class Neutron {
 				min : minInput.value,
 				max : maxInput.value
 			};
-			// this.docu.params[param.name] = param;
+			this.editor.docu.params[param.name] = param;
 
 			this.ReloadExistingParams();
 		}.bind(this);

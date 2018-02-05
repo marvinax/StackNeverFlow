@@ -1,5 +1,6 @@
 var Status = require("./Status.js");
 
+var Document = require('./model/Document.js');
 var Curve    = require('./model/Curve.js');
 var Cast     = require('./control/Cast.js');
 
@@ -26,8 +27,6 @@ class EditorCoreData{
 		this.currPointIndex = null;
 
 		this.transArray = [];
-
-		// this.captured = null;
 
 	}
 
@@ -81,7 +80,8 @@ class EditorCoreData{
 	}
 
 	UpdateCurrLever(newPoint){
-		this.CurrCurve().UpdateLever(this.currLeverIndex, this.currPointIndex, newPoint);
+		if(this.currLeverIndex != null)
+			this.CurrCurve().UpdateLever(this.currLeverIndex, this.currPointIndex, newPoint);
 	}
 
 	Deselect(){

@@ -17,8 +17,8 @@ class Editor extends EditorCoreData {
 	constructor(){
 		super();
 		
-		this.neutron = new Neutron();
 		this.docu = new Document();
+		this.neutron = new Neutron(this);
 		this.zpr = new ZPR();
 		this.context = document.getElementById("canvas").getContext("2d");
 
@@ -30,31 +30,16 @@ class Editor extends EditorCoreData {
 		this.UpdateDraw("init");
 	}
 
-	setAnchor(newPoint){
+	SetAnchor(newPoint){
 		this.docu.anchor = newPoint;
 	}
 
 	MoveLever(){
-		// if(this.captured != null){
-		// 	var cap = this.curr.Copy(),
-		// 		other = this.captured.over == "x" ? "y" : "x";
-		// 	cap[other] = this.captured.by[other];
-		// 	this.TransCurrLever(cap.Sub(this.orig));
-		// } else {
-			this.TransCurrLever(this.curr.Sub(this.orig));
-		// }		
+		this.TransCurrLever(this.curr.Sub(this.orig));
 	}
 
 	EditLever(){
-		// if(this.captured != null){
-		// 	var cent = this.CurrLever().points[2],
-		// 		vec  = this.curr.Copy().Sub(cent),
-		// 		over = this.captured.over,
-		// 		cap  = cent.Add(over.Mult(vec.Dot(over) / over.Dot(over)));
-		// 	this.UpdateCurrLever(cap);
-		// } else {
-			this.UpdateCurrLever(this.curr);
-		// }		
+		this.UpdateCurrLever(this.curr);
 	}
 
 	UpdateEdit(){
@@ -63,6 +48,8 @@ class Editor extends EditorCoreData {
 		case Status.Creating:
 			this.CurrCurve().UpdateLever(this.currLeverIndex, 4, this.curr);
 			break;
+		case Status.MovingAnchor:
+			this.SetAnchor(this.curr); break;
 		case Status.MovingCurve:
 			this.TransCurrCurve(this.curr.Sub(this.orig));
 			break;
@@ -78,6 +65,7 @@ class Editor extends EditorCoreData {
 			curve.GetOutlines();
 			console.log(curve.outline);
 		}
+		console.log(this.docu);
 
 	}
 
@@ -87,89 +75,7 @@ class Editor extends EditorCoreData {
 		}
 	}
 
-	// CaptureFramework(ithPoint, enter, leave){
-	// 	for(const [ithc, curve] of this.docu.curves.entries()){
-	// 		for(const [ithl, lever] of curve.levers.entries()){
-	// 			var curveMatch = this.currCurveIndex == ithc,
-	// 				leverMatch = this.currLeverMatch == ithl;
-	// 			if(this.captured == null){
-	// 				if(!curveMatch || (!leverMatch && curveMatch)) enter(lever, ithPoint);							
-	// 			} else {
-	// 				leave(lever, ithPoint);
-	// 			}
-	// 		}
-	// 	}			
-	// }
-
-	// CapturedMove(){
-
-	// 	var enter = function(lever){
-	// 			if(this.CurrLever().points[2].Dist(lever.points[2]) < 100){
-	// 				var abs = this.curr.Sub(lever.points[2]).Abs();
-	// 				this.captured = {
-	// 					by   : lever.points[2],
-	// 					over : (abs.x < abs.y) ? "x" : "y",
-	// 					type : "center"
-	// 				};
-	// 			}
-	// 		}.bind(this);
-	// 	var leave = function(){
-	// 		if(this.captured.type == "center"){
-	// 			var otherDir = this.captured.over == "x" ? "y" : "x";
-	// 			if(Math.abs(this.curr[otherDir] - this.captured.by[otherDir]) > 50){
-	// 				this.captured = null;
-	// 			}				
-	// 		}
-	// 	}.bind(this);
-
-	// 	this.CaptureFramework(null, enter, leave);
-	// 	this.UpdateDraw("MoveLever");
-	// }
-
-
-	// CapturedEdit(ithPoint){
-
-	// 	var enter = function(lever, ithPoint){
-
-	// 		console.log(ithPoint);
-
-	// 			var angle = this.curr.Sub(this.CurrLever().points[2]).Angle(),
-	// 				control = lever.points[ithPoint].Sub(lever.points[2]),
-	// 				leverAngle = control.Angle();
-				
-	// 			for(let i = 0; i < 3; i++){
-	// 				if(Math.abs(angle - Math.PI/2 * i) < 0.09){
-	// 					var x = Math.cos(Math.PI/2 * i),
-	// 						y = Math.sin(Math.PI/2 * i);
-	// 					this.captured = {
-	// 						by:this.CurrLever().points[2],
-	// 						over: new Vector(x, y),
-	// 						type: "control"
-	// 					}
-	// 				}								
-	// 			}
-
-	// 			if(Math.abs(angle - leverAngle) < 0.09){
-	// 				this.captured = {
-	// 					by : lever.points[2],
-	// 					over: control,
-	// 					type: "control"
-	// 				};
-	// 			}
-	// 		}.bind(this);
-	// 	var leave = function(){
-	// 		if(this.captured.type == "center"){
-	// 			var control = lever.points[pIndex].Sub(lever.points[2]);
-	// 			if(Math.abs(angle - control.Angle()) >= 0.09){
-	// 				this.captured = null;
-	// 			}
-	// 		}
-	// 	}.bind(this);
-
-	// 	this.CaptureFramework(ithPoint, enter, leave);
-	// 	this.UpdateDraw("EditLever");
-	// }
-
+	
 	Drag(event) {
 		
 		event.stopPropagation();
@@ -189,7 +95,7 @@ class Editor extends EditorCoreData {
 			case Status.Creating:
 				this.AddPoint(this.orig); break;
 			case Status.MovingAnchor:
-				this.setAnchor(this.curr); break;
+				this.SetAnchor(this.curr); break;
 			case Status.EditingLever:
 				this.SelectControlPoint(this.curr);
 				if(this.currLeverIndex == null) this.Deselect(); break;
@@ -218,7 +124,6 @@ class Editor extends EditorCoreData {
 	}
 
 	UpdateDraw(info){
-		console.log(info);
 		Draw.Editor(this);
 	}
 
@@ -244,13 +149,12 @@ class Editor extends EditorCoreData {
 		}		
 	}
 
-	ToggleMoveAnchor(){
+	ToggleMoveAnchor(evt){
 		evt.preventDefault();
-		if(editor.status == Status.Editing){
-			editor.status = Status.MovingAnchor;
-		}
-		if(editor.status == Status.MovingAnchor){
-			editor.status = Status.Editing;	
+		if(this.status == Status.Editing){
+			this.status = Status.MovingAnchor;
+		} else if(this.status == Status.MovingAnchor){
+			this.status = Status.Editing;	
 		}
 	}
 
@@ -287,11 +191,12 @@ class Editor extends EditorCoreData {
 			}
 
             if(evt.ctrlKey && evt.key == "Delete"){
-            	this.RemoveLever();
+            	this.RemoveLever(evt);
             }
 
 			if(evt.ctrlKey && evt.key == "a"){
-				this.ToggleMoveAnchor();
+				console.log("here")
+				this.ToggleMoveAnchor(evt);
 			}                      
 
 			this.SetLeverType(evt);

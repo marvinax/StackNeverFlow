@@ -27,7 +27,7 @@ class Document{
 		this.update = input.update;
 		this.curves = input.curves.map(function(curve){return new Curve(curve)});
 		this.anchor = new Vector(input.anchor);
-		for(var docName in res.importDocuments){
+		for(var docName in input.importDocuments){
 			this.importedDocuments[docName] = new Document(this.importedDocuments[docName]);
 		}
 
@@ -47,47 +47,6 @@ class Document{
 		delete this.lstack;
 		delete this.vars;
 		delete this.funs;
-	}
-
-	Save(){
-		var xhr = new XMLHttpRequest();
-		xhr.open('PUT', 'save/');
-		xhr.setRequestHeader('Content-Type', 'application/json');
-		xhr.onload = function() {
-		    if (xhr.status === 200) {
-		        var userInfo = JSON.parse(xhr.responseText);
-		    }
-		};
-		this.ClearEval();
-		xhr.send(JSON.stringify({id: docu_id, data:docu}));
-	}
-
-	Load(){
-		var xhr = new XMLHttpRequest();
-		xhr.open('GET', 'load/'+docu_id);
-		xhr.onload = function() {
-		    if (xhr.status === 200) {
-		        var res = JSON.parse(xhr.responseText);
-		    	console.log(res);
-		        this.SetDocument(res);
-
-		        // Move the things below to the outside, and triggered by
-		        // finishing loading the data from server
-		        
-		        // neutron.ReloadExistingParams();
-		        // document.getElementById("init-code").value = docu.init;
-		        // document.getElementById("update-code").value = docu.update;
-		        // docu.InitEval();
-		        // docu.Eval(docu.init);
-		        // docu.Eval(docu.update);
-
-		    }
-		    else {
-		        alert('Request failed.  Returned status of ' + xhr.status);
-		    }
-		};
-		xhr.send();
-
 	}
 
 	Eval(expr){
