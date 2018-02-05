@@ -49,7 +49,7 @@
 	__webpack_require__(1)
 
 	var Editor = __webpack_require__(5);
-	var Vector   = __webpack_require__(10);
+	var Vector   = __webpack_require__(9);
 
 	(function(){
 		window.onload = function() {
@@ -413,15 +413,15 @@
 	var Status = __webpack_require__(6);
 	var EditorCoreData = __webpack_require__(7);
 
-	var Document = __webpack_require__(14);
+	var Document = __webpack_require__(8);
 	var Neutron  = __webpack_require__(15);
 
-	var Vector   = __webpack_require__(10);
-	var Lever    = __webpack_require__(11);
-	var Curve    = __webpack_require__(8);
-	var Outline  = __webpack_require__(9);
+	var Vector   = __webpack_require__(9);
+	var Lever    = __webpack_require__(10);
+	var Curve    = __webpack_require__(11);
+	var Outline  = __webpack_require__(12);
 
-	var Cast     = __webpack_require__(13);
+	var Cast     = __webpack_require__(14);
 	var Draw     = __webpack_require__(16);
 	var ZPR      = __webpack_require__(17);
 
@@ -596,7 +596,6 @@
 				Math.max(rect.top,  Math.min(rect.bottom, event.clientY - rect.top)  * 1.5)
 			);
 
-			console.log(mouseV);
 			var zoomInc = event.deltaY*0.00005;
 			this.zpr.Zoom(mouseV, zoomInc);
 			this.UpdateDraw();
@@ -670,9 +669,9 @@
 
 	var Status = __webpack_require__(6);
 
-	var Document = __webpack_require__(14);
-	var Curve    = __webpack_require__(8);
-	var Cast     = __webpack_require__(13);
+	var Document = __webpack_require__(8);
+	var Curve    = __webpack_require__(11);
+	var Cast     = __webpack_require__(14);
 
 	/**
 	 * stores current editing context, including
@@ -837,754 +836,9 @@
 /* 8 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	var Outline = __webpack_require__(9);
-	var Vector  = __webpack_require__(10);
-	var Lever   = __webpack_require__(11);
-
-	var CurveMath = __webpack_require__(12);
-
-	class Curve {
-
-	    constructor(input){
-
-	        if(input != undefined){
-	            this.levers = input.levers.map(function(lever){return new Lever(lever)});
-	            this.outline = new Outline(input.outline);
-	        } else {
-	            this.levers = [];
-	            this.outline = new Outline();            
-	        }
-
-	    }
-
-	    Add(mouseV){
-	        this.levers.push(new Lever(mouseV));
-	        // this.GetOutlines();
-	        return this.levers.length - 1;
-	    }
-
-	    Delete(index){
-	        levers.splice(index, 1);
-	        this.GetOutlines();
-	    }
-	    
-	    Insert(curveCast) {
-	        this.levers.splice(Math.floor(curveCast+1), 0, new Lever(new Vector(0, 0)));
-	        CurveMath.SetInsertedLeverOnCurveGroup(this.levers, Math.floor(curveCast+1), curveCast - Math.floor(curveCast));
-	        console.log(this.levers.length);
-
-	        this.GetOutlines();
-	        
-	        return Math.floor(curveCast+1);
-	    }
-
-	    UpdateLever(ithLever, ithPoint, value){
-	        this.levers[ithLever].SetControlPoint(ithPoint, value);
-	        this.outline.GetOutline(this.levers);
-	    }
-
-	    GetOutlines(){
-	        this.outline.GetOutline(this.levers);
-	    }
-
-
-	    ExtractArray(){
-	    	var res = [];
-	        for(var lever of this.levers) res.push(lever.ExtractArray());
-	        return res;
-	    }
-
-	    TransFromArray(array, increment) {
-	    	// console.log(array);
-	        for (var i = 0; i < this.levers.length; i++) {
-	            this.levers[i].TransFromArray(array[i], increment);
-	        }
-	        this.GetOutlines();
-	    }
-	}
-
-	module.exports = Curve;
-
-/***/ }),
-/* 9 */
-/***/ (function(module, exports, __webpack_require__) {
-
-	var Vector = __webpack_require__(10);
-	var Lever =  __webpack_require__(11);
-	var CurveMath = __webpack_require__(12);
-
-	var CurveSide = Object.freeze({
-	    LEFT :  1,
-	    RIGHT : 3
-	});
-
-	class Outline{
-
-		constructor(input){
-	        if(input == undefined){
-	            this.outer = [];
-	            this.inner = [];            
-	        } else {
-	            if(input.outer != undefined){
-	                this.outer = input.outer.map(function(bezGroup){ return bezGroup.map(function(point){return new Vector(point)})});
-	            }
-	            if(input.inner != undefined){
-	                this.inner = input.inner.map(function(bezGroup){ return bezGroup.map(function(point){return new Vector(point)})});
-	            }
-	        }
-		}
-
-
-	    GetOutline(levers){
-	        this.outer = [];
-	        this.inner = [];
-	        for (var i = 0; i < levers.length - 1; i++) {
-	            this.GetOutlineSegment(levers[i], levers[i+1], 0);
-	        }
-	    }
-
-
-	    GetOutlineSegment(l0, l1, level){
-	        // console.log("level"+level);
-	        // console.log(l0, l1);
-	        var l0aux1 = l0.points[1].Sub(l0.points[2]).Add(l0.points[4]),
-	            l1aux1 = l1.points[1].Sub(l1.points[2]).Add(l1.points[0]),
-	            l0aux3 = l0.points[3].Sub(l0.points[2]).Add(l0.points[4]),
-	            l1aux3 = l1.points[3].Sub(l1.points[2]).Add(l1.points[0]);
-
-	        var cent_segment = l0.points[4].Sub(l1.points[0]);
-
-	        var offl01 = cent_segment.RightPerp().Normalize().Mult(l0.points[1].Dist(l0.points[2])).Add(l0.points[4]),
-	            offl11 = cent_segment.RightPerp().Normalize().Mult(l1.points[1].Dist(l1.points[2])).Add(l1.points[0]),
-	            offl03 = cent_segment.LeftPerp().Normalize().Mult(l0.points[3].Dist(l0.points[2])).Add(l0.points[4]),
-	            offl13 = cent_segment.LeftPerp().Normalize().Mult(l1.points[3].Dist(l1.points[2])).Add(l1.points[0]);
-
-	        var l0c1 = CurveMath.LineLineIntersection(l0.points[1], l0aux1, offl01, offl11),
-	            l1c1 = CurveMath.LineLineIntersection(offl01, offl11, l1aux1, l1.points[1]),
-	            l0c3 = CurveMath.LineLineIntersection(l0.points[3], l0aux3, offl03, offl13),
-	            l1c3 = CurveMath.LineLineIntersection(offl03, offl13, l1aux3, l1.points[3]),
-	            l0l11 = CurveMath.SegSegIntersection(l0.points[1], l0aux1, l1aux1, l1.points[1]),
-	            l0l13 = CurveMath.SegSegIntersection(l0.points[3], l0aux3, l1aux3, l1.points[3]),
-	            l0l1 = CurveMath.SegSegIntersection(l0.points[2], l0.points[4], l1.points[0], l1.points[2]);
-
-	        var l0width = l0.points[1].Dist(l0.points[2]),
-	            l1width = l1.points[1].Dist(l1.points[2]);
-
-	        // console.log("level "+level+": l0l1 s:" + l0l1.s.toFixed(3) + " t:" + l0l1.t.toFixed(3) + "\n",
-	        //             "l0c1.p "+l0c1.p.toFixed(3) + " l1c1.p "+l1c1.p.toFixed(3)+
-	        //             " l0c3.p "+l0c3.p.toFixed(3) + "l1c3.p "+l1c3.p.toFixed(3));
-
-	        if(l0c1.p > 0.96){ l0c1.v = offl01; }
-	        if(l1c1.p > 0.96){ l1c1.v = offl11; }
-	        if(l0c3.p > 0.96){ l0c3.v = offl03; }
-	        if(l1c3.p > 0.99){ l1c3.v = offl13; }
-
-	        if(l0l1.s < 1 && l0l1.s > 0 && l0l1.t < 1 && l0l1.t > 0){
-	            this.outer.push([l0.points[1], l0l11.v, l0l11.v, l1.points[1]]);
-	            this.inner.push([l0.points[3], l0l13.v, l0l13.v, l1.points[3]]);            
-	        } else if(level == 2 || l0l1.s > 1 && l0l1.t < 0){
-	            this.outer.push([l0.points[1], l0c1.v, l1c1.v, l1.points[1]]);
-	            this.inner.push([l0.points[3], l0c3.v, l1c3.v, l1.points[3]]);
-	        } else {
-
-	            var vwo = (l0l1.s > 1 ? l1c1.v : l0c1.v),
-	                vwi = (l0l1.s > 1 ? l1c3.v : l0c3.v),
-	                vp  = (l0l1.s > 1 ? l1.points[0] : l0.points[4]);
-
-	            var t = CurveMath.GetClosestTFromGivenPoint(l0, l1, vwo, 3, 3);
-	            // console.log("t val:"+t);
-
-	            var s = new Lever({point:new Vector(0,0)}),
-	                l1copy = l1.Copy(),
-	                l0copy = l0.Copy();
-	                
-	            CurveMath.SetInsertedLeverOnCurve(l0copy, s, l1copy, t);
-
-	            s.points[1] = s.points[2].Add(vwo.Sub(vp).Normalize().Mult((l1width + t*(l0width - l1width))));
-	            s.points[3] = s.points[2].Add(vwi.Sub(vp).Normalize().Mult((l1width + t*(l0width - l1width))));
-
-	            // console.log("haha"+JSON.stringify(s));
-	            this.GetOutlineSegment(l0copy, s, level+1);
-	            this.GetOutlineSegment(s, l1copy, level+1);                    
-	        }
-
-	    }
-
-	}
-
-	module.exports = Outline;
-
-/***/ }),
-/* 10 */
-/***/ (function(module, exports) {
-
-	class Vector{
-
-		constructor(x, y){
-			if(x.x != undefined && x.y != undefined && y == undefined){
-				this.x = x.x;
-				this.y = x.y;
-			} else {
-				this.x = x;
-				this.y = y;
-			}
-		}
-
-		Copy(){
-			return new Vector(this.x, this.y);
-		}
-
-		Abs(){
-			return new Vector(Math.abs(this.x), Math.abs(this.y));
-		}
-
-		Dist(v){
-			var dx = v.x - this.x;
-			var dy = v.y - this.y;
-			return Math.hypot(dx, dy);
-		}
-
-	    Dot(v){
-	        return this.x*v.x + this.y*v.y;
-	    }
-
-	    Cross(v){
-	    	return this.x*v.y - this.y*v.x;
-	    }
-
-		Mag(){
-	        return Math.hypot(this.x, this.y);
-		}
-
-		static Dist(v1, v2){
-			var dx = v2.x - v1.x;
-			var dy = v2.y - v1.y;
-			return Math.hypot(dx, dy);
-		}
-
-		Normalize() {
-			var d = Math.hypot(this.x, this.y);
-			return new Vector(this.x/d, this.y/d);
-		}
-
-		Sub(v){
-			return new Vector(this.x - v.x, this.y - v.y);
-		}
-
-	    Subl(v){
-	        this.x -= v.x;
-	        this.y -= v.y;
-	    }
-
-		Add(v){
-			return new Vector(this.x + v.x, this.y + v.y);
-		}
-
-	    Addl(v){
-	        this.x += v.x;
-	        this.y += v.y;
-	    }
-
-		Mult(s){
-			return new Vector(this.x * s, this.y * s);
-		}
-
-	    Multl(s){
-	        this.x *= s;
-	        this.y *= s;
-	    }
-
-		Set(x, y){
-			if(typeof y !== "undefined"){
-				this.x = x;
-				this.y = y;
-			} else {
-				this.x = x.x;
-				this.y = x.y;
-			}
-		}
-
-		Angle(){
-			return Math.atan(this.y/this.x);
-		}
-
-		get Zero(){
-			return new Vector(0, 0);
-		}
-
-		LeftPerp(){
-			return new Vector(-this.y, this.x);
-		}
-
-		RightPerp(){
-			return new Vector(this.y, -this.x);	
-		}
-
-		toString(){
-			return this.x.toFixed(3) + " " + this.y.toFixed(3);
-		}
-	}
-
-	module.exports = Vector;
-
-/***/ }),
-/* 11 */
-/***/ (function(module, exports, __webpack_require__) {
-
-	var Vector = __webpack_require__(10);
-
-	var LeverMode = Object.freeze({
-	    BROKEN		: 0,
-	    LINEAR 		: 2,
-	    PROPER 		: 3,
-	    SYMMETRIC	: 4
-	});
-
-	var StrokeMode = Object.freeze({
-	    FREE : 0,
-	    PERP : 1
-	})
-
-	var SelectMode = Object.freeze({
-		NONE 		 : 0,
-		LEVER_SELECT : 1
-	});
-
-	var LeverPoint = Object.freeze({
-		POINT 		 : 2,
-		CONTROL_1	 : 0,
-		CONTROL_2 	 : 4,
-		WIDTH_1 	 : 1,
-		WIDTH_2	 	 : 3
-	});
-
-	class Lever {
-
-		constructor(input){
-
-	        if(input != undefined){
-
-	            if(input.points != undefined){
-	                this.points     = input.points.map(function(point){return new Vector(point)});    
-	            }
-	            if(input.point != undefined){
-	                this.points = [
-	                    new Vector(input.point),
-	                    new Vector(input.point),
-	                    new Vector(input.point),
-	                    new Vector(input.point),
-	                    new Vector(input.point)
-	                ]
-	            }
-
-	            this.leverMode = (input.leverMode != undefined) ? input.leverMode : LeverMode.SYMMETRIC;
-	            this.selectMode = (input.selectMode != undefined) ? input.selectMode : SelectMode.NONE;
-	            this.strokeMode = (input.strokeMode != undefined) ? input.strokeMode : StrokeMode.FREE;
-
-	        } else {
-				this.points = [
-					Vector.Zero,
-					Vector.Zero,
-					Vector.Zero,
-					Vector.Zero,
-					Vector.Zero
-				]
-			}
-		}
-
-	    Copy(){
-	        var newLever = new Lever();
-	        for (var i = newLever.points.length - 1; i >= 0; i--) {
-	            newLever.points[i] = this.points[i].Copy();
-	        }
-	        newLever.leverMode = this.leverMode;
-	        newLever.selectMode = this.selectMode;
-	        newLever.strokeMode = this.strokeMode;
-
-	        return newLever;
-	    }
-
-	    OppoOf(ith){
-	    	return 4 - ith;
-	    }
-
-	    Ratio(ith) {
-	    	var ithSide  = this.points[2].Dist(this.points[ith]),
-	    		oppoSide = this.points[2].Dist(this.points[this.OppoOf(ith)]);
-	        return ithSide / oppoSide;
-	    }
-
-	    OppoNorm(newPoint) {
-	        return (this.points[2].Sub(newPoint)).Normalize();
-	    }
-
-	    SetOppo(ith, oppoNorm, newDistance) {
-	        this.points[this.OppoOf(ith)] = this.points[2].Add(oppoNorm.Mult(newDistance));
-	    }
-
-	    SetControlPoint(ith, newPoint) {
-	    	var ratioOppo = this.Ratio(this.OppoOf(ith));
-	    	var oppoNorm  = this.OppoNorm(newPoint);
-
-	    	var dist;
-	    	switch(this.leverMode){
-
-	            /// for symmetric case, ratio is overwritten as 1
-	    		case LeverMode.SYMMETRIC:
-	    			ratioOppo = 1;
-
-	            /// recalculate to make proportional lever, the distance
-	            /// is calculated from the new distance between origin
-	            /// and currently selected control point.
-		        case LeverMode.PROPER:
-		            this.SetOppo(ith, oppoNorm, ratioOppo * this.points[2].Dist(newPoint));
-
-	            /// recalculate to make three points aligned on same
-	            /// line. use new direction and original distance of
-	            /// opposite control point.
-		        case LeverMode.LINEAR:
-		            this.SetOppo(ith, oppoNorm, this.points[2].Dist(this.points[this.OppoOf(ith)]));
-
-	            /// set new control point without affecting the oppo-
-	            /// site. The tangent will be broken.
-	     	   case LeverMode.BROKEN:
-		            this.points[ith].Set(newPoint);
-
-	    	}
-	    }
-
-	    // ExtractArray and TransFromArray should be appear in Dragging handler,
-	    // to implement the real time update during dragging. When dragging around,
-	    // the lever should be always translated from same array (or point group)
-	    // until mouseup.
-
-	    ExtractArray(){
-	    	return [this.points[0].Copy(),
-	    			this.points[1].Copy(),
-	    			this.points[2].Copy(),
-	    			this.points[3].Copy(),
-	    			this.points[4].Copy()];
-	    }
-
-	    TransFromArray(points, inc){
-	    	this.points[0] = inc.Add(points[0]);
-	    	this.points[1] = inc.Add(points[1]);
-	    	this.points[2] = inc.Add(points[2]);
-	    	this.points[3] = inc.Add(points[3]);
-	    	this.points[4] = inc.Add(points[4]);
-	    }
-
-	    Trans(inc){
-	    	var array = this.ExtractArray();
-	    	this.TransFromArray(array, inc);
-	    }
-
-	    TransCreate(inc){
-	        var lever = this.Copy();
-	        lever.Trans(inc);
-	        return lever;
-	    }
-	}
-
-	module.exports = Lever;
-
-/***/ }),
-/* 12 */
-/***/ (function(module, exports, __webpack_require__) {
-
-	var Vector = __webpack_require__(10);
-
-	class CurveMath{
-
-	    static GetPointOnCurve(t, points){
-	        return   points[0].Mult((1-t)  *(1-t)*(1-t))
-	        	.Add(points[1].Mult(3*(1-t)*(1-t)*(t)  ))
-	        	.Add(points[2].Mult(3*(t)  *(t)  *(1-t)))
-	            .Add(points[3].Mult((t)    *(t)  *(t)  ));
-	    }
-	  
-	    static GetPointOnCurveBetweenLever(t, l0, l1) {
-	    	return this.GetPointOnCurve(t, [l0.points[2], l0.points[4], l1.points[0], l1.points[2]]);
-	    }
-
-	    static SetInsertedLever(
-	        p0p,
-	        p0cp2,
-	        p1cp1,
-	        p1p,
-	        p1cp2,
-	        p2cp1,
-	        p2p, t
-	    ){
-
-	        var P0 = p0p;
-	        var P1 = p0cp2;
-	        var P2 = p2cp1;
-	        var P3 = p2p;
-
-	        var P0_1       = P0.Mult(1-t).Add(P1.Mult(t));
-	        var P1_2       = P1.Mult(1-t).Add(P2.Mult(t));
-	        var P2_3       = P2.Mult(1-t).Add(P3.Mult(t));
-	        var P01_12     = P0_1.Mult(1-t).Add(P1_2.Mult(t));
-	        var P12_23     = P1_2.Mult(1-t).Add(P2_3.Mult(t));
-	        var P0112_1223 = P01_12.Mult(1-t).Add(P12_23.Mult(t));
-
-	        p0cp2.Set(P0_1);
-	        p1cp1.Set(P01_12);
-	        p1p.Set(P0112_1223);
-	        p1cp2.Set(P12_23);
-	        p2cp1.Set(P2_3);
-
-	        // return [p0p, p0cp2, p1cp1, p1p, p1cp2, p2cp1, p2p];
-
-	    }
-
-	    static SetInsertedLeverOnCurve(p0, p1, p2, t){
-	        
-	        this.SetInsertedLever(
-	            p0.points[2],
-	            p0.points[4],
-	            p1.points[0],
-	            p1.points[2],
-	            p1.points[4],
-	            p2.points[0],
-	            p2.points[2], t);
-	    }
-
-	    static SetInsertedLeverOnCurveGroup(levers, ithNode, t){
-	        this.SetInsertedLeverOnCurve(
-	            levers[ithNode == 0 ? 0 : ithNode - 1],
-	            levers[ithNode],
-	            levers[(ithNode == levers.length - 1 ? ithNode : ithNode + 1)],
-	            t);
-	    }
-
-	    static GetClosestTFromGivenPoint(p0, p1, givenPoint, iter, slices) {
-
-	        var start = 0;
-	        var end   = 1;
-
-	        var curr_d = 0,
-	        	best_t = 0,
-	        	best_d = Infinity,
-	        	curr_P = new Vector(0, 0);
-
-	        for (var i = 0; i < iter; i++) {
-	            var tick = 0.1 * (end - start) / slices;
-
-	            for (var t = start; t <= end; t += tick) {
-	                
-	                curr_d = this.GetPointOnCurveBetweenLever(t, p0, p1).Dist(givenPoint);
-	                if (curr_d < best_d) {
-	                    best_d = curr_d;
-	                    best_t = t;
-	                }
-	            }
-
-	            start = Math.max(best_t - tick, 0);
-	            end   = Math.min(best_t + tick, 1);
-	        }
-
-	        return (start + end)/2;
-	    }
-
-	    static Det(a, b, c, d){
-	        // | a  b |
-	        // |      | => ad - bc
-	        // | c  d |
-	        return a*d - b*c;
-	    }
-
-	    static DetPoint(p1, p2){
-	        // | p1.x  p1.y |
-	        // |            | => p1.x * p2.y - p2.x * p1.y
-	        // | p2.x, p2.y |
-	        return p1.x * p2.y - p2.x*p1.y;        
-	    }
-
-	    static LineLineIntersection(pa1, pa2, pb1, pb2){
-	        var det_pa = this.DetPoint(pa1, pa2),
-	            det_pb = this.DetPoint(pb1, pb2);
-
-	        var delta_pa = pa2.Sub(pa1),
-	            delta_pb = pb2.Sub(pb1);
-
-	        var det_papb = this.DetPoint(delta_pa, delta_pb);
-
-	        var newX = -this.Det(det_pa, delta_pa.x, det_pb, delta_pb.x)/det_papb,
-	            newY = -this.Det(det_pa, delta_pa.y, det_pb, delta_pb.y)/det_papb;
-
-	        var parallel = delta_pa.Normalize().Dot(delta_pb.Normalize());
-
-	        // console.log("p",parallel);
-
-	        // if(Math.abs(parallel.x) < 0.001){
-	        //     newX = -pa2.x;
-	        // }
-	        // if(Math.abs(parallel.y) < 0.001){
-	        //     newY = -pa2.y;
-	        // }
-
-	        return {v : new Vector(newX, newY), p:parallel};
-	    }
-
-	    static SegSegIntersection(pa1, pa2, pb1, pb2){
-	        
-	        var det_s = this.DetPoint(pb1.Sub(pb2), pb1.Sub(pa1)),
-	            det_t = this.DetPoint(pa1.Sub(pa2), pb1.Sub(pa1)),
-	            det   = this.DetPoint(pb1.Sub(pb2), pa2.Sub(pa1));
-
-	        var s = det_s/det,
-	            t = det_t/det;
-
-	        // console.log((s).toFixed(3), " ", (t).toFixed(3));
-
-	        return {v : pa1.Add(pa2.Sub(pa1).Mult(s)), s:s, t:t};
-
-	    }
-
-	    static GetIdenticalCurve(l0, l1, side){
-
-	        var l0aux = l0.points[side].Sub(l0.points[2]).Add(l0.points[4]),
-	            l1aux = l1.points[side].Sub(l1.points[2]).Add(l1.points[0]);
-
-	        var cent_segment = l0.points[4].Sub(l1.points[0]);
-	        var norm;
-	            if(side == 1){
-	                norm = cent_segment.RightPerp();
-	            } else {
-	                norm = cent_segment.LeftPerp();
-	            }
-
-	        var offl0 = norm.Normalize().Mult(l0.points[side].Dist(l0.points[2])).Add(l0.points[4]),
-	            offl1 = norm.Normalize().Mult(l1.points[side].Dist(l1.points[2])).Add(l1.points[0]);
-
-	        // var ctx = document.getElementById("canvas").getContext("2d");
-	        //     ctx.beginPath();
-	        //     ctx.moveTo(l0.points[side].x, l0.points[side].y)
-	        //     ctx.lineTo(l0aux.x, l0aux.y);
-	        //     ctx.moveTo(offl0.x, offl0.y);
-	        //     ctx.lineTo(offl1.x, offl1.y);
-	        //     ctx.moveTo(l1aux.x, l1aux.y);
-	        //     ctx.lineTo(l1.points[side].x, l1.points[side].y)
-	        //     ctx.stroke();
-
-	        var l0c = this.LineLineIntersection(l0.points[side], l0aux, offl0, offl1),
-	            l1c = this.LineLineIntersection(offl0, offl1, l1aux, l1.points[side]),
-	            l01 = this.LineLineIntersection(l0.points[side], l0aux, l1aux, l1.points[side]),
-	            l01s = this.SegSegIntersection(l0.points[side], l0aux, l1aux, l1.points[side]),
-	            ld  = l1c.v.Sub(l0c.v);
-
-
-	            // if(l1c.p < -0.05){
-	            //     l0c.v = l01.v;
-	            // }
-	            // if(l0c.p < -0.05){
-	            //     l1c.v = l01.v;
-	            // }
-
-	            if(Math.abs(l1c.p) < 0.05){
-	                l0c.v = l0aux;
-	            }
-	            if(Math.abs(l0c.p) < 0.05){
-	                l1c.v = l1aux;
-	            }
-
-
-	            console.log("p ", l0c.p.toFixed(3), " ", l1c.p.toFixed(3));
-	            // console.log("s ",l01s.s, "t ",l01s.t);
-	            // if(Math.abs(l01s.s - 1) < 0.5){
-	            //     l0c.v = l0aux;
-	            // }
-	            // if(Math.abs(l01s.t - 1) < 0.5){
-	            //     l1c.v = l1aux;
-	            // }
-
-	            if( l01s.s < 1 && l01s.s > 0 && l01s.t < 1 && l01s.t > 0){
-	                l0c.v = l01s.v;
-	                l1c.v = l01s.v;
-	            }
-
-	        // console.log(offl0, offl1);
-
-	        return [l0c.v, l1c.v];
-	    }
-	}
-
-	module.exports = CurveMath;
-
-/***/ }),
-/* 13 */
-/***/ (function(module, exports, __webpack_require__) {
-
-	
-	var CurveMath = __webpack_require__(12);
-
-	class Cast{
-	    
-	    static CurveRect(curve, curr){
-	        return curve.bounding[0].x < curr.x && curve.bounding[1].x > curr.x &&
-	               curve.bounding[0].y < curr.y && curve.bounding[1].y > curr.y;
-	    }
-	    
-	    static Curve(curve, curr) {
-	        
-	    	var CAST_DIST = 9;
-
-	        var t, p, dist;
-	        for (var i = 0; i < curve.levers.length - 1; i++) {
-
-	            t = CurveMath.GetClosestTFromGivenPoint(curve.levers[i], curve.levers[i+1], curr, 6, 4);
-	            p = CurveMath.GetPointOnCurveBetweenLever(t, curve.levers[i], curve.levers[i+1]);
-	            dist = p.Dist(curr);
-	            if (dist < CAST_DIST)
-	                return i + t;
-	        }
-	        return -1;
-	    } 
-
-	    static CurveIthLever(curve, curr) {
-
-	    	var CAST_DIST = 9;
-
-	        var i = 0,
-	        	found = false;
-
-	        for (; i < curve.levers.length; i ++) {
-	        	found = PVector.dist(curve.levers[i].points[2], curr) < CAST_DIST;
-	        	if(found) break;	
-	        } 
-
-	        if(!found) i = -1;
-
-	        return i;
-	    }
-
-	    static Lever(lever, curr){
-
-			var CAST_DIST = 9;    
-	        var castSequence = [0, 4, 1, 3, 2];
-	        
-	        var res = -1;
-	        for(var ith = 0; ith < 5; ith++)
-	            if(lever.points[castSequence[ith]].Dist(curr) < CAST_DIST){
-	            	console.log(ith + " " + castSequence[ith]);
-	                res = castSequence[ith];
-	                break;
-	            }
-	        return res;
-	    }
-	}
-
-	module.exports = Cast;
-
-/***/ }),
-/* 14 */
-/***/ (function(module, exports, __webpack_require__) {
-
-	var Vector =  __webpack_require__(10);
-	var Lever =   __webpack_require__(11);
-	var Curve =   __webpack_require__(8);
+	var Vector =  __webpack_require__(9);
+	var Lever =   __webpack_require__(10);
+	var Curve =   __webpack_require__(11);
 
 	Array.prototype.last = function(){
 		return this[this.length - 1];
@@ -2019,11 +1273,756 @@
 	module.exports = Document;
 
 /***/ }),
+/* 9 */
+/***/ (function(module, exports) {
+
+	class Vector{
+
+		constructor(x, y){
+			if(x.x != undefined && x.y != undefined && y == undefined){
+				this.x = x.x;
+				this.y = x.y;
+			} else {
+				this.x = x;
+				this.y = y;
+			}
+		}
+
+		Copy(){
+			return new Vector(this.x, this.y);
+		}
+
+		Abs(){
+			return new Vector(Math.abs(this.x), Math.abs(this.y));
+		}
+
+		Dist(v){
+			var dx = v.x - this.x;
+			var dy = v.y - this.y;
+			return Math.hypot(dx, dy);
+		}
+
+	    Dot(v){
+	        return this.x*v.x + this.y*v.y;
+	    }
+
+	    Cross(v){
+	    	return this.x*v.y - this.y*v.x;
+	    }
+
+		Mag(){
+	        return Math.hypot(this.x, this.y);
+		}
+
+		static Dist(v1, v2){
+			var dx = v2.x - v1.x;
+			var dy = v2.y - v1.y;
+			return Math.hypot(dx, dy);
+		}
+
+		Normalize() {
+			var d = Math.hypot(this.x, this.y);
+			return new Vector(this.x/d, this.y/d);
+		}
+
+		Sub(v){
+			return new Vector(this.x - v.x, this.y - v.y);
+		}
+
+	    Subl(v){
+	        this.x -= v.x;
+	        this.y -= v.y;
+	    }
+
+		Add(v){
+			return new Vector(this.x + v.x, this.y + v.y);
+		}
+
+	    Addl(v){
+	        this.x += v.x;
+	        this.y += v.y;
+	    }
+
+		Mult(s){
+			return new Vector(this.x * s, this.y * s);
+		}
+
+	    Multl(s){
+	        this.x *= s;
+	        this.y *= s;
+	    }
+
+		Set(x, y){
+			if(typeof y !== "undefined"){
+				this.x = x;
+				this.y = y;
+			} else {
+				this.x = x.x;
+				this.y = x.y;
+			}
+		}
+
+		Angle(){
+			return Math.atan(this.y/this.x);
+		}
+
+		get Zero(){
+			return new Vector(0, 0);
+		}
+
+		LeftPerp(){
+			return new Vector(-this.y, this.x);
+		}
+
+		RightPerp(){
+			return new Vector(this.y, -this.x);	
+		}
+
+		toString(){
+			return this.x.toFixed(3) + " " + this.y.toFixed(3);
+		}
+	}
+
+	module.exports = Vector;
+
+/***/ }),
+/* 10 */
+/***/ (function(module, exports, __webpack_require__) {
+
+	var Vector = __webpack_require__(9);
+
+	var LeverMode = Object.freeze({
+	    BROKEN		: 0,
+	    LINEAR 		: 2,
+	    PROPER 		: 3,
+	    SYMMETRIC	: 4
+	});
+
+	var StrokeMode = Object.freeze({
+	    FREE : 0,
+	    PERP : 1
+	})
+
+	var SelectMode = Object.freeze({
+		NONE 		 : 0,
+		LEVER_SELECT : 1
+	});
+
+	var LeverPoint = Object.freeze({
+		POINT 		 : 2,
+		CONTROL_1	 : 0,
+		CONTROL_2 	 : 4,
+		WIDTH_1 	 : 1,
+		WIDTH_2	 	 : 3
+	});
+
+	class Lever {
+
+		constructor(input){
+
+	        if(input != undefined){
+
+	            if(input.points != undefined){
+	                this.points     = input.points.map(function(point){return new Vector(point)});    
+	            }
+	            if(input.point != undefined){
+	                this.points = [
+	                    new Vector(input.point),
+	                    new Vector(input.point),
+	                    new Vector(input.point),
+	                    new Vector(input.point),
+	                    new Vector(input.point)
+	                ]
+	            }
+
+	            this.leverMode = (input.leverMode != undefined) ? input.leverMode : LeverMode.SYMMETRIC;
+	            this.selectMode = (input.selectMode != undefined) ? input.selectMode : SelectMode.NONE;
+	            this.strokeMode = (input.strokeMode != undefined) ? input.strokeMode : StrokeMode.FREE;
+
+	        } else {
+				this.points = [
+					Vector.Zero,
+					Vector.Zero,
+					Vector.Zero,
+					Vector.Zero,
+					Vector.Zero
+				]
+			}
+		}
+
+	    Copy(){
+	        var newLever = new Lever();
+	        for (var i = newLever.points.length - 1; i >= 0; i--) {
+	            newLever.points[i] = this.points[i].Copy();
+	        }
+	        newLever.leverMode = this.leverMode;
+	        newLever.selectMode = this.selectMode;
+	        newLever.strokeMode = this.strokeMode;
+
+	        return newLever;
+	    }
+
+	    OppoOf(ith){
+	    	return 4 - ith;
+	    }
+
+	    Ratio(ith) {
+	    	var ithSide  = this.points[2].Dist(this.points[ith]),
+	    		oppoSide = this.points[2].Dist(this.points[this.OppoOf(ith)]);
+	        return ithSide / oppoSide;
+	    }
+
+	    OppoNorm(newPoint) {
+	        return (this.points[2].Sub(newPoint)).Normalize();
+	    }
+
+	    SetOppo(ith, oppoNorm, newDistance) {
+	        this.points[this.OppoOf(ith)] = this.points[2].Add(oppoNorm.Mult(newDistance));
+	    }
+
+	    SetControlPoint(ith, newPoint) {
+	    	var ratioOppo = this.Ratio(this.OppoOf(ith));
+	    	var oppoNorm  = this.OppoNorm(newPoint);
+
+	    	var dist;
+	    	switch(this.leverMode){
+
+	            /// for symmetric case, ratio is overwritten as 1
+	    		case LeverMode.SYMMETRIC:
+	    			ratioOppo = 1;
+
+	            /// recalculate to make proportional lever, the distance
+	            /// is calculated from the new distance between origin
+	            /// and currently selected control point.
+		        case LeverMode.PROPER:
+		            this.SetOppo(ith, oppoNorm, ratioOppo * this.points[2].Dist(newPoint));
+
+	            /// recalculate to make three points aligned on same
+	            /// line. use new direction and original distance of
+	            /// opposite control point.
+		        case LeverMode.LINEAR:
+		            this.SetOppo(ith, oppoNorm, this.points[2].Dist(this.points[this.OppoOf(ith)]));
+
+	            /// set new control point without affecting the oppo-
+	            /// site. The tangent will be broken.
+	     	   case LeverMode.BROKEN:
+		            this.points[ith].Set(newPoint);
+
+	    	}
+	    }
+
+	    // ExtractArray and TransFromArray should be appear in Dragging handler,
+	    // to implement the real time update during dragging. When dragging around,
+	    // the lever should be always translated from same array (or point group)
+	    // until mouseup.
+
+	    ExtractArray(){
+	    	return [this.points[0].Copy(),
+	    			this.points[1].Copy(),
+	    			this.points[2].Copy(),
+	    			this.points[3].Copy(),
+	    			this.points[4].Copy()];
+	    }
+
+	    TransFromArray(points, inc){
+	    	this.points[0] = inc.Add(points[0]);
+	    	this.points[1] = inc.Add(points[1]);
+	    	this.points[2] = inc.Add(points[2]);
+	    	this.points[3] = inc.Add(points[3]);
+	    	this.points[4] = inc.Add(points[4]);
+	    }
+
+	    Trans(inc){
+	    	var array = this.ExtractArray();
+	    	this.TransFromArray(array, inc);
+	    }
+
+	    TransCreate(inc){
+	        var lever = this.Copy();
+	        lever.Trans(inc);
+	        return lever;
+	    }
+	}
+
+	module.exports = Lever;
+
+/***/ }),
+/* 11 */
+/***/ (function(module, exports, __webpack_require__) {
+
+	var Outline = __webpack_require__(12);
+	var Vector  = __webpack_require__(9);
+	var Lever   = __webpack_require__(10);
+
+	var CurveMath = __webpack_require__(13);
+
+	class Curve {
+
+	    constructor(input){
+
+	        if(input != undefined){
+	            this.levers = input.levers.map(function(lever){return new Lever(lever)});
+	            this.outline = new Outline(input.outline);
+	        } else {
+	            this.levers = [];
+	            this.outline = new Outline();            
+	        }
+
+	    }
+
+	    Add(mouseV){
+	        this.levers.push(new Lever(mouseV));
+	        // this.GetOutlines();
+	        return this.levers.length - 1;
+	    }
+
+	    Delete(index){
+	        levers.splice(index, 1);
+	        this.GetOutlines();
+	    }
+	    
+	    Insert(curveCast) {
+	        this.levers.splice(Math.floor(curveCast+1), 0, new Lever(new Vector(0, 0)));
+	        CurveMath.SetInsertedLeverOnCurveGroup(this.levers, Math.floor(curveCast+1), curveCast - Math.floor(curveCast));
+	        console.log(this.levers.length);
+
+	        this.GetOutlines();
+	        
+	        return Math.floor(curveCast+1);
+	    }
+
+	    UpdateLever(ithLever, ithPoint, value){
+	        this.levers[ithLever].SetControlPoint(ithPoint, value);
+	        this.outline.GetOutline(this.levers);
+	    }
+
+	    GetOutlines(){
+	        this.outline.GetOutline(this.levers);
+	    }
+
+
+	    ExtractArray(){
+	    	var res = [];
+	        for(var lever of this.levers) res.push(lever.ExtractArray());
+	        return res;
+	    }
+
+	    TransFromArray(array, increment) {
+	    	// console.log(array);
+	        for (var i = 0; i < this.levers.length; i++) {
+	            this.levers[i].TransFromArray(array[i], increment);
+	        }
+	        this.GetOutlines();
+	    }
+	}
+
+	module.exports = Curve;
+
+/***/ }),
+/* 12 */
+/***/ (function(module, exports, __webpack_require__) {
+
+	var Vector = __webpack_require__(9);
+	var Lever =  __webpack_require__(10);
+	var CurveMath = __webpack_require__(13);
+
+	var CurveSide = Object.freeze({
+	    LEFT :  1,
+	    RIGHT : 3
+	});
+
+	class Outline{
+
+		constructor(input){
+	        if(input == undefined){
+	            this.outer = [];
+	            this.inner = [];            
+	        } else {
+	            if(input.outer != undefined){
+	                this.outer = input.outer.map(function(bezGroup){ return bezGroup.map(function(point){return new Vector(point)})});
+	            }
+	            if(input.inner != undefined){
+	                this.inner = input.inner.map(function(bezGroup){ return bezGroup.map(function(point){return new Vector(point)})});
+	            }
+	        }
+		}
+
+
+	    GetOutline(levers){
+	        this.outer = [];
+	        this.inner = [];
+	        for (var i = 0; i < levers.length - 1; i++) {
+	            this.GetOutlineSegment(levers[i], levers[i+1], 0);
+	        }
+	    }
+
+
+	    GetOutlineSegment(l0, l1, level){
+	        // console.log("level"+level);
+	        // console.log(l0, l1);
+	        var l0aux1 = l0.points[1].Sub(l0.points[2]).Add(l0.points[4]),
+	            l1aux1 = l1.points[1].Sub(l1.points[2]).Add(l1.points[0]),
+	            l0aux3 = l0.points[3].Sub(l0.points[2]).Add(l0.points[4]),
+	            l1aux3 = l1.points[3].Sub(l1.points[2]).Add(l1.points[0]);
+
+	        var cent_segment = l0.points[4].Sub(l1.points[0]);
+
+	        var offl01 = cent_segment.RightPerp().Normalize().Mult(l0.points[1].Dist(l0.points[2])).Add(l0.points[4]),
+	            offl11 = cent_segment.RightPerp().Normalize().Mult(l1.points[1].Dist(l1.points[2])).Add(l1.points[0]),
+	            offl03 = cent_segment.LeftPerp().Normalize().Mult(l0.points[3].Dist(l0.points[2])).Add(l0.points[4]),
+	            offl13 = cent_segment.LeftPerp().Normalize().Mult(l1.points[3].Dist(l1.points[2])).Add(l1.points[0]);
+
+	        var l0c1 = CurveMath.LineLineIntersection(l0.points[1], l0aux1, offl01, offl11),
+	            l1c1 = CurveMath.LineLineIntersection(offl01, offl11, l1aux1, l1.points[1]),
+	            l0c3 = CurveMath.LineLineIntersection(l0.points[3], l0aux3, offl03, offl13),
+	            l1c3 = CurveMath.LineLineIntersection(offl03, offl13, l1aux3, l1.points[3]),
+	            l0l11 = CurveMath.SegSegIntersection(l0.points[1], l0aux1, l1aux1, l1.points[1]),
+	            l0l13 = CurveMath.SegSegIntersection(l0.points[3], l0aux3, l1aux3, l1.points[3]),
+	            l0l1 = CurveMath.SegSegIntersection(l0.points[2], l0.points[4], l1.points[0], l1.points[2]);
+
+	        var l0width = l0.points[1].Dist(l0.points[2]),
+	            l1width = l1.points[1].Dist(l1.points[2]);
+
+	        // console.log("level "+level+": l0l1 s:" + l0l1.s.toFixed(3) + " t:" + l0l1.t.toFixed(3) + "\n",
+	        //             "l0c1.p "+l0c1.p.toFixed(3) + " l1c1.p "+l1c1.p.toFixed(3)+
+	        //             " l0c3.p "+l0c3.p.toFixed(3) + "l1c3.p "+l1c3.p.toFixed(3));
+
+	        if(l0c1.p > 0.96){ l0c1.v = offl01; }
+	        if(l1c1.p > 0.96){ l1c1.v = offl11; }
+	        if(l0c3.p > 0.96){ l0c3.v = offl03; }
+	        if(l1c3.p > 0.99){ l1c3.v = offl13; }
+
+	        if(l0l1.s < 1 && l0l1.s > 0 && l0l1.t < 1 && l0l1.t > 0){
+	            this.outer.push([l0.points[1], l0l11.v, l0l11.v, l1.points[1]]);
+	            this.inner.push([l0.points[3], l0l13.v, l0l13.v, l1.points[3]]);            
+	        } else if(level == 2 || l0l1.s > 1 && l0l1.t < 0){
+	            this.outer.push([l0.points[1], l0c1.v, l1c1.v, l1.points[1]]);
+	            this.inner.push([l0.points[3], l0c3.v, l1c3.v, l1.points[3]]);
+	        } else {
+
+	            var vwo = (l0l1.s > 1 ? l1c1.v : l0c1.v),
+	                vwi = (l0l1.s > 1 ? l1c3.v : l0c3.v),
+	                vp  = (l0l1.s > 1 ? l1.points[0] : l0.points[4]);
+
+	            var t = CurveMath.GetClosestTFromGivenPoint(l0, l1, vwo, 3, 3);
+	            // console.log("t val:"+t);
+
+	            var s = new Lever({point:new Vector(0,0)}),
+	                l1copy = l1.Copy(),
+	                l0copy = l0.Copy();
+	                
+	            CurveMath.SetInsertedLeverOnCurve(l0copy, s, l1copy, t);
+
+	            s.points[1] = s.points[2].Add(vwo.Sub(vp).Normalize().Mult((l1width + t*(l0width - l1width))));
+	            s.points[3] = s.points[2].Add(vwi.Sub(vp).Normalize().Mult((l1width + t*(l0width - l1width))));
+
+	            // console.log("haha"+JSON.stringify(s));
+	            this.GetOutlineSegment(l0copy, s, level+1);
+	            this.GetOutlineSegment(s, l1copy, level+1);                    
+	        }
+
+	    }
+
+	}
+
+	module.exports = Outline;
+
+/***/ }),
+/* 13 */
+/***/ (function(module, exports, __webpack_require__) {
+
+	var Vector = __webpack_require__(9);
+
+	class CurveMath{
+
+	    static GetPointOnCurve(t, points){
+	        return   points[0].Mult((1-t)  *(1-t)*(1-t))
+	        	.Add(points[1].Mult(3*(1-t)*(1-t)*(t)  ))
+	        	.Add(points[2].Mult(3*(t)  *(t)  *(1-t)))
+	            .Add(points[3].Mult((t)    *(t)  *(t)  ));
+	    }
+	  
+	    static GetPointOnCurveBetweenLever(t, l0, l1) {
+	    	return this.GetPointOnCurve(t, [l0.points[2], l0.points[4], l1.points[0], l1.points[2]]);
+	    }
+
+	    static SetInsertedLever(
+	        p0p,
+	        p0cp2,
+	        p1cp1,
+	        p1p,
+	        p1cp2,
+	        p2cp1,
+	        p2p, t
+	    ){
+
+	        var P0 = p0p;
+	        var P1 = p0cp2;
+	        var P2 = p2cp1;
+	        var P3 = p2p;
+
+	        var P0_1       = P0.Mult(1-t).Add(P1.Mult(t));
+	        var P1_2       = P1.Mult(1-t).Add(P2.Mult(t));
+	        var P2_3       = P2.Mult(1-t).Add(P3.Mult(t));
+	        var P01_12     = P0_1.Mult(1-t).Add(P1_2.Mult(t));
+	        var P12_23     = P1_2.Mult(1-t).Add(P2_3.Mult(t));
+	        var P0112_1223 = P01_12.Mult(1-t).Add(P12_23.Mult(t));
+
+	        p0cp2.Set(P0_1);
+	        p1cp1.Set(P01_12);
+	        p1p.Set(P0112_1223);
+	        p1cp2.Set(P12_23);
+	        p2cp1.Set(P2_3);
+
+	        // return [p0p, p0cp2, p1cp1, p1p, p1cp2, p2cp1, p2p];
+
+	    }
+
+	    static SetInsertedLeverOnCurve(p0, p1, p2, t){
+	        
+	        this.SetInsertedLever(
+	            p0.points[2],
+	            p0.points[4],
+	            p1.points[0],
+	            p1.points[2],
+	            p1.points[4],
+	            p2.points[0],
+	            p2.points[2], t);
+	    }
+
+	    static SetInsertedLeverOnCurveGroup(levers, ithNode, t){
+	        this.SetInsertedLeverOnCurve(
+	            levers[ithNode == 0 ? 0 : ithNode - 1],
+	            levers[ithNode],
+	            levers[(ithNode == levers.length - 1 ? ithNode : ithNode + 1)],
+	            t);
+	    }
+
+	    static GetClosestTFromGivenPoint(p0, p1, givenPoint, iter, slices) {
+
+	        var start = 0;
+	        var end   = 1;
+
+	        var curr_d = 0,
+	        	best_t = 0,
+	        	best_d = Infinity,
+	        	curr_P = new Vector(0, 0);
+
+	        for (var i = 0; i < iter; i++) {
+	            var tick = 0.1 * (end - start) / slices;
+
+	            for (var t = start; t <= end; t += tick) {
+	                
+	                curr_d = this.GetPointOnCurveBetweenLever(t, p0, p1).Dist(givenPoint);
+	                if (curr_d < best_d) {
+	                    best_d = curr_d;
+	                    best_t = t;
+	                }
+	            }
+
+	            start = Math.max(best_t - tick, 0);
+	            end   = Math.min(best_t + tick, 1);
+	        }
+
+	        return (start + end)/2;
+	    }
+
+	    static Det(a, b, c, d){
+	        // | a  b |
+	        // |      | => ad - bc
+	        // | c  d |
+	        return a*d - b*c;
+	    }
+
+	    static DetPoint(p1, p2){
+	        // | p1.x  p1.y |
+	        // |            | => p1.x * p2.y - p2.x * p1.y
+	        // | p2.x, p2.y |
+	        return p1.x * p2.y - p2.x*p1.y;        
+	    }
+
+	    static LineLineIntersection(pa1, pa2, pb1, pb2){
+	        var det_pa = this.DetPoint(pa1, pa2),
+	            det_pb = this.DetPoint(pb1, pb2);
+
+	        var delta_pa = pa2.Sub(pa1),
+	            delta_pb = pb2.Sub(pb1);
+
+	        var det_papb = this.DetPoint(delta_pa, delta_pb);
+
+	        var newX = -this.Det(det_pa, delta_pa.x, det_pb, delta_pb.x)/det_papb,
+	            newY = -this.Det(det_pa, delta_pa.y, det_pb, delta_pb.y)/det_papb;
+
+	        var parallel = delta_pa.Normalize().Dot(delta_pb.Normalize());
+
+	        // console.log("p",parallel);
+
+	        // if(Math.abs(parallel.x) < 0.001){
+	        //     newX = -pa2.x;
+	        // }
+	        // if(Math.abs(parallel.y) < 0.001){
+	        //     newY = -pa2.y;
+	        // }
+
+	        return {v : new Vector(newX, newY), p:parallel};
+	    }
+
+	    static SegSegIntersection(pa1, pa2, pb1, pb2){
+	        
+	        var det_s = this.DetPoint(pb1.Sub(pb2), pb1.Sub(pa1)),
+	            det_t = this.DetPoint(pa1.Sub(pa2), pb1.Sub(pa1)),
+	            det   = this.DetPoint(pb1.Sub(pb2), pa2.Sub(pa1));
+
+	        var s = det_s/det,
+	            t = det_t/det;
+
+	        // console.log((s).toFixed(3), " ", (t).toFixed(3));
+
+	        return {v : pa1.Add(pa2.Sub(pa1).Mult(s)), s:s, t:t};
+
+	    }
+
+	    static GetIdenticalCurve(l0, l1, side){
+
+	        var l0aux = l0.points[side].Sub(l0.points[2]).Add(l0.points[4]),
+	            l1aux = l1.points[side].Sub(l1.points[2]).Add(l1.points[0]);
+
+	        var cent_segment = l0.points[4].Sub(l1.points[0]);
+	        var norm;
+	            if(side == 1){
+	                norm = cent_segment.RightPerp();
+	            } else {
+	                norm = cent_segment.LeftPerp();
+	            }
+
+	        var offl0 = norm.Normalize().Mult(l0.points[side].Dist(l0.points[2])).Add(l0.points[4]),
+	            offl1 = norm.Normalize().Mult(l1.points[side].Dist(l1.points[2])).Add(l1.points[0]);
+
+	        // var ctx = document.getElementById("canvas").getContext("2d");
+	        //     ctx.beginPath();
+	        //     ctx.moveTo(l0.points[side].x, l0.points[side].y)
+	        //     ctx.lineTo(l0aux.x, l0aux.y);
+	        //     ctx.moveTo(offl0.x, offl0.y);
+	        //     ctx.lineTo(offl1.x, offl1.y);
+	        //     ctx.moveTo(l1aux.x, l1aux.y);
+	        //     ctx.lineTo(l1.points[side].x, l1.points[side].y)
+	        //     ctx.stroke();
+
+	        var l0c = this.LineLineIntersection(l0.points[side], l0aux, offl0, offl1),
+	            l1c = this.LineLineIntersection(offl0, offl1, l1aux, l1.points[side]),
+	            l01 = this.LineLineIntersection(l0.points[side], l0aux, l1aux, l1.points[side]),
+	            l01s = this.SegSegIntersection(l0.points[side], l0aux, l1aux, l1.points[side]),
+	            ld  = l1c.v.Sub(l0c.v);
+
+
+	            // if(l1c.p < -0.05){
+	            //     l0c.v = l01.v;
+	            // }
+	            // if(l0c.p < -0.05){
+	            //     l1c.v = l01.v;
+	            // }
+
+	            if(Math.abs(l1c.p) < 0.05){
+	                l0c.v = l0aux;
+	            }
+	            if(Math.abs(l0c.p) < 0.05){
+	                l1c.v = l1aux;
+	            }
+
+
+	            console.log("p ", l0c.p.toFixed(3), " ", l1c.p.toFixed(3));
+	            // console.log("s ",l01s.s, "t ",l01s.t);
+	            // if(Math.abs(l01s.s - 1) < 0.5){
+	            //     l0c.v = l0aux;
+	            // }
+	            // if(Math.abs(l01s.t - 1) < 0.5){
+	            //     l1c.v = l1aux;
+	            // }
+
+	            if( l01s.s < 1 && l01s.s > 0 && l01s.t < 1 && l01s.t > 0){
+	                l0c.v = l01s.v;
+	                l1c.v = l01s.v;
+	            }
+
+	        // console.log(offl0, offl1);
+
+	        return [l0c.v, l1c.v];
+	    }
+	}
+
+	module.exports = CurveMath;
+
+/***/ }),
+/* 14 */
+/***/ (function(module, exports, __webpack_require__) {
+
+	
+	var CurveMath = __webpack_require__(13);
+
+	class Cast{
+	    
+	    static CurveRect(curve, curr){
+	        return curve.bounding[0].x < curr.x && curve.bounding[1].x > curr.x &&
+	               curve.bounding[0].y < curr.y && curve.bounding[1].y > curr.y;
+	    }
+	    
+	    static Curve(curve, curr) {
+	        
+	    	var CAST_DIST = 9;
+
+	        var t, p, dist;
+	        for (var i = 0; i < curve.levers.length - 1; i++) {
+
+	            t = CurveMath.GetClosestTFromGivenPoint(curve.levers[i], curve.levers[i+1], curr, 6, 4);
+	            p = CurveMath.GetPointOnCurveBetweenLever(t, curve.levers[i], curve.levers[i+1]);
+	            dist = p.Dist(curr);
+	            if (dist < CAST_DIST)
+	                return i + t;
+	        }
+	        return -1;
+	    } 
+
+	    static CurveIthLever(curve, curr) {
+
+	    	var CAST_DIST = 9;
+
+	        var i = 0,
+	        	found = false;
+
+	        for (; i < curve.levers.length; i ++) {
+	        	found = PVector.dist(curve.levers[i].points[2], curr) < CAST_DIST;
+	        	if(found) break;	
+	        } 
+
+	        if(!found) i = -1;
+
+	        return i;
+	    }
+
+	    static Lever(lever, curr){
+
+			var CAST_DIST = 9;    
+	        var castSequence = [0, 4, 1, 3, 2];
+	        
+	        var res = -1;
+	        for(var ith = 0; ith < 5; ith++)
+	            if(lever.points[castSequence[ith]].Dist(curr) < CAST_DIST){
+	            	console.log(ith + " " + castSequence[ith]);
+	                res = castSequence[ith];
+	                break;
+	            }
+	        return res;
+	    }
+	}
+
+	module.exports = Cast;
+
+/***/ }),
 /* 15 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	
-	var Document = __webpack_require__(14);
+	var Document = __webpack_require__(8);
 
 	class Neutron {
 		constructor(editor){
@@ -2263,7 +2262,7 @@
 /***/ (function(module, exports, __webpack_require__) {
 
 	var ZPR = __webpack_require__(17);
-	var Vector = __webpack_require__(10);
+	var Vector = __webpack_require__(9);
 
 	class Draw{
 
@@ -2487,8 +2486,8 @@
 /* 17 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	var Vector = __webpack_require__(10);
-	var Matrix = __webpack_require__(19);
+	var Vector = __webpack_require__(9);
+	var Matrix = __webpack_require__(18);
 
 	/**
 	 * Zoom, Pan and Rotate
@@ -2531,20 +2530,20 @@
 				newM3 = new Matrix();
 
 			newM1.SetPan(mouseScreenVec);
-			newM2.SetZoom({x:newZoom, y:newZoom});
+			newM2.SetZoom({x:-newZoom, y:-newZoom});
 			newM3.SetPan({x:-mouseScreenVec.x, y:-mouseScreenVec.y});
 
 			this.trans = newM3.Mult(newM2).Mult(newM1).Mult(this.trans);
-			console.log(this.trans.toString());
+			// console.log(this.trans.toString());
 			this.invTrans = this.trans.Inv();
+			this.zoom *= newZoom;
 		}
 	}
 
 	module.exports = ZPR;
 
 /***/ }),
-/* 18 */,
-/* 19 */
+/* 18 */
 /***/ (function(module, exports) {
 
 	class Matrix{

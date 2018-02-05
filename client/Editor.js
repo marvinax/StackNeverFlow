@@ -184,7 +184,6 @@ class Editor extends EditorCoreData {
 			Math.max(rect.top,  Math.min(rect.bottom, event.clientY - rect.top)  * 1.5)
 		);
 
-		console.log(mouseV);
 		var zoomInc = event.deltaY*0.00005;
 		this.zpr.Zoom(mouseV, zoomInc);
 		this.UpdateDraw();
