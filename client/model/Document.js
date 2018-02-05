@@ -409,6 +409,26 @@ class Document{
 		}
 		this.dstack = []
 	}
+
+	EvalInit(){
+		this.Eval(this.init);
+
+		for(var curve of this.curves){
+			curve.GetOutlines();
+			console.log(curve.outline);
+		}
+
+	}
+
+	EvalUpdate(){
+		this.Eval(this.update);
+
+		for(var curve of this.curves){
+			curve.GetOutlines();
+			console.log(curve.outline);
+		}
+
+	}
 	
 }
 

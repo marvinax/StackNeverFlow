@@ -1,4 +1,5 @@
 var Vector = require('../model/Vector.js');
+var Matrix = require('../model/Matrix.js');
 
 /**
  * Zoom, Pan and Rotate
@@ -8,6 +9,8 @@ class ZPR {
 	constructor(){
 		this.zoom = 1;
 		this.pan = new Vector(0, 0);
+		this.trans = new Matrix();
+		this.invTrans = new Matrix();
 	}
 
 	/**
@@ -15,7 +18,7 @@ class ZPR {
 	 * @param {[type]} vec [description]
 	 */
 	Transform(vec){
-		return vec.Sub(this.pan).Mult(this.zoom).Add(this.pan);
+		return this.trans.Mult(vec);
 	}
 
 	/**
@@ -23,7 +26,7 @@ class ZPR {
 	 * @param {[type]} vec [description]
 	 */
 	InvTransform(vec){
-		return vec.Sub(this.pan).Mult(1/this.zoom).Add(this.pan);
+		return this.invTrans.Mult(vec);
 	}
 
 	/**
@@ -33,12 +36,18 @@ class ZPR {
 	 */
 	Zoom(mouseScreenVec, zoomInc){
 		var newZoom = (this.zoom >= 3 && zoomInc > 0) ? 1 : (this.zoom <= 0.6 && zoomInc < 0) ? 1 : 1 + zoomInc;
-		this.zoom *= newZoom;
-		this.pan = mouseScreenVec.Mult(newZoom);
-	}
 
-	Save(){
-		this.hist = this.pan.Copy();
+		var newM1 = new Matrix(),
+			newM2 = new Matrix(),
+			newM3 = new Matrix();
+
+		newM1.SetPan(mouseScreenVec);
+		newM2.SetZoom({x:newZoom, y:newZoom});
+		newM3.SetPan({x:-mouseScreenVec.x, y:-mouseScreenVec.y});
+
+		this.trans = newM3.Mult(newM2).Mult(newM1).Mult(this.trans);
+		console.log(this.trans.toString());
+		this.invTrans = this.trans.Inv();
 	}
 }
 

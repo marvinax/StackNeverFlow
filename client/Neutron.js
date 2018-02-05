@@ -46,11 +46,11 @@ class Neutron {
 		        this.editor.docu = new Document(res);
 		        
 		        this.ReloadExistingParams();
-		        // document.getElementById("init-code").value = docu.init;
-		        // document.getElementById("update-code").value = docu.update;
-		        // docu.InitEval();
-		        // docu.Eval(docu.init);
-		        // docu.Eval(docu.update);
+		        document.getElementById("init-code").value = this.editor.docu.init;
+		        document.getElementById("update-code").value = this.editor.docu.update;
+		        this.editor.docu.InitEval();
+		        this.editor.docu.EvalInit();
+		        this.editor.docu.EvalUpdate();
 		        this.editor.UpdateDraw("loaded");
 		    }
 		    else {

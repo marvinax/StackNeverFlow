@@ -177,9 +177,16 @@ class Editor extends EditorCoreData {
 
 	Zoom(event){
 		event.preventDefault();
-		
+
+		var rect = event.target.getBoundingClientRect();
+		var mouseV = new Vector(
+			Math.max(rect.left, Math.min(rect.right, event.clientX - rect.left)) * 1.5,
+			Math.max(rect.top,  Math.min(rect.bottom, event.clientY - rect.top)  * 1.5)
+		);
+
+		console.log(mouseV);
 		var zoomInc = event.deltaY*0.00005;
-		this.zpr.Zoom(this.curr, zoomInc);
+		this.zpr.Zoom(mouseV, zoomInc);
 		this.UpdateDraw();
 	}
 
