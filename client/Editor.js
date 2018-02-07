@@ -18,6 +18,7 @@ class Editor extends EditorCoreData {
 		super();
 		
 		this.docu = new Document();
+		this.docu.InitEval();
 		this.neutron = new Neutron(this);
 		this.zpr = new ZPR();
 		this.context = document.getElementById("canvas").getContext("2d");
@@ -63,9 +64,9 @@ class Editor extends EditorCoreData {
 
 		for(var curve of this.docu.curves){
 			curve.GetOutlines();
-			console.log(curve.outline);
+			// console.log(curve.outline);
 		}
-		console.log(this.docu);
+		// console.log(this.docu);
 
 	}
 

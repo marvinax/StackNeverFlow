@@ -314,25 +314,15 @@ class Document{
 		}.bind(this);
 
 		var imp = function(){
+			console.log("reached here");
 			var docu_id = pop();
 			var xhr = new XMLHttpRequest();
 			xhr.open('GET', 'load/'+docu_id);
 				xhr.onload = function() {
 				    if (xhr.status === 200) {
 				        var res = JSON.parse(xhr.responseText);
-						delete res.currLeverIndex;
-						delete res.currCurveIndex;
-						delete res.currPoint;
-						delete res.captured;
-						delete res.canvas;
-						delete res.isEditingLever;
-						delete res.isTranslatingLever;
-						delete res.zpr;
-						delete res.status;
-
-						this.importedDocuments[docu_id]=res;
-						this.importedDocuments[docu_id].curves = LoadData.Curves(this.importedDocuments[docu_id].curves);
-						Draw.Curve(this.canvas.getContext("2d"), res, this.zpr);
+						this.importedDocuments[docu_id]=new Document(res);
+						Draw.Curve(this.canvas.getContext("2d"), res, this.zpr, null);
 				    }
 				    else {
 				        alert('Request failed.  Returned status of ' + xhr.status);

@@ -42,13 +42,19 @@ class ZPR {
 			newM3 = new Matrix();
 
 		newM1.SetPan(mouseScreenVec);
-		newM2.SetZoom({x:-newZoom, y:-newZoom});
+		newM2.SetZoom({x:newZoom, y:newZoom});
 		newM3.SetPan({x:-mouseScreenVec.x, y:-mouseScreenVec.y});
 
 		this.trans = newM3.Mult(newM2).Mult(newM1).Mult(this.trans);
-		// console.log(this.trans.toString());
 		this.invTrans = this.trans.Inv();
 		this.zoom *= newZoom;
+	}
+
+	Reset(){
+		this.zoom = 1;
+		this.pan = new Vector(0, 0);
+		this.trans = new Matrix();
+		this.invTrans = new Matrix();
 	}
 }
 

@@ -11,11 +11,11 @@ class Draw{
         ctx.strokeStyle = "#CCCCCC";
         ctx.lineWidth = 1;
         ctx.beginPath();
-        for(let i=0; i<50; i++){
-            var y1 = zpr.Transform(new Vector(i*30-300, -300)),
-                y2 = zpr.Transform(new Vector(i*30-300, 1500)),
-                x1 = zpr.Transform(new Vector(-300, i*30-300)),
-                x2 = zpr.Transform(new Vector(1500, i*30-300));
+        for(let i=0; i<65; i++){
+            var y1 = zpr.Transform(new Vector(i*30-450, -450)),
+                y2 = zpr.Transform(new Vector(i*30-450, 1500)),
+                x1 = zpr.Transform(new Vector(-450, i*30-450)),
+                x2 = zpr.Transform(new Vector(1500, i*30-450));
             ctx.moveTo(y1.x, y1.y);
             ctx.lineTo(y2.x, y2.y);
             ctx.moveTo(x1.x, x1.y);

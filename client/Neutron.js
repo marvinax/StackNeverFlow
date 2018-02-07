@@ -10,6 +10,10 @@ class Neutron {
 		this.LoadLink();
 
 		document.getElementById("save").onclick = this.Save.bind(this);
+		document.getElementById("init-eval").onclick = function(){
+			this.editor.docu.EvalInit()
+		}.bind(this);
+		// document.getElementById("init-code").onchange = 
 	}
 
 	ClearDOMChildren(elem){

@@ -430,6 +430,7 @@
 			super();
 			
 			this.docu = new Document();
+			this.docu.InitEval();
 			this.neutron = new Neutron(this);
 			this.zpr = new ZPR();
 			this.context = document.getElementById("canvas").getContext("2d");
@@ -475,9 +476,9 @@
 
 			for(var curve of this.docu.curves){
 				curve.GetOutlines();
-				console.log(curve.outline);
+				// console.log(curve.outline);
 			}
-			console.log(this.docu);
+			// console.log(this.docu);
 
 		}
 
@@ -1152,25 +1153,15 @@
 			}.bind(this);
 
 			var imp = function(){
+				console.log("reached here");
 				var docu_id = pop();
 				var xhr = new XMLHttpRequest();
 				xhr.open('GET', 'load/'+docu_id);
 					xhr.onload = function() {
 					    if (xhr.status === 200) {
 					        var res = JSON.parse(xhr.responseText);
-							delete res.currLeverIndex;
-							delete res.currCurveIndex;
-							delete res.currPoint;
-							delete res.captured;
-							delete res.canvas;
-							delete res.isEditingLever;
-							delete res.isTranslatingLever;
-							delete res.zpr;
-							delete res.status;
-
-							this.importedDocuments[docu_id]=res;
-							this.importedDocuments[docu_id].curves = LoadData.Curves(this.importedDocuments[docu_id].curves);
-							Draw.Curve(this.canvas.getContext("2d"), res, this.zpr);
+							this.importedDocuments[docu_id]=new Document(res);
+							Draw.Curve(this.canvas.getContext("2d"), res, this.zpr, null);
 					    }
 					    else {
 					        alert('Request failed.  Returned status of ' + xhr.status);
@@ -2033,6 +2024,10 @@
 			this.LoadLink();
 
 			document.getElementById("save").onclick = this.Save.bind(this);
+			document.getElementById("init-eval").onclick = function(){
+				this.editor.docu.EvalInit()
+			}.bind(this);
+			// document.getElementById("init-code").onchange = 
 		}
 
 		ClearDOMChildren(elem){
@@ -2274,11 +2269,11 @@
 	        ctx.strokeStyle = "#CCCCCC";
 	        ctx.lineWidth = 1;
 	        ctx.beginPath();
-	        for(let i=0; i<50; i++){
-	            var y1 = zpr.Transform(new Vector(i*30-300, -300)),
-	                y2 = zpr.Transform(new Vector(i*30-300, 1500)),
-	                x1 = zpr.Transform(new Vector(-300, i*30-300)),
-	                x2 = zpr.Transform(new Vector(1500, i*30-300));
+	        for(let i=0; i<65; i++){
+	            var y1 = zpr.Transform(new Vector(i*30-450, -450)),
+	                y2 = zpr.Transform(new Vector(i*30-450, 1500)),
+	                x1 = zpr.Transform(new Vector(-450, i*30-450)),
+	                x2 = zpr.Transform(new Vector(1500, i*30-450));
 	            ctx.moveTo(y1.x, y1.y);
 	            ctx.lineTo(y2.x, y2.y);
 	            ctx.moveTo(x1.x, x1.y);
@@ -2530,13 +2525,19 @@
 				newM3 = new Matrix();
 
 			newM1.SetPan(mouseScreenVec);
-			newM2.SetZoom({x:-newZoom, y:-newZoom});
+			newM2.SetZoom({x:newZoom, y:newZoom});
 			newM3.SetPan({x:-mouseScreenVec.x, y:-mouseScreenVec.y});
 
 			this.trans = newM3.Mult(newM2).Mult(newM1).Mult(this.trans);
-			// console.log(this.trans.toString());
 			this.invTrans = this.trans.Inv();
 			this.zoom *= newZoom;
+		}
+
+		Reset(){
+			this.zoom = 1;
+			this.pan = new Vector(0, 0);
+			this.trans = new Matrix();
+			this.invTrans = new Matrix();
 		}
 	}
 
