@@ -1,6 +1,7 @@
 var Vector =  require('./Vector.js');
 var Lever =   require('./Lever.js');
 var Curve =   require('./Curve.js');
+var Draw =    require('../control/Draw.js');
 
 Array.prototype.last = function(){
 	return this[this.length - 1];
@@ -9,16 +10,16 @@ Array.prototype.last = function(){
 class Document{
 
 	constructor(input){
-		if(input != undefined){
+
+		this.params = {};
+		this.init = "";
+		this.update = "";
+		this.curves = [];
+		this.anchor = new Vector(0, 0);
+		this.importedDocuments = {};
+
+		if(input != undefined)
 			this.SetDocument(input);
-		} else {
-			this.params = {};
-			this.init = "";
-			this.update = "";
-			this.curves = [];
-			this.anchor = new Vector(0, 0);
-			this.importedDocuments = {};
-		}
 	}
 
 	SetDocument(input){
@@ -29,8 +30,8 @@ class Document{
 		this.anchor = new Vector(input.anchor);
 		for(var docName in input.importDocuments){
 			this.importedDocuments[docName] = new Document(this.importedDocuments[docName]);
+			document.dispatchEvent(new Event('ondocuchange'));
 		}
-
 	}
 
 	InitEval(){
@@ -50,6 +51,19 @@ class Document{
 	}
 
 	Eval(expr){
+
+		var request = function(method, url, content){
+			return new Promise(function(resolve, reject){
+				var xhr = new XMLHttpRequest();
+				xhr.open(method, url);
+				xhr.setRequestHeader('Content-Type', 'application/json');
+				xhr.onload = function(){return resolve(xhr.responseText)};
+				xhr.onerror = function(){return reject(xhr.statusText)};
+				xhr.send(content);
+			})
+		}
+
+
 		var text = expr.split('\n'),
 			literal_flag = false,
 			exec_err_flag = false;
@@ -89,24 +103,6 @@ class Document{
 				exec_err_flag = true;				
 			}
 		}.bind(this);
-
-		var refer = function(){
-			var name = pop();
-			var xhr = new XMLHttpRequest();
-			xhr.open('GET', 'load/'+name);
-			xhr.onload = function() {
-				if (xhr.status === 200) {
-					var res = JSON.parse(xhr.responseText);
-					push(LoadData.Curves(res.curves));
-
-				}
-				else {
-					console.log('Request failed.  Returned status of ' + xhr.status);
-					exec_err_flag = true;
-				}
-			};
-			xhr.send();
-		};
 
 		var put = function(){
 			var key = pop();
@@ -313,23 +309,11 @@ class Document{
 			}			
 		}.bind(this);
 
-		var imp = function(){
-			console.log("reached here");
+		var imp = async function(){
 			var docu_id = pop();
-			var xhr = new XMLHttpRequest();
-			xhr.open('GET', 'load/'+docu_id);
-				xhr.onload = function() {
-				    if (xhr.status === 200) {
-				        var res = JSON.parse(xhr.responseText);
-						this.importedDocuments[docu_id]=new Document(res);
-						Draw.Curve(this.canvas.getContext("2d"), res, this.zpr, null);
-				    }
-				    else {
-				        alert('Request failed.  Returned status of ' + xhr.status);
-				    }
-				}.bind(this);
-			xhr.send();
-
+			var res = await request('GET', 'load/'+docu_id);
+			this.importedDocuments[docu_id] = new Document(JSON.parse(res));
+			document.dispatchEvent(new Event('ondocuchange'));
 		}.bind(this);
 
 		var exec = function(mark){
@@ -398,6 +382,7 @@ class Document{
 			}
 		}
 		this.dstack = []
+		document.dispatchEvent(new Event('ondocuchange'));
 	}
 
 	EvalInit(){

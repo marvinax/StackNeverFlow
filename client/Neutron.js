@@ -11,9 +11,11 @@ class Neutron {
 
 		document.getElementById("save").onclick = this.Save.bind(this);
 		document.getElementById("init-eval").onclick = function(){
-			this.editor.docu.EvalInit()
+			this.editor.docu.EvalInit();
 		}.bind(this);
-		// document.getElementById("init-code").onchange = 
+		document.getElementById("init-code").oninput = function(){
+			this.editor.docu.init = document.getElementById("init-code").value;
+		}.bind(this);
 	}
 
 	ClearDOMChildren(elem){
@@ -22,79 +24,59 @@ class Neutron {
 		}
 	}
 
+	Request(method, url, content){
+		return new Promise(function(resolve, reject){
+			var xhr = new XMLHttpRequest();
+			xhr.open(method, url);
+			xhr.setRequestHeader('Content-Type', 'application/json');
+			xhr.onload = function(){return resolve(xhr.responseText)};
+			xhr.onerror = function(){return reject(xhr.statusText)};
+			xhr.send(content);
+		})
+	}
 
-	Save(){
-		var xhr = new XMLHttpRequest();
-		xhr.open('PUT', 'save/');
-		xhr.setRequestHeader('Content-Type', 'application/json');
-		console.log(this.editor.docu);
+	async Save(){
+		var docu_id = document.getElementById("prefix").value + "_" + document.getElementById("name").value,
+			content = JSON.stringify({id: docu_id, data:this.editor.docu});
+
 		this.editor.docu.ClearEval();
-		xhr.onload = function(){
-			if(xhr.status == 200) {
-		        var res = JSON.parse(xhr.responseText);
-				this.LoadLink();				
-			}
-		}.bind(this);
-
-		var docu_id = document.getElementById("prefix").value + "_" + document.getElementById("name").value;
-		xhr.send(JSON.stringify({id: docu_id, data:this.editor.docu}));
+		const res = await this.Request('PUT', 'save/', content);
 	}
 
-	Load(docu_id){
-		var xhr = new XMLHttpRequest();
-		xhr.open('GET', 'load/'+docu_id);
-		xhr.onload = function() {
-		    if (xhr.status === 200) {
-		        var res = JSON.parse(xhr.responseText);
-		    	console.log(res);
-		        this.editor.docu = new Document(res);
-		        
-		        this.ReloadExistingParams();
-		        document.getElementById("init-code").value = this.editor.docu.init;
-		        document.getElementById("update-code").value = this.editor.docu.update;
-		        this.editor.docu.InitEval();
-		        this.editor.docu.EvalInit();
-		        this.editor.docu.EvalUpdate();
-		        this.editor.UpdateDraw("loaded");
-		    }
-		    else {
-		        alert('Request failed.  Returned status of ' + xhr.status);
-		    }
-		}.bind(this);
-		xhr.send();
+	async Load(docu_id){
+
+		const res = await this.Request('GET', 'load/'+docu_id);
+		console.log(res);
+		this.editor.docu = new Document(JSON.parse(res));
+
+		this.ReloadExistingParams();
+		document.getElementById("init-code").value = this.editor.docu.init;
+		document.getElementById("update-code").value = this.editor.docu.update;
+		this.editor.docu.InitEval();
+		this.editor.docu.EvalInit();
+		this.editor.docu.EvalUpdate();
+		this.editor.UpdateDraw("loaded");
 	}
 
-	LoadLink(){
+	async LoadLink(){
+		
+		const res = await this.Request('GET', 'load_name/');
+		console.log(res);
 
-		var xhr = new XMLHttpRequest();
-		xhr.open('GET', 'load_name/');
-		xhr.onload = function() {
-		    if (xhr.status === 200) {
-		    	console.log(xhr.responseText);
-		        var res = JSON.parse(xhr.responseText);
-		    	console.log(res);
-		    
-				this.ClearDOMChildren(document.getElementById("list"));
+		this.ClearDOMChildren(document.getElementById("list"));
 
-		    	for (let docu_id of res.res){
-		    		let a = document.createElement('a');
-		    		a.innerHTML = docu_id.split("_").pop();
-		    		a.class = "char-link";
-		    		a.onclick = function(){
-		    			this.Load(docu_id);
-		    			document.getElementById("prefix").value = docu_id.split("_")[0];
-		    			document.getElementById("name").value = docu_id.split("_")[1];
-		    		}.bind(this);
-		    		list.appendChild(a);
-		    		list.appendChild(document.createTextNode(" "));
-		    	}
-
-		    }
-		    else {
-		        alert('Request failed.  Returned status of ' + xhr.status);
-		    }
-		}.bind(this);
-		xhr.send();
+		for (let docu_id of JSON.parse(res).res){
+			let a = document.createElement('a');
+			a.innerHTML = docu_id.split("_").pop();
+			a.class = "char-link";
+			a.onclick = function(){
+				this.Load(docu_id);
+				document.getElementById("prefix").value = docu_id.split("_")[0];
+				document.getElementById("name").value = docu_id.split("_")[1];
+			}.bind(this);
+			list.appendChild(a);
+			list.appendChild(document.createTextNode(" "));
+		}
 	}
 
 	ClearParams(){

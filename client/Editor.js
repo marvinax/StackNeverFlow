@@ -231,6 +231,9 @@ class Editor extends EditorCoreData {
 
 		canvas.onmousewheel = this.Zoom.bind(this);
 
+		document.addEventListener("ondocuchange", function(){
+			this.UpdateDraw('redraw by event');
+		}.bind(this));
 	}
 
 }
