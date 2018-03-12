@@ -222,13 +222,6 @@ module.exports = Vector;
 
 var Vector = __webpack_require__(0);
 
-var LeverMode = Object.freeze({
-    BROKEN		: 0,
-    LINEAR 		: 2,
-    PROPER 		: 3,
-    SYMMETRIC	: 4
-});
-
 var StrokeMode = Object.freeze({
     FREE : 0,
     PERP : 1
@@ -239,107 +232,40 @@ var SelectMode = Object.freeze({
 	LEVER_SELECT : 1
 });
 
-var LeverPoint = Object.freeze({
-	POINT 		 : 2,
-	CONTROL_1	 : 0,
-	CONTROL_2 	 : 4,
-	WIDTH_1 	 : 1,
-	WIDTH_2	 	 : 3
-});
-
 class Lever {
 
 	constructor(input){
 
         if(input != undefined){
 
-            if(input.points != undefined){
-                this.points     = input.points.map(function(point){return new Vector(point)});    
+            if(input.end != undefined && input.control != undefined){
+                this.end     = new Vector(input.end)
+                this.control = new Vector(input.control)
             }
             if(input.point != undefined){
-                this.points = [
-                    new Vector(input.point),
-                    new Vector(input.point),
-                    new Vector(input.point),
-                    new Vector(input.point),
-                    new Vector(input.point)
-                ]
+                
+                this.end     = new Vector(input.point)
+                this.control = new Vector(input.point)
             }
 
-            this.leverMode = (input.leverMode != undefined) ? input.leverMode : LeverMode.SYMMETRIC;
-            this.selectMode = (input.selectMode != undefined) ? input.selectMode : SelectMode.NONE;
-            this.strokeMode = (input.strokeMode != undefined) ? input.strokeMode : StrokeMode.FREE;
-
         } else {
-			this.points = [
-				Vector.Zero,
-				Vector.Zero,
-				Vector.Zero,
-				Vector.Zero,
-				Vector.Zero
-			]
+			this.end     = new Vector(0, 0)
+			this.control = new Vector(0, 0)
 		}
 	}
 
     Copy(){
+        
         var newLever = new Lever();
-        for (var i = newLever.points.length - 1; i >= 0; i--) {
-            newLever.points[i] = this.points[i].Copy();
-        }
-        newLever.leverMode = this.leverMode;
-        newLever.selectMode = this.selectMode;
-        newLever.strokeMode = this.strokeMode;
 
+        newLever.end     = this.end.Copy()
+        newLever.control = this.control.Copy()
+        
         return newLever;
     }
 
-    OppoOf(ith){
-    	return 4 - ith;
-    }
-
-    Ratio(ith) {
-    	var ithSide  = this.points[2].Dist(this.points[ith]),
-    		oppoSide = this.points[2].Dist(this.points[this.OppoOf(ith)]);
-        return ithSide / oppoSide;
-    }
-
-    OppoNorm(newPoint) {
-        return (this.points[2].Sub(newPoint)).Normalize();
-    }
-
-    SetOppo(ith, oppoNorm, newDistance) {
-        this.points[this.OppoOf(ith)] = this.points[2].Add(oppoNorm.Mult(newDistance));
-    }
-
     SetControlPoint(ith, newPoint) {
-    	var ratioOppo = this.Ratio(this.OppoOf(ith));
-    	var oppoNorm  = this.OppoNorm(newPoint);
-
-    	var dist;
-    	switch(this.leverMode){
-
-            /// for symmetric case, ratio is overwritten as 1
-    		case LeverMode.SYMMETRIC:
-    			ratioOppo = 1;
-
-            /// recalculate to make proportional lever, the distance
-            /// is calculated from the new distance between origin
-            /// and currently selected control point.
-	        case LeverMode.PROPER:
-	            this.SetOppo(ith, oppoNorm, ratioOppo * this.points[2].Dist(newPoint));
-
-            /// recalculate to make three points aligned on same
-            /// line. use new direction and original distance of
-            /// opposite control point.
-	        case LeverMode.LINEAR:
-	            this.SetOppo(ith, oppoNorm, this.points[2].Dist(this.points[this.OppoOf(ith)]));
-
-            /// set new control point without affecting the oppo-
-            /// site. The tangent will be broken.
-     	   case LeverMode.BROKEN:
-	            this.points[ith].Set(newPoint);
-
-    	}
+        this.control.Set(newPoint);
     }
 
     // ExtractArray and TransFromArray should be appear in Dragging handler,
@@ -348,19 +274,13 @@ class Lever {
     // until mouseup.
 
     ExtractArray(){
-    	return [this.points[0].Copy(),
-    			this.points[1].Copy(),
-    			this.points[2].Copy(),
-    			this.points[3].Copy(),
-    			this.points[4].Copy()];
+    	return [this.end.Copy(),
+    			this.control.Copy()];
     }
 
     TransFromArray(points, inc){
-    	this.points[0] = inc.Add(points[0]);
-    	this.points[1] = inc.Add(points[1]);
-    	this.points[2] = inc.Add(points[2]);
-    	this.points[3] = inc.Add(points[3]);
-    	this.points[4] = inc.Add(points[4]);
+    	this.end     = inc.Add(points[0])
+    	this.control = inc.Add(points[1])
     }
 
     Trans(inc){
@@ -395,8 +315,6 @@ class Document{
 	constructor(input){
 
 		this.params = {};
-		this.init = "";
-		this.update = "";
 		this.curves = [];
 		this.anchor = new Vector(0, 0);
 		this.importedDocuments = {};
@@ -407,387 +325,13 @@ class Document{
 
 	SetDocument(input){
 		this.params = input.params;
-		this.init = input.init;
-		this.update = input.update;
 		this.curves = input.curves.map(function(curve){return new Curve(curve)});
 		this.anchor = new Vector(input.anchor);
 		for(var docName in input.importDocuments){
 			this.importedDocuments[docName] = new Document(this.importedDocuments[docName]);
 			document.dispatchEvent(new Event('ondocuchange'));
 		}
-	}
-
-	InitEval(){
-		this.dstack = [];
-		this.rstack = [];
-		this.lstack = [];
-		this.vars = {};
-		this.funs = {};
-	}
-
-	ClearEval(){
-		delete this.dstack;
-		delete this.rstack;
-		delete this.lstack;
-		delete this.vars;
-		delete this.funs;
-	}
-
-	Eval(expr){
-
-		var request = function(method, url, content){
-			return new Promise(function(resolve, reject){
-				var xhr = new XMLHttpRequest();
-				xhr.open(method, url);
-				xhr.setRequestHeader('Content-Type', 'application/json');
-				xhr.onload = function(){return resolve(xhr.responseText)};
-				xhr.onerror = function(){return reject(xhr.statusText)};
-				xhr.send(content);
-			})
-		}
-
-
-		var text = expr.split('\n'),
-			literal_flag = false,
-			exec_err_flag = false;
-
-		var lit = function(){
-			literal_flag = true;
-		};
-
-		var unlit = function(){
-			literal_flag = false;
-		};
-
-		var pop = function(){
-			return this.dstack.pop();
-		}.bind(this);
-
-		var push = function(elem){
-			this.dstack.push(elem);
-			// console.log(JSON.stringify(dstack));
-		}.bind(this);
-
-		var dup = function(){
-			var val = pop();
-			push(val);
-			push(val);
-		}
-
-		var rot = function(){
-			var val = parseInt(pop());
-			if(val <= this.dstack.length){
-				this.dstack.push(this.dstack.splice(-val,1)[0]);
-				console.log("rot "+	JSON.stringify(this.dstack))
-			}
-
-			else {
-				console.log('rotating length larger than dstack ');
-				exec_err_flag = true;				
-			}
-		}.bind(this);
-
-		var put = function(){
-			var key = pop();
-			var val = pop();
-			console.log(val);
-			this.vars[key] = val.Copy();
-			console.log(key.toString() + " " + JSON.stringify(this.vars[key]));
-		}.bind(this);
-
-		var fun = function(){
-			var key = pop();
-			this.funs[key] = this.lstack.reverse();
-			this.lstack = [];
-		}.bind(this);
-
-		var vec = function(){
-			var x = pop();
-			var y = pop();
-			push(new Vector(parseFloat(x), parseFloat(y)));
-		};
-
-		var set_curve = function(){
-			var index = pop();
-			var value = pop();
-			this.curve[parseInt(index)] = value;
-			puhs(value);
-		};
-
-		var set_lever = function(){
-			var index = pop();
-			var value = pop();
-			var curve = pop();
-			curve.levers[parseInt(index)] = value;
-			push(curve);
-		};
-
-		var set_point = function(){
-			var index = pop();
-			var value = pop();
-			var lever = pop();
-			lever.SetControlPoint(parseInt(index), value);
-			push(lever);
-		};
-
-		var float = function(){
-			var p = pop();
-			push(parseFloat(p));
-		};
-
-		var plus = function(){
-			var p1 = pop();
-			var p2 = pop();
-
-			if(typeof p1 == "number" && typeof p2 == "number")
-				push(p1 + p2);
-			else if(typeof p1.x == "number" && typeof p2.x == "number")
-				push(p1.Add(p2));
-			else{
-				console.log("plus type error");
-				exec_err_flag = true;
-			}
-		};
-
-		var subt = function(){
-			var p1 = pop();
-			var p2 = pop();
-
-			if(typeof p1 == "number" && typeof p2 == "number")
-				push(p1 - p2);
-			else if(typeof p1.x == "number" && typeof p2.x == "number")
-				push(p1.Sub(p2));
-			else{
-				console.log("sub type error: " + JSON.stringify(p1) + " " + typeof p1 + " " + p2 + " " + typeof p2 );
-				exec_err_flag = true;
-			}
-		};
-
-		var mult = function(){
-			var p = pop();
-			var n  = pop();
-			if(typeof p == "number" && typeof n == "number")
-				push(n * p);
-			else if(typeof p.x == "number" && typeof n == "number")
-				push(p.Mult(n));
-			else{
-				console.log("mult type error: " + typeof p + " " + typeof n);
-				exec_err_flag = true;
-			}
-		};
-
-		var dist = function(){
-			var p1 = pop();
-			var p2 = pop();
-			push(p1.Dist(p2));
-		};
-
-		var trans = function(){
-			var elem = pop(),
-				increm = pop();
-				console.log(increm);
-			push(elem.TransCreate(increm));
-		};
-
-		var sin = function(){
-			var elem = pop();
-			push(Math.sin(elem / 180 * Math.PI));
-		};
-
-		var cos = function(){
-			var elem = pop();
-			push(Math.cos(elem / 180 * Math.PI));
-		};
-
-		var tan = function(){
-			var elem = pop();
-			push(Math.tan(elem / 180*Math.PI));
-		};
-
-		var mag = function(){
-			var elem = pop();
-			push(elem.Dist());
-		};
-
-		var norm = function(){
-			var elem = pop();
-			console.log(elem);
-			push(elem.Mult(1/elem.Mag()));
-		};
-
-		var rotate = function(){
-			var angle = pop(),
-				rad   = angle / 180.0 * Math.PI;
-			var about = pop();
-			var dest  = pop();
-
-			var newVec = dest.Sub(about);
-			var x = newVec.x,
-				y = newVec.y;
-			newVec.x = Math.cos(rad) * x - Math.sin(rad) * y;
-			newVec.y = Math.sin(rad) * x + Math.cos(rad) * y;
-
-			push(newVec.Add(about));
-		};
-
-		var rot_lever = function(){
-			var angle = pop(),
-				rad   = angle / 180.0 * Math.PI;
-			var about = pop();
-			var dest  = pop();
-
-			var destCopy = dest.Copy();
-			var newVec;
-			for (var i = destCopy.points.length - 1; i >= 0; i--) {
-				newVec = destCopy.points[i].Sub(about);
-				var x = newVec.x,
-					y = newVec.y;
-				newVec.x = Math.cos(rad) * x - Math.sin(rad) * y;
-				newVec.y = Math.sin(rad) * x + Math.cos(rad) * y;
-				destCopy.points[i] = about.Add(newVec);
-			}
-
-			push(destCopy);
-		}
-
-		var get_curve = function(){
-			var ith = parseInt(pop());
-			push(this.curves[ith]);
-		}.bind(this);
-
-		var get_lever = function(){
-			var elem = pop();
-			var ith = parseInt(pop());
-			if(elem.levers != undefined)
-				push(elem.levers[ith]);
-			else{
-				console.log("lever needs a curve ref ahead");
-				exec_err_flag = true;
-			}
-		};
-
-		var get_point = function(){
-			var elem = pop();
-			var ith = parseInt(pop());
-			if(elem.points != undefined)
-				push(elem.points[ith]);
-			else{
-				console.log("point needs a lever ref ahead");
-				exec_err_flag = true;
-			}
-		};
-
-		var get = function(){
-			var key = pop();
-			if(this.params[key] != undefined){
-				push(parseFloat(this.params[key].value));
-			} else if(this.vars[key] != undefined){
-				push(this.vars[key]);
-			} else if(this.funs[key] != undefined){
-				this.rstack.push(this.funs[key].slice());
-				exec(true);
-			} else {
-				console.log("key "+ key +"neither found in params nor vars");
-				exec_err_flag = true;				
-			}			
-		}.bind(this);
-
-		var imp = async function(){
-			var docu_id = pop();
-			var res = await request('GET', 'load/'+docu_id);
-			this.importedDocuments[docu_id] = new Document(JSON.parse(res));
-			document.dispatchEvent(new Event('ondocuchange'));
-		}.bind(this);
-
-		var exec = function(mark){
-			while(true){
-				curr = this.rstack.last().pop();
-
-				if(literal_flag && curr != "{" ){
-					this.lstack.push(curr);
-				} else {
-					switch(curr){
-						case "sin"	 : sin();       break;
-						case "cos"   : cos();       break;
-						case "tan"   : tan();       break;
-
-						case "float" : float();		break;
-						case "mag"	 : mag();   	break;
-						case "dist"  : dist();      break;
-						case "rotate": rotate();	break;
-						case "rotlev": rot_lever(); break;
-						case "vec"   : vec();		break;
-						case "plus"  : plus();		break;
-						case "sub"   : subt();		break;
-						case "mult"  : mult();		break;
-
-						case "@curve": get_curve();	break;
-						case "@lever": get_lever();	break;
-						case "@point": get_point();	break;
-
-						case "&curve": set_curve(); break;
-						case "&lever": set_lever(); break;
-						case "&point": set_point(); break;
-						case "trans" : trans();		break;
-
-						case "dup"   : dup();       break;
-						case "rot"   : rot();       break;
-
-						case "@"     : get();       break;
-						case "&"     : put();       break;
-						case "."     : pop();       break;
-						case "#"     : fun();       break;
-						case "}"     : lit();       break;
-						case "{"     : unlit();     break;
-						case "import": imp(); 		break;
-						default	:
-							if(curr != "") push(curr);
-					}
-				}
-
-				if(this.rstack.last().length == 0) {this.rstack.pop(); break;}
-				if(exec_err_flag) {
-					console.log("at "+curr);
-					break;
-				}
-			}
-		}.bind(this);
-
-		var curr;
-
-		for (var i = 0; i < text.length; i++) {
-			this.rstack.push(text[i].split(" "));
-			exec();
-			if(exec_err_flag){
-				console.log("error raised, further Eval stopped");
-				console.log(text[i]);
-				break;
-			}
-		}
-		this.dstack = []
-		document.dispatchEvent(new Event('ondocuchange'));
-	}
-
-	EvalInit(){
-		this.Eval(this.init);
-
-		for(var curve of this.curves){
-			curve.GetOutlines();
-			console.log(curve.outline);
-		}
-
-	}
-
-	EvalUpdate(){
-		this.Eval(this.update);
-
-		for(var curve of this.curves){
-			curve.GetOutlines();
-			console.log(curve.outline);
-		}
-
-	}
-	
+	}	
 }
 
 module.exports = Document;
@@ -808,34 +352,31 @@ class Curve {
     constructor(input){
 
         if(input != undefined){
-            this.levers = input.levers.map(function(lever){return new Lever(lever)});
+            this.head = new Lever(input.head);
+            this.tail = new Lever(input.tail);
             this.outline = new Outline(input.outline);
         } else {
-            this.levers = [];
+            this.head = new Lever();
+            this.tail = new Lever();
             this.outline = new Outline();            
         }
 
+        this.levers = 0;
+
+        // computational attributes
+
+        this.anchor = new Vector(0, 0)
     }
 
     Add(mouseV){
-        this.levers.push(new Lever(mouseV));
-        // this.GetOutlines();
-        return this.levers.length - 1;
-    }
+        if(this.levers == 0){
+            this.head = new Lever(mouseV)
+            this.levers = 1
+        }else if (this.levers == 1){
+            this.tail = new Lever(mouseV)
+            this.levers = 2
+        }
 
-    Delete(index){
-        levers.splice(index, 1);
-        this.GetOutlines();
-    }
-    
-    Insert(curveCast) {
-        this.levers.splice(Math.floor(curveCast+1), 0, new Lever(new Vector(0, 0)));
-        CurveMath.SetInsertedLeverOnCurveGroup(this.levers, Math.floor(curveCast+1), curveCast - Math.floor(curveCast));
-        console.log(this.levers.length);
-
-        this.GetOutlines();
-        
-        return Math.floor(curveCast+1);
     }
 
     UpdateLever(ithLever, ithPoint, value){
@@ -2210,7 +1751,6 @@ class Editor extends EditorCoreData {
 		super();
 		
 		this.docu = new Document();
-		this.docu.InitEval();
 		this.neutron = new Neutron(this);
 		this.zpr = new ZPR();
 		this.context = document.getElementById("canvas").getContext("2d");
@@ -2734,18 +2274,12 @@ var Document = __webpack_require__(2);
 class Neutron {
 	constructor(editor){
 		this.editor = editor;
-		this.param_ui = document.getElementById("param-group");
+		// this.param_ui = document.getElementById("param-group");
 
-		this.AddParamUI();
+		// this.AddParamUI();
 		this.LoadLink();
 
 		document.getElementById("save").onclick = this.Save.bind(this);
-		document.getElementById("init-eval").onclick = function(){
-			this.editor.docu.EvalInit();
-		}.bind(this);
-		document.getElementById("init-code").oninput = function(){
-			this.editor.docu.init = document.getElementById("init-code").value;
-		}.bind(this);
 	}
 
 	ClearDOMChildren(elem){
@@ -2779,12 +2313,7 @@ class Neutron {
 		console.log(res);
 		this.editor.docu = new Document(JSON.parse(res));
 
-		this.ReloadExistingParams();
-		document.getElementById("init-code").value = this.editor.docu.init;
-		document.getElementById("update-code").value = this.editor.docu.update;
-		this.editor.docu.InitEval();
-		this.editor.docu.EvalInit();
-		this.editor.docu.EvalUpdate();
+		// this.ReloadExistingParams();
 		this.editor.UpdateDraw("loaded");
 	}
 

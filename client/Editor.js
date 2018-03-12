@@ -18,7 +18,6 @@ class Editor extends EditorCoreData {
 		super();
 		
 		this.docu = new Document();
-		this.docu.InitEval();
 		this.neutron = new Neutron(this);
 		this.zpr = new ZPR();
 		this.context = document.getElementById("canvas").getContext("2d");

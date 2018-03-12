@@ -4,18 +4,12 @@ var Document = require('./model/Document.js');
 class Neutron {
 	constructor(editor){
 		this.editor = editor;
-		this.param_ui = document.getElementById("param-group");
+		// this.param_ui = document.getElementById("param-group");
 
-		this.AddParamUI();
+		// this.AddParamUI();
 		this.LoadLink();
 
 		document.getElementById("save").onclick = this.Save.bind(this);
-		document.getElementById("init-eval").onclick = function(){
-			this.editor.docu.EvalInit();
-		}.bind(this);
-		document.getElementById("init-code").oninput = function(){
-			this.editor.docu.init = document.getElementById("init-code").value;
-		}.bind(this);
 	}
 
 	ClearDOMChildren(elem){
@@ -49,12 +43,7 @@ class Neutron {
 		console.log(res);
 		this.editor.docu = new Document(JSON.parse(res));
 
-		this.ReloadExistingParams();
-		document.getElementById("init-code").value = this.editor.docu.init;
-		document.getElementById("update-code").value = this.editor.docu.update;
-		this.editor.docu.InitEval();
-		this.editor.docu.EvalInit();
-		this.editor.docu.EvalUpdate();
+		// this.ReloadExistingParams();
 		this.editor.UpdateDraw("loaded");
 	}
 

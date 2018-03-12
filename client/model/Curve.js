@@ -9,34 +9,31 @@ class Curve {
     constructor(input){
 
         if(input != undefined){
-            this.levers = input.levers.map(function(lever){return new Lever(lever)});
+            this.head = new Lever(input.head);
+            this.tail = new Lever(input.tail);
             this.outline = new Outline(input.outline);
         } else {
-            this.levers = [];
+            this.head = new Lever();
+            this.tail = new Lever();
             this.outline = new Outline();            
         }
 
+        this.levers = 0;
+
+        // computational attributes
+
+        this.anchor = new Vector(0, 0)
     }
 
     Add(mouseV){
-        this.levers.push(new Lever(mouseV));
-        // this.GetOutlines();
-        return this.levers.length - 1;
-    }
+        if(this.levers == 0){
+            this.head = new Lever(mouseV)
+            this.levers = 1
+        }else if (this.levers == 1){
+            this.tail = new Lever(mouseV)
+            this.levers = 2
+        }
 
-    Delete(index){
-        levers.splice(index, 1);
-        this.GetOutlines();
-    }
-    
-    Insert(curveCast) {
-        this.levers.splice(Math.floor(curveCast+1), 0, new Lever(new Vector(0, 0)));
-        CurveMath.SetInsertedLeverOnCurveGroup(this.levers, Math.floor(curveCast+1), curveCast - Math.floor(curveCast));
-        console.log(this.levers.length);
-
-        this.GetOutlines();
-        
-        return Math.floor(curveCast+1);
     }
 
     UpdateLever(ithLever, ithPoint, value){
